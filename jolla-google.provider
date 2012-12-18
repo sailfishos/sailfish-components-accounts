@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE provider>
+<provider version="1.0" id="jolla-google">
+    <name>Google</name>
+    <description>Google account provider</description>
+    <icon>icon-l-google.png</icon>
+    <sign-up-link>www.google.com</sign-up-link>
+    <domains>.*google\.com</domains>
+</provider>

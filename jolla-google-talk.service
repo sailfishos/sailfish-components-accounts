@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<service id="jolla-google-talk">
+    <type>IM</type>
+    <provider>jolla-google</provider>
+    <name>GoogleTalk</name>
+    <icon>icon_google_talk</icon>
+
+    <!-- default settings (account settings have precedence over these) -->
+    <template>
+        <group name="telepathy">
+            <setting name="manager">gabble</setting>
+            <setting name="protocol">jabber</setting>
+            <setting name="ConnectAutomatically" type="b">true</setting>
+            <setting name="server">talk.google.com</setting>
+            <setting name="port" type="i">5223</setting>
+            <setting name="old-ssl" type="b">true</setting>
+            <setting name="fallback-conference-server">conference.jabber.org</setting>
+        </group>
+
+        <group name="auth">
+            <setting name="method">password</setting>
+            <setting name="mechanism">password</setting>
+        </group>
+    </template>
+</service>

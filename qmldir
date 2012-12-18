@@ -1,0 +1,4 @@
+plugin jollacomponentsaccountsplugin
+AccountProvidersListView 1.0 AccountProvidersListView.qml
+AccountsListView 1.0 AccountsListView.qml
+AccountsPage 1.0 AccountsPage.qml

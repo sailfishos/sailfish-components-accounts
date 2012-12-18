@@ -1,0 +1,11 @@
+{
+    "entries": [
+        {
+            "path": "System Settings/Accounts/Accounts",
+            "type": "page",
+            "params": {
+                "source": "/usr/share/jolla-settings/pages/accounts/mainpage.qml"
+            }
+        }
+    ]
+}
