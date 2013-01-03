@@ -1,7 +1,10 @@
 {
+    "translation_catalog": "components_accounts",
     "entries": [
         {
-            "path": "System Settings/Accounts/Accounts",
+            "path": "accounts",
+            "title": "Accounts",
+            "translation_id": "settings_accounts-accounts",
             "type": "page",
             "params": {
                 "source": "/usr/share/jolla-settings/pages/accounts/mainpage.qml"
