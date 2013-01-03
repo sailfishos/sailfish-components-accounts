@@ -31,7 +31,6 @@ public:
     void initializeEngine(QDeclarativeEngine *engine, const char *uri)
     {
         Q_UNUSED(uri)
-        Q_UNUSED(engine)
         Q_ASSERT(QLatin1String(uri) == QLatin1String("com.jolla.components.accounts"));
 
         AppTranslator *engineeringEnglish = new AppTranslator(engine);
