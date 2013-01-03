@@ -9,7 +9,7 @@ QT += declarative
 CONFIG += plugin
 
 SOURCES += plugin.cpp
-OTHER_FILES += *.qml *.png *.service *.provider *.json
+OTHER_FILES += *.qml settings/*qml *.png *.service *.provider settings/*.json
 
 TS_FILE = $$OUT_PWD/components_accounts.ts
 EE_QM = $$OUT_PWD/components_accounts_eng_en.qm
@@ -46,9 +46,9 @@ providers.path = /usr/share/accounts/providers/
 services.files = jolla-google-talk.service
 services.path = /usr/share/accounts/services/
 
-settings_entry.files = accounts.json
+settings_entry.files = settings/accounts.json
 settings_entry.path = /usr/share/jolla-settings/entries/
-settings_page.files = mainpage.qml
+settings_page.files = settings/mainpage.qml
 settings_page.path = /usr/share/jolla-settings/pages/accounts/
 
 QMAKE_EXTRA_TARGETS += translations engineering_english
