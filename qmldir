@@ -1,4 +1,8 @@
 plugin jollacomponentsaccountsplugin
-AccountProvidersListView 1.0 AccountProvidersListView.qml
-AccountsListView 1.0 AccountsListView.qml
-AccountsPage 1.0 AccountsPage.qml
+AccountProvidersListView 1.0 components/AccountProvidersListView.qml
+AccountsListView 1.0 components/AccountsListView.qml
+AccountsPage 1.0 components/AccountsPage.qml
+OAuthAccountEditor 1.0 components/OAuthAccountEditor.qml
+OAuthSignOnButton 1.0 components/OAuthSignOnButton.qml
+ServiceAccountsListView 1.0 components/ServiceAccountsListView.qml
+ServiceAccountsPage 1.0 components/ServiceAccountsPage.qml

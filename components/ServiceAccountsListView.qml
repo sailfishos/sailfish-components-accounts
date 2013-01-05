@@ -6,10 +6,10 @@ import org.nemomobile.signon 1.0
 JollaListView {
     id: root
 
-    property AccountModel accountsModel // must be provided by client
+    property ServiceAccountModel accountsModel // must be provided by client
     signal accountClicked(int accountId)
 
-    model: accountsModel // default sort should be providerName alphabetical
+    model: accountsModel // default sort should be providerDisplayName alphabetical followed by serviceDisplayName alphabetical
     currentIndex: -1 // otherwise the last-added item steals focus
     delegate: delegateComponent
     header: headerComponent
@@ -23,15 +23,10 @@ JollaListView {
             width: root.width
             height: 147 // XXX TODO: get real design
 
-            Label {
-                //: accounts list view
-                //% "Accounts"
-                text: qsTrId("components_accounts-accounts_list_view-accounts")
-                color: theme.primaryColor
-                font {
-                    family: theme.fontFamilyHeading
-                    pixelSize: theme.fontSizeLarge
-                }
+            HeadingLabel {
+                //: service accounts list view
+                //% "Service Accounts"
+                text: qsTrId("components_accounts-service_accounts_list_view-service_accounts")
                 anchors.centerIn: parent
             }
         }
@@ -39,7 +34,7 @@ JollaListView {
 
     Component {
         id: delegateComponent
-        MouseArea {
+        BackgroundItem {
             id: accountDelegate
             onClicked: parent.parent.accountClicked(accountId)
             height: childrenRect.height
@@ -49,7 +44,7 @@ JollaListView {
                 id: accountDelegateRow
                 spacing: 12
                 Image {
-                    source: accountIcon
+                    source: serviceIcon
                     height: 80
                     width: 80
                     fillMode: Image.PreserveAspectFit
@@ -58,23 +53,15 @@ JollaListView {
 
                 Column {
                     id: accountDelegateColumn
-                    Label {
+                    HeadingLabel {
                         id: providerLabel
-                        text: providerDisplayName
-                        color: theme.primaryColor
-                        font {
-                            pixelSize: theme.fontSizeLarge
-                            family: theme.fontFamilyHeading
-                        }
+                        text: serviceDisplayName
                     }
-                    Label {
+
+                    HeadingLabel {
                         id: usernameLabel
                         text: accountDisplayName // XXX TODO: modify model to supply username... or should displayName be username in most cases?
                         color: theme.secondaryColor
-                        font {
-                            pixelSize: theme.fontSizeLarge
-                            family: theme.fontFamilyHeading
-                        }
                     }
                 }
             }

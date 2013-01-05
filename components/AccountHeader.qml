@@ -24,25 +24,20 @@ Image {
             fillMode: Image.PreserveAspectCrop
             clip: visible
             source: root.providerIconImageUrl
+            asynchronous: true
             onStatusChanged: {
-                if (status == Image.Error)
+                if (status == Image.Error) {
                     visible = false
-                else if (status == Image.Ready)
+                } else if (status == Image.Ready) {
                     visible = true
+                }
             }
         }
 
-        Label {
+        HeadingLabel {
             id: providerNameLabel
-
             text: root.providerDisplayName
-
             anchors.horizontalCenter: parent.horizontalCenter
-            color: theme.highlightColor
-            font {
-                family: theme.fontFamilyHeading
-                pixelSize: theme.fontSizeLarge
-            }
         }
     }
 }

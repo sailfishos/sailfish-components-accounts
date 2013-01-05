@@ -5,9 +5,12 @@ import org.nemomobile.accounts 1.0
 Page {
     id: root
 
-    AccountModel { id: accountsModel }
+    property Component _app: AccountProvidersPage {}
+    property QtObject _psp // provider selection page generated from _app.
 
-    AccountsListView {
+    ServiceAccountModel { id: accountsModel }
+
+    ServiceAccountsListView {
         id: accountsListView
         anchors.fill: parent
 
@@ -25,10 +28,6 @@ Page {
         onAccountClicked: openAccountEditor(accountId)
     }
 
-    property Component _gae: GoogleAccountEditor {}
-    property Component _app: AccountProvidersPage {}
-    property QtObject _psp
-
     function openProviderSelector() {
         _psp = _app.createObject(root)
         _psp.providerSelected.connect(openAccountCreator)
@@ -41,17 +40,35 @@ Page {
 
         // now create the account creation page and show it.
         var provider = accountsModel.provider(providerName)
-        if (!provider)
+        if (!provider) {
             throw new Error("Unable to obtain provider with name: " + providerName)
-        var obj = _gae.createObject(root, { "provider": provider, "accountId": 0 })
+        }
+
+        // load the per-provider UI page
+        var componentName = "../extensions/" + providerName + ".qml"
+        var comp = Qt.createComponent(componentName)
+        if (comp.status !== Component.Ready) {
+            throw new Error("Error while loading account creation page: " + comp.errorString());
+        }
+
+        var obj = comp.createObject(root, { "provider": provider, "accountId": 0 })
         pageStack.push(obj)
     }
 
     function openAccountEditor(accId) {
         var provider = accountsModel.provider(accId)
-        if (!provider)
+        if (!provider) {
             throw new Error("Unable to ascertain provider for account with id: " + accId)
-        var obj = _gae.createObject(root, { "provider": provider, "accountId": accId })
+        }
+
+        // load the per-provider UI page
+        var componentName = "../extensions/" + provider.name + ".qml"
+        var comp = Qt.createComponent(componentName)
+        if (comp.status !== Component.Ready) {
+            throw new Error("Error while loading account edit page: " + comp.errorString());
+        }
+
+        var obj = comp.createObject(root, { "provider": provider, "accountId": accId })
         pageStack.push(obj)
     }
 }

@@ -3,7 +3,7 @@
     <type>IM</type>
     <provider>jolla-google</provider>
     <name>GoogleTalk</name>
-    <icon>icon_google_talk</icon>
+    <icon>extensions/icons/icon_google_talk</icon>
 
     <!-- default settings (account settings have precedence over these) -->
     <template>

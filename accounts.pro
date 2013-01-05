@@ -9,13 +9,19 @@ QT += declarative
 CONFIG += plugin
 
 SOURCES += plugin.cpp
-OTHER_FILES += *.qml settings/*qml *.png *.service *.provider settings/*.json
+OTHER_FILES += components/*.qml \
+               extensions/*.qml \
+               extensions/icons/*.png \
+               extensions/services/*.service \
+               extensions/providers/*.provider \
+               settings/*.json \
+               settings/*.qml
 
 TS_FILE = $$OUT_PWD/components_accounts.ts
 EE_QM = $$OUT_PWD/components_accounts_eng_en.qm
 
 translations.commands += lupdate $$PWD -ts $$TS_FILE
-translations.depends = $$PWD/*.qml
+translations.depends = $$PWD/components/*.qml
 translations.CONFIG += no_check_exist no_link
 translations.output = $$TS_FILE
 translations.input = .
@@ -36,14 +42,22 @@ engineering_english_install.path = /usr/share/translations
 engineering_english_install.files = $$EE_QM
 engineering_english_install.CONFIG += no_check_exist
 
-import.files = *.qml icon-l-google.png qmldir images
+import.files = qmldir
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 
-providers.files = jolla-google.provider
+components.files = components/*qml
+components.path = $$TARGETPATH/components/
+
+extensions.files = extensions/*qml
+extensions.path = $$TARGETPATH/extensions/
+extensions_icons.files = extensions/icons/*
+extensions_icons.path = $$TARGETPATH/extensions/icons/
+
+providers.files = extensions/providers/*provider
 providers.path = /usr/share/accounts/providers/
 
-services.files = jolla-google-talk.service
+services.files = extensions/services/*service
 services.path = /usr/share/accounts/services/
 
 settings_entry.files = settings/accounts.json
@@ -54,4 +68,4 @@ settings_page.path = /usr/share/jolla-settings/pages/accounts/
 QMAKE_EXTRA_TARGETS += translations engineering_english
 PRE_TARGETDEPS += translations engineering_english
 
-INSTALLS += target import providers services settings_entry settings_page translations_install engineering_english_install
+INSTALLS += target import components extensions extensions_icons providers services settings_entry settings_page translations_install engineering_english_install

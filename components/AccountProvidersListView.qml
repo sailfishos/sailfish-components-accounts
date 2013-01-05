@@ -22,15 +22,10 @@ JollaListView {
         Item {
             width: root.width
             height: 147 // XXX TODO: design
-            Label {
+            HeadingLabel {
                 //: account providers list view
                 //% "Account Providers"
                 text: qsTrId("components_accounts-account_providers_list_view-account_providers")
-                color: theme.primaryColor
-                font {
-                    family: theme.fontFamilyHeading
-                    pixelSize: theme.fontSizeLarge
-                }
                 anchors.centerIn: parent
            }
         }
@@ -49,20 +44,16 @@ JollaListView {
                 spacing: 12
                 Image {
                     source: providerIcon
+                    asynchronous: true
                     height: 80
                     width: 80
                     fillMode: Image.PreserveAspectFit
                     y: 6 // XXX TODO: better way to do this?
                 }
 
-                Label {
+                HeadingLabel {
                     id: providerLabel
                     text: providerDisplayName
-                    color: theme.secondaryColor
-                    font {
-                        pixelSize: theme.fontSizeLarge
-                        family: theme.fontFamilyHeading
-                    }
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
