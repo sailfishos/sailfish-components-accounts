@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<service id="picasa">
-    <type>sharing</type>
-    <name>Picasa</name>
-    <icon>extensions/icons/icon-l-picasa.png</icon>
+<?xml version="1.0" encoding="UTF-8"?>
+<service id="google-gmail">
+    <type>email</type>
+    <name>GMail</name>
     <provider>google</provider>
+    <icon>icon-l-gmail.png</icon>
 
     <template>
         <group name="auth">
@@ -16,14 +16,14 @@
                     <setting name="TokenPath">o/oauth2/token</setting>
                     <setting name="RedirectUri">urn:ietf:wg:oauth:2.0:oob</setting>
                     <setting name="ResponseType">token</setting>
-                    <setting name="Scope" type="as">["https://picasaweb.google.com/data/";]</setting>
-                    <setting name="AllowedSchemes" type="as">["https","http"]</setting>
+                    <setting name="Scope" type="as">["https://www.googleapis.com/auth/userinfo.email","https://mail.google.com/mail/"]</setting>
+                    <setting name="AllowedSchemes" type="as">["https"]</setting>
 <!--
                     The following must be provided by the application via:
                         serviceAccount.setConfigurationValue("auth/oauth2/user_agent/ClientId", client_id)
                         serviceAccount.setConfigurationValue("auth/oauth2/user_agent/ClientSecret", client_secret)
                     <setting name="ClientId">application_client_id</setting>
-                    <setting name="ClientSecret">application_client_id</setting>
+                    <setting name="ClientSecret">application_client_secret</setting>
 -->
                 </group>
             </group>

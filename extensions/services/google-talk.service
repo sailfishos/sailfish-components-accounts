@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<service id="jolla-google-talk">
+<service id="google-talk">
     <type>IM</type>
-    <provider>jolla-google</provider>
+    <provider>google</provider>
     <name>GoogleTalk</name>
-    <icon>extensions/icons/icon_google_talk</icon>
+    <icon>extensions/icons/icon-l-googletalk</icon>
 
     <!-- default settings (account settings have precedence over these) -->
     <template>

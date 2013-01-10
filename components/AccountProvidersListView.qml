@@ -33,30 +33,11 @@ JollaListView {
 
     Component {
         id: delegateComponent
-        MouseArea {
+        AccountDelegate {
             id: accountDelegate
             onClicked: parent.parent.providerClicked(providerName)
-            height: childrenRect.height
-            width: childrenRect.width
-
-            Row {
-                id: accountDelegateRow
-                spacing: 12
-                Image {
-                    source: providerIcon
-                    asynchronous: true
-                    height: 80
-                    width: 80
-                    fillMode: Image.PreserveAspectFit
-                    y: 6 // XXX TODO: better way to do this?
-                }
-
-                HeadingLabel {
-                    id: providerLabel
-                    text: providerDisplayName
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
+            iconUrl: providerIcon
+            topLabelText: providerDisplayName
         }
     }
 }

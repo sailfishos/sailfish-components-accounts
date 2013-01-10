@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service-type id="PIM">
+  <name>Personal Information Management</name>
+  <description>A service of this type provides calendaring and contact information management</description>
+  <icon>icon-l-pim.png</icon>
+  <tags>
+    <tag>pim</tag>
+    <tag>scheduling</tag>
+    <tag>calendars</tag>
+    <tag>contacts</tag>
+  </tags>
+</service-type>

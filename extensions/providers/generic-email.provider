@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE provider>
+<provider version="1.0" id="generic-email">
+    <name>E-mail</name>
+    <description>Generic IMAP/POP3 email account provider</description>
+    <icon>extensions/icons/icon-l-email.png</icon>
+    <!--
+        This allows users to create generic email accounts.
+        QMF can use these accounts to manage email on any
+        mail server which supports imap/pop3.
+    -->
+</provider>

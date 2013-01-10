@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE provider>
-<provider version="1.0" id="jolla-google">
+<provider version="1.0" id="google">
     <name>Google</name>
     <description>Google account provider</description>
     <icon>extensions/icons/icon-l-google.png</icon>
@@ -16,7 +16,7 @@
                     <setting name="Host">accounts.google.com</setting>
                     <setting name="AuthPath">o/oauth2/auth</setting>
                     <setting name="TokenPath">o/oauth2/token</setting>
-                    <setting name="RedirectUri">accounts.google.com</setting>
+                    <setting name="RedirectUri">urn:ietf:wg:oauth:2.0:oob</setting>
                     <setting name="ResponseType">token</setting>
                     <setting name="Scope" type="as">["https://docs.google.com/feeds/","https://www.googleapis.com/auth/googletalk","https://www.googleapis.com/auth/userinfo.email","https://www.googleapis.com/auth/userinfo.profile","https://picasaweb.google.com/data/"]</setting>
                     <setting name="AllowedSchemes" type="as">["https","http"]</setting>

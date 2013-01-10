@@ -1,23 +1,12 @@
 import QtQuick 1.1
 import com.jolla.components 1.0
+import com.jolla.components.accounts 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 
-Page {
+// JabberID / password, optional server address
+AccountCreationPage {
     id: root
-
-    property Provider provider
-    property int accountId: 0
-
-    // the following are for extension plugins to set (if required)
-    property bool _needsCaption: false
-    property bool _needsMechParamsAndSettings: false // by default, the following three properties' values are prefilled from .provider file.
-    property variant _oauthParameters
-    property variant _accountSettings
-    property string _mechanism
-
-    // the following contains the available mechanisms.  _mechanism must be set to one of these.
-    property variant _mechanisms: ["user_agent", "web_server", "HMAC-SHA1", "PLAINTEXT", "RSA-SHA1"]
 
     // implementation details.
     property string __defaultServiceName: provider.serviceNames[0]
@@ -27,8 +16,8 @@ Page {
         id: header
         width: parent.width
 
-        providerDisplayName: provider.displayName
-        providerIconImageUrl: provider.iconName
+        displayLabel: provider.displayName
+        iconImageUrl: provider.iconName
 
         // Left icon - cancel edit
         ToolIcon {
@@ -41,9 +30,7 @@ Page {
                 leftMargin: 10
             }
 
-            onClicked: {
-                pageStack.pop()
-            }
+            onClicked: cancel()
 
         }
 
@@ -58,9 +45,7 @@ Page {
                 rightMargin: 10
             }
 
-            onClicked: {
-                saveAccount()
-            }
+            onClicked: saveAccount()
         }
     }
 
@@ -84,18 +69,18 @@ Page {
 
             Label {
                 id: usernameLabel
-                //: oauth account editor
-                //% "User Name"
-                text: qsTrId("components_accounts-oauth_account_editor-user_name")
+                //: jabber account editor
+                //% "Jabber ID"
+                text: qsTrId("components_accounts-jabber_account_editor-jabber_id")
                 anchors.right: parent.right
             }
 
             TextField {
                 id: usernameText
                 width: root.width
-                //: oauth account editor
-                //% "username"
-                placeholderText: qsTrId("components_accounts-oauth_account_editor-username_ph")
+                //: jabber account editor
+                //% "JabberID"
+                placeholderText: qsTrId("components_accounts-jabber_account_editor-jabberid_ph")
                 property bool hasChanged: false
                 onTextChanged: {
                     if (text != "" && !hasChanged) {
@@ -109,9 +94,9 @@ Page {
 
             Label {
                 id: passwordLabel
-                //: oauth account editor
+                //: jabber account editor
                 //% "Password"
-                text: qsTrId("components_accounts-oauth_account_editor-password")
+                text: qsTrId("components_accounts-jabber_account_editor-password")
                 anchors.right: parent.right
             }
 
@@ -119,9 +104,9 @@ Page {
                 id: passwordText
                 width: root.width
                 echoMode: TextInput.PasswordEchoOnEdit
-                //: oauth account editor
+                //: jabber account editor
                 //% "password"
-                placeholderText: qsTrId("components_accounts-oauth_account_editor-password_ph")
+                placeholderText: qsTrId("components_accounts-jabber_account_editor-password_ph")
                 property bool hasChanged: false
                 onTextChanged: {
                     if (text != "" && !hasChanged) {
@@ -132,41 +117,11 @@ Page {
                     }
                 }
             }
-
-            Label {
-                id: captionLabel
-                visible: _needsCaption
-                //: oauth account editor
-                //% "Caption"
-                text: qsTrId("components_accounts-oauth_account_editor-caption")
-                anchors.right: parent.right
-            }
-
-            TextField {
-                id: captionText
-                visible: _needsCaption
-                width: root.width
-                //: oauth account editor
-                //% "caption"
-                placeholderText: qsTrId("components_accounts-oauth_account_editor-caption_ph")
-                property bool hasChanged: false
-                onTextChanged: {
-                    if (text != "" && !hasChanged) {
-                        hasChanged = true
-                    }
-                    if (hasChanged) {
-                        _ident.caption = text
-                    }
-                }
-            }
         }
     }
 
     function saveAccount() {
         // we actually save the identity first.
-        if (_needsMechParamsAndSettings) {
-            _ident.setMethodMechanisms("oauth2", [_mechanism])
-        }
         _ident.sync()
     }
 
@@ -187,11 +142,13 @@ Page {
                 usernameText.text = _account.displayName // we save the username in the display name.
                 _ident.identifier = _account.identityIdentifier(__defaultServiceName) // if zero, will create new identity.
             } else if (status == Account.Synced) {
-                pageStack.pop() // Success!
+                // success
+                success()
             } else if (status == Account.Error) {
                 // display "error" dialog
-                cleanup();
-                pageStack.pop() // Failed.
+                console.log("ERROR creating jabber account!")
+                cleanup()
+                root.failure()
             }
         }
     }
@@ -204,31 +161,18 @@ Page {
             if (status == Identity.Initialized) {
                 usernameText.text = userName
                 passwordText.text = secret
-                if (_needsCaption) {
-                    captionText.text = caption
-                }
             } else if (status == Identity.Synced) {
                 _account.displayName = usernameText.text // XXX TODO: ensure this is correct...
                 for (var i in provider.serviceNames) {
                     _account.enableWithService(provider.serviceNames[i])
                     _account.setIdentityIdentifier(_ident.identifier, provider.serviceNames[i])
                 }
-                if (_needsMechParamsAndSettings) {
-                    _account.setConfigurationValue("auth/method", "oauth2")
-                    _account.setConfigurationValue("auth/mechanism", _mechanism)
-                    var prefix = "auth/oauth2/" + _mechanism + "/"
-                    for (var i in _oauthParameters) {
-                        _account.setConfigurationValue(prefix + i, _oauthParameters[i])
-                    }
-                    for (var i in _accountSettings) {
-                        _account.setConfigurationValue(i, _accountSettings[i])
-                    }
-                }
                 _account.sync()
             } else if (status == Identity.Error) {
                 // display "error" dialog
-                cleanup();
-                pageStack.pop() // Failed.
+                console.log("ERROR creating jabber identity!")
+                cleanup()
+                failure()
             }
         }
     }

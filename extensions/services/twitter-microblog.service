@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<service id="twitter-microblog">
+    <type>microblogging</type>
+    <name>Twitter</name>
+    <icon>extensions/icons/icon-l-twitter.png</icon>
+    <provider>twitter</provider>
+
+    <!-- Identical to the template in twitter.provider
+         but the template section is not supported in
+         .provider files until libaccounts-glib v1.4 -->
+    <template>
+        <group name="auth">
+            <setting name="method">oauth2</setting>
+            <setting name="mechanism">HMAC-SHA1</setting>
+            <group name="oauth2">
+                <group name="HMAC-SHA1">
+                    <setting name="RequestEndpoint">https://api.twitter.com/oauth/request_token</setting>
+                    <setting name="TokenEndpoint">https://api.twitter.com/oauth/access_token</setting>
+                    <setting name="AuthorizationEndpoint">https://api.twitter.com/oauth/authorize</setting>
+                    <setting name="AllowedSchemes" type="as">["https";]</setting>
+                    <setting name="Callback">https://www.jolla.com/</setting>
+<!--
+                    The following must be provided by the application via:
+                        serviceAccount.setConfigurationValue("auth/oauth2/HMAC-SHA1/ConsumerKey", consumer_key)
+                        serviceAccount.setConfigurationValue("auth/oauth2/HMAC-SHA1/ConsumerSecret", consumer_secret)
+                    <setting name="ConsumerKey">application_consumer_key</setting>
+                    <setting name="ConsumerSecret">application_consumer_secret</setting>
+-->
+                </group>
+            </group>
+        </group>
+    </template>
+</service>

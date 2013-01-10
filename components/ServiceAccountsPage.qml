@@ -25,7 +25,7 @@ Page {
             }
         }
 
-        onAccountClicked: openAccountEditor(accountId)
+        onAccountClicked: openAccountSettings(accountId)
     }
 
     function openProviderSelector() {
@@ -35,40 +35,10 @@ Page {
     }
 
     function openAccountCreator(providerName) {
-        // take the provider selection page out of the stack.
-        pageStack.pop(undefined, true)
-
-        // now create the account creation page and show it.
-        var provider = accountsModel.provider(providerName)
-        if (!provider) {
-            throw new Error("Unable to obtain provider with name: " + providerName)
-        }
-
-        // load the per-provider UI page
-        var componentName = "../extensions/" + providerName + ".qml"
-        var comp = Qt.createComponent(componentName)
-        if (comp.status !== Component.Ready) {
-            throw new Error("Error while loading account creation page: " + comp.errorString());
-        }
-
-        var obj = comp.createObject(root, { "provider": provider, "accountId": 0 })
-        pageStack.push(obj)
+        UiNavigation.openAccountCreationPage(root, true, accountsModel, providerName, 0)        
     }
 
-    function openAccountEditor(accId) {
-        var provider = accountsModel.provider(accId)
-        if (!provider) {
-            throw new Error("Unable to ascertain provider for account with id: " + accId)
-        }
-
-        // load the per-provider UI page
-        var componentName = "../extensions/" + provider.name + ".qml"
-        var comp = Qt.createComponent(componentName)
-        if (comp.status !== Component.Ready) {
-            throw new Error("Error while loading account edit page: " + comp.errorString());
-        }
-
-        var obj = comp.createObject(root, { "provider": provider, "accountId": accId })
-        pageStack.push(obj)
+    function openAccountSettings(accId) {
+        UiNavigation.openAccountSettingsPage(root, false, accountsModel, accId)
     }
 }

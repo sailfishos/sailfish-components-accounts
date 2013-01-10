@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<service id="POP3">
+    <type>email</type>
+    <provider>generic-email</provider>
+    <name>POP3 Email</name>
+    <icon>extensions/icons/icon-l-email</icon>
+</service>

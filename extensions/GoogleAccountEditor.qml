@@ -15,8 +15,8 @@ Page {
         id: header
         width: parent.width
 
-        providerDisplayName: provider.displayName
-        providerIconImageUrl: provider.iconName
+        displayLabel: provider.displayName
+        iconImageUrl: provider.iconName
 
         // Left icon - cancel edit
         ToolIcon {
@@ -164,7 +164,7 @@ Page {
         onStatusChanged: {
             if (status == Account.Initialized && !_isNewAccount) {
                 usernameText.text = account.displayName // we save the username in the display name.  XXX TODO: check this is correct, with mardy.
-                ident.identifier = account.identityIdentifier("jolla-google-talk") // if zero, will create new identity.
+                ident.identifier = account.identityIdentifier("google-talk") // if zero, will create new identity.
             } else if (status == Account.Synced) {
                 pageStack.pop() // Success!
             } else if (status == Account.Error) {
@@ -177,7 +177,7 @@ Page {
 
     Identity {
         id: ident
-        identifier: root.accountId ? account.identityIdentifier("jolla-google-talk") : 0
+        identifier: root.accountId ? account.identityIdentifier("google-talk") : 0
         identifierPending: root.accountId != 0
 
         onStatusChanged: {
@@ -187,8 +187,8 @@ Page {
                 captionText.text = caption
             } else if (status == Identity.Synced) {
                 account.displayName = usernameText.text // XXX TODO: ensure this is correct...
-                account.enableAccountWithService("jolla-google-talk")
-                account.setIdentityIdentifier(ident.identifier, "jolla-google-talk")
+                account.enableAccountWithService("google-talk")
+                account.setIdentityIdentifier(ident.identifier, "google-talk")
                 // XXX TODO: other services (gmail, picasa, g+, ...)
                 account.sync()
             } else if (status == Identity.Error) {

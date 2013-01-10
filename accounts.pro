@@ -10,6 +10,7 @@ CONFIG += plugin
 
 SOURCES += plugin.cpp
 OTHER_FILES += components/*.qml \
+               components/*.js \
                extensions/*.qml \
                extensions/icons/*.png \
                extensions/services/*.service \
@@ -46,7 +47,7 @@ import.files = qmldir
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 
-components.files = components/*qml
+components.files = components/*qml components/*js
 components.path = $$TARGETPATH/components/
 
 extensions.files = extensions/*qml
@@ -60,6 +61,9 @@ providers.path = /usr/share/accounts/providers/
 services.files = extensions/services/*service
 services.path = /usr/share/accounts/services/
 
+service_types.files = extensions/service_types/*service-type
+service_types.path = /usr/share/accounts/service_types/
+
 settings_entry.files = settings/accounts.json
 settings_entry.path = /usr/share/jolla-settings/entries/
 settings_page.files = settings/mainpage.qml
@@ -68,4 +72,4 @@ settings_page.path = /usr/share/jolla-settings/pages/accounts/
 QMAKE_EXTRA_TARGETS += translations engineering_english
 PRE_TARGETDEPS += translations engineering_english
 
-INSTALLS += target import components extensions extensions_icons providers services settings_entry settings_page translations_install engineering_english_install
+INSTALLS += target import components extensions extensions_icons providers services service_types settings_entry settings_page translations_install engineering_english_install

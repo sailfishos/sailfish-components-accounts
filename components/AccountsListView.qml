@@ -34,36 +34,11 @@ JollaListView {
 
     Component {
         id: delegateComponent
-        BackgroundItem {
-            id: accountDelegate
+        AccountDelegate {
             onClicked: parent.parent.accountClicked(accountId)
-            height: childrenRect.height
-            width: childrenRect.width
-
-            Row {
-                id: accountDelegateRow
-                spacing: 12
-                Image {
-                    source: accountIcon
-                    height: 80
-                    width: 80
-                    fillMode: Image.PreserveAspectFit
-                    y: 6 // XXX TODO: better way to do this?
-                }
-
-                Column {
-                    id: accountDelegateColumn
-                    HeadingLabel {
-                        id: providerLabel
-                        text: providerDisplayName
-                    }
-                    HeadingLabel {
-                        id: usernameLabel
-                        text: accountDisplayName // XXX TODO: modify model to supply username... or should displayName be username in most cases?
-                        color: theme.secondaryColor
-                    }
-                }
-            }
+            iconUrl: accountIcon
+            topLabelText: providerDisplayName
+            bottomLabelText: accountDisplayName
         }
     }
 }

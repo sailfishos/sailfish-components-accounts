@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service-type id="sharing">
+  <name>Sharing</name>
+  <description>A service of this type allows images, videos, and other content to be shared</description>
+  <icon>icon-l-sharing.png</icon>
+  <tags>
+    <tag>share</tag>
+    <tag>sharing</tag>
+    <tag>images</tag>
+    <tag>video</tag>
+  </tags>
+</service-type>

@@ -4,8 +4,8 @@ import com.jolla.components 1.0
 Image {
     id: root
 
-    property url providerIconImageUrl
-    property string providerDisplayName
+    property url iconImageUrl
+    property string displayLabel
 
     source: "image://theme/graphic-header"
     height: 147
@@ -19,11 +19,11 @@ Image {
             id: img
             opacity: 0.5
             anchors.horizontalCenter: parent.horizontalCenter
-            height: root.height - providerNameLabel.height
+            height: root.height - iconLabel.height
             width: 120
             fillMode: Image.PreserveAspectCrop
             clip: visible
-            source: root.providerIconImageUrl
+            source: root.iconImageUrl
             asynchronous: true
             onStatusChanged: {
                 if (status == Image.Error) {
@@ -35,8 +35,8 @@ Image {
         }
 
         HeadingLabel {
-            id: providerNameLabel
-            text: root.providerDisplayName
+            id: iconLabel
+            text: root.displayLabel
             anchors.horizontalCenter: parent.horizontalCenter
         }
     }
