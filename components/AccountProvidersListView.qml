@@ -27,6 +27,7 @@ JollaListView {
                 //% "Account Providers"
                 text: qsTrId("components_accounts-account_providers_list_view-account_providers")
                 anchors.centerIn: parent
+                color: theme.highlightColor
            }
         }
     }

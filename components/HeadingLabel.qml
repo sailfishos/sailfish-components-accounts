@@ -3,7 +3,7 @@ import com.jolla.components 1.0
 
 Label {
     id: root
-    color: theme.highlightColor
+    color: theme.primaryColor
     font {
         family: theme.fontFamilyHeading
         pixelSize: theme.fontSizeLarge

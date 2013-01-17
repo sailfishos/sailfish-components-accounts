@@ -39,15 +39,50 @@ Page {
         PageHeader {
             id: header
             //: Save the account settings
-            //% "Save";
+            //% "Save"
             title: qsTrId("accounts-me-save")
+            anchors.right: parent.right
             anchors.rightMargin: 60 // XXX TODO: better way to do this
+        }
+
+
+        Column {
+            id: accountNameColumn
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: header.bottom
+                bottom: accountNameText.bottom
+                margins: 20
+            }
+
+            Label {
+                id: accountNameLabel
+                font.family: theme.fontFamilyHeading
+                //: account settings page
+                //% "Account Name"
+                text: qsTrId("components_accounts-account_settings_page-account_name")
+                anchors.right: parent.right
+            }
+            TextField {
+                id: accountNameText
+                width: root.width
+                //: account settings page
+                //% "Name this account"
+                placeholderText: qsTrId("components_accounts-account_settings_page-account_name_ph")
+                horizontalAlignment: Text.AlignRight
+                anchors {
+                    right: parent.right
+                    left: parent.left
+                }
+            }
         }
 
         Grid {
             id: grid
             columns: 2
-            anchors.top: header.bottom
+            anchors.top: accountNameColumn.bottom
+            anchors.topMargin: 20
 
             AccountDelegate {
                 id: accountDelegate
@@ -72,7 +107,8 @@ Page {
         onNavigationChanged: {
             if (navigation == PageNavigation.Forward) {
                 // Save
-                _account.sync();
+                _account.displayName = accountNameText.text
+                _account.sync()
             } else if (navigation == PageNavigation.Back) {
                 // Cancel
                 console.log("AccountSettings not saved for account: " + _account.displayName)
@@ -144,6 +180,9 @@ Page {
             if (status == Account.Initialized) {
                 _hasInited = true
                 populateServiceSwitches()
+                if (displayName != "") {
+                    accountNameText.text = displayName
+                }
             } else if (status == Account.Error) {
                 // display "error" dialog
                 cleanup();

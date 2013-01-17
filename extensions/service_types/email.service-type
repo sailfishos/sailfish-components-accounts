@@ -2,7 +2,7 @@
 <service-type id="email">
   <name>E-Mail</name>
   <description>A service of this type allows sending and receiving emails</description>
-  <icon>icon-l-email.png</icon>
+  <icon>extensions/icons/icon-l-email.png</icon>
   <tags>
     <tag>email</tag>
     <tag>e-mail</tag>

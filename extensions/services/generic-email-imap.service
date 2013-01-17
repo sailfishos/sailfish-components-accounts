@@ -3,5 +3,5 @@
     <type>email</type>
     <provider>generic-email</provider>
     <name>IMAP Email</name>
-    <icon>extensions/icons/icon-l-email</icon>
+    <icon>extensions/icons/icon-l-email.png</icon>
 </service>

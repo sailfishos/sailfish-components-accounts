@@ -27,6 +27,7 @@ JollaListView {
                 //: accounts list view
                 //% "Accounts"
                 text: qsTrId("components_accounts-accounts_list_view-accounts")
+                color: theme.highlightColor
                 anchors.centerIn: parent
             }
         }
@@ -39,6 +40,9 @@ JollaListView {
             iconUrl: accountIcon
             topLabelText: providerDisplayName
             bottomLabelText: accountDisplayName
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: 20
         }
     }
 }

@@ -2,7 +2,7 @@
 <service-type id="microblogging">
   <name>Microblogging</name>
   <description>A service of this type provides short-form blogging capability</description>
-  <icon>icon-l-microblog.png</icon>
+  <icon>extensions/icons/icon-l-microblog.png</icon>
   <tags>
     <tag>microblog</tag>
     <tag>blog</tag>

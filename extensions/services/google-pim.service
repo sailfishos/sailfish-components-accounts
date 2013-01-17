@@ -3,7 +3,7 @@
     <type>PIM</type>
     <name>Google Contacts and Calendar</name>
     <provider>google</provider>
-    <icon>icon-l-google.png</icon>
+    <icon>extensions/icons/icon-l-google.png</icon>
 
     <template>
         <group name="auth">

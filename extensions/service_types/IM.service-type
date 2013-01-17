@@ -2,7 +2,7 @@
 <service-type id="IM">
   <name>Instant Messaging</name>
   <description>A service of this type provides instant messaging capabilities</description>
-  <icon>icon-l-messaging.png</icon>
+  <icon>extensions/icons/icon-l-messaging.png</icon>
   <tags>
     <tag>im</tag>
     <tag>messaging</tag>

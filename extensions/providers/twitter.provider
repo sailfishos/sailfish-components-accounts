@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <provider id="twitter">
     <name>Twitter</name>
-    <icon>icon-l-twitter.png</icon>
+    <icon>extensions/icons/icon-l-twitter.png</icon>
     <domains>.*twitter\.com</domains>
 
     <template>
@@ -13,7 +13,7 @@
                     <setting name="RequestEndpoint">https://api.twitter.com/oauth/request_token</setting>
                     <setting name="TokenEndpoint">https://api.twitter.com/oauth/access_token</setting>
                     <setting name="AuthorizationEndpoint">https://api.twitter.com/oauth/authorize</setting>
-                    <setting name="AllowedSchemes" type="as">["https";]</setting>
+                    <setting name="AllowedSchemes" type="as">["https"]</setting>
                     <setting name="Callback">https://www.jolla.com/</setting>
 <!--
                     The following must be provided by the application via:

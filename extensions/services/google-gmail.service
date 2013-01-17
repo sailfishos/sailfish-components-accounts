@@ -3,7 +3,7 @@
     <type>email</type>
     <name>GMail</name>
     <provider>google</provider>
-    <icon>icon-l-gmail.png</icon>
+    <icon>extensions/icons/icon-l-gmail.png</icon>
 
     <template>
         <group name="auth">

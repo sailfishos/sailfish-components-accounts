@@ -41,6 +41,7 @@ BackgroundItem {
             HeadingLabel {
                 id: topLabel
                 text: root.topLabelText
+                color: theme.primaryColor
                 font: root.labelFont
             }
             HeadingLabel {
@@ -56,6 +57,7 @@ BackgroundItem {
             id: label
             visible: root.bottomLabelText == ""
             text: root.topLabelText
+            color: theme.primaryColor
             anchors.verticalCenter: parent.verticalCenter
             font: root.labelFont
         }

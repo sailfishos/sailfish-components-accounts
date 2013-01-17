@@ -2,7 +2,7 @@
 <service-type id="sharing">
   <name>Sharing</name>
   <description>A service of this type allows images, videos, and other content to be shared</description>
-  <icon>icon-l-sharing.png</icon>
+  <icon>extensions/icons/icon-l-sharing.png</icon>
   <tags>
     <tag>share</tag>
     <tag>sharing</tag>
