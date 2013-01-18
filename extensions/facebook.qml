@@ -8,7 +8,7 @@ OAuthAccountCreationPage {
     _needsMechParamsAndSettings: false
     _needsCaption: false
 
-    // FOR TESTING PURPOSES ONLY - USES MEEGO CS and CId
-    _signonSessionData: {"ClientId":"213156715390803", "ClientSecret":"bf89c2d9de5e929fe5c5921e9a1f2924"}
+    // FOR TESTING PURPOSES ONLY
+    _signonSessionData: {"ClientId":"122816351223028", "ClientSecret":"3fc2a0e80c67f8343dc38ee8ef9dd2ff"}
     _signonServiceName: "facebook-sharing"
 }

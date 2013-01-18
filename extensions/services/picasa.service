@@ -14,9 +14,9 @@
                     <setting name="Host">accounts.google.com</setting>
                     <setting name="AuthPath">o/oauth2/auth</setting>
                     <setting name="TokenPath">o/oauth2/token</setting>
-                    <setting name="RedirectUri">urn:ietf:wg:oauth:2.0:oob</setting>
-                    <setting name="ResponseType">token</setting>
-                    <setting name="Scope" type="as">["https://picasaweb.google.com/data/"]</setting>
+                    <setting name="RedirectUri">http://localhost</setting>
+                    <setting name="ResponseType">code</setting>
+                    <setting name="Scope">https://picasaweb.google.com/data/</setting>
                     <setting name="AllowedSchemes" type="as">["https","http"]</setting>
 <!--
                     The following must be provided by the application via:

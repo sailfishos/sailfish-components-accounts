@@ -12,40 +12,25 @@ AccountCreationPage {
     property string __defaultServiceName: provider.serviceNames[0]
     property bool __isNewAccount: accountId == 0
 
+    // allow forward flick to save
+    forwardNavigation: true
+
     AccountHeader {
         id: header
         width: parent.width
-
         displayLabel: provider.displayName
         iconImageUrl: provider.iconName
+    }
 
-        // Left icon - cancel edit
-        ToolIcon {
-            iconSource: "image://theme/icon-header-cancel"
-            height: parent.height
-
-            y: parent.y - 15        // Battling implicit margins.
-            anchors {
-                left: parent.left
-                leftMargin: 10
+    QtObject {
+        id: saveFlickHandler
+        property int navigation: root._navigation
+        onNavigationChanged: {
+            if (navigation == PageNavigation.Forward) {
+                saveAccount()
+            } else if (navigation == PageNavigation.Back) {
+                cancel(true)
             }
-
-            onClicked: cancel()
-
-        }
-
-        // Right icon - save edit
-        ToolIcon {
-            iconSource: "image://theme/icon-header-accept"
-            height: parent.height
-
-            y: parent.y - 15        // Battling implicit margins.
-            anchors {
-                right: parent.right
-                rightMargin: 10
-            }
-
-            onClicked: saveAccount()
         }
     }
 
@@ -78,6 +63,7 @@ AccountCreationPage {
             TextField {
                 id: usernameText
                 width: root.width
+                anchors.right: usernameLabel.right
                 //: jabber account editor
                 //% "JabberID"
                 placeholderText: qsTrId("components_accounts-jabber_account_editor-jabberid_ph")
@@ -104,6 +90,7 @@ AccountCreationPage {
                 id: passwordText
                 width: root.width
                 echoMode: TextInput.PasswordEchoOnEdit
+                anchors.right: passwordLabel.right
                 //: jabber account editor
                 //% "password"
                 placeholderText: qsTrId("components_accounts-jabber_account_editor-password_ph")
@@ -128,8 +115,12 @@ AccountCreationPage {
     function cleanup() {
         if (__isNewAccount) {
             // error occurred, new account, attempt to remove everything we added.
-            _ident.remove()
-            _account.remove()
+            if (_ident) {
+                _ident.remove()
+            }
+            if (_account) {
+                _account.remove()
+            }
         }
     }
 
@@ -143,12 +134,13 @@ AccountCreationPage {
                 _ident.identifier = _account.identityIdentifier(__defaultServiceName) // if zero, will create new identity.
             } else if (status == Account.Synced) {
                 // success
+                root.accountId = _account.identifier
                 success()
             } else if (status == Account.Error) {
                 // display "error" dialog
                 console.log("ERROR creating jabber account!")
                 cleanup()
-                root.failure()
+                root.failure(true)
             }
         }
     }
@@ -172,7 +164,7 @@ AccountCreationPage {
                 // display "error" dialog
                 console.log("ERROR creating jabber identity!")
                 cleanup()
-                failure()
+                failure(true)
             }
         }
     }

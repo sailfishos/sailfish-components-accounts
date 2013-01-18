@@ -7,4 +7,9 @@ import org.nemomobile.signon 1.0
 OAuthAccountCreationPage {
     _needsMechParamsAndSettings: false
     _needsCaption: false
+
+    // FOR TESTING PURPOSES ONLY
+    _signonSessionData: {"ConsumerKey":"FxVs00m3hPvdC4tpla1yHA", "ConsumerSecret":"yxfwTU17VXcrtYPqWD941bQRsaHvgKdje6RlqOq07yA"}
+    _signonServiceName: "twitter-microblog"
+    _signonUserNameKey: "ScreenName"
 }

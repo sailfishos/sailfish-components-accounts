@@ -8,7 +8,7 @@ Image {
     property string displayLabel
 
     source: "image://theme/graphic-header"
-    height: 147
+    height: 80
 
     Column {
         id: col
@@ -20,7 +20,6 @@ Image {
             opacity: 0.5
             anchors.horizontalCenter: parent.horizontalCenter
             height: root.height - iconLabel.height
-            width: 120
             fillMode: Image.PreserveAspectCrop
             clip: visible
             source: root.iconImageUrl
@@ -38,6 +37,8 @@ Image {
             id: iconLabel
             text: root.displayLabel
             anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            truncationMode: TruncationMode.Fade
         }
     }
 }

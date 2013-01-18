@@ -12,42 +12,27 @@ AccountCreationPage {
     property string __defaultServiceName: provider.serviceNames[0]
     property bool __isNewAccount: accountId == 0
 
+    // allow forward flick to save
+    forwardNavigation: true
+
     AccountHeader {
         id: header
         width: parent.width
-
         displayLabel: provider.displayName
         iconImageUrl: provider.iconName
-
-        // Left icon - cancel edit
-        ToolIcon {
-            iconSource: "image://theme/icon-header-cancel"
-            height: parent.height
-
-            y: parent.y - 15        // Battling implicit margins.
-            anchors {
-                left: parent.left
-                leftMargin: 10
-            }
-
-            onClicked: cancel()
-
-        }
-
-        // Right icon - save edit
-        ToolIcon {
-            iconSource: "image://theme/icon-header-accept"
-            height: parent.height
-
-            y: parent.y - 15        // Battling implicit margins.
-            anchors {
-                right: parent.right
-                rightMargin: 10
-            }
-
-            onClicked: saveAccount()
-        }
     }
+
+    QtObject {
+        id: saveFlickHandler
+        property int navigation: root._navigation
+        onNavigationChanged: {
+            if (navigation == PageNavigation.Forward) {
+                saveAccount()
+            } else if (navigation == PageNavigation.Back) {
+                cancel(true) // already been popped // XXX TODO: incorrect.
+            }
+        }
+    }    
 
     JollaFlickable {
         id: flick
@@ -78,9 +63,11 @@ AccountCreationPage {
             TextField {
                 id: usernameText
                 width: root.width
+                anchors.right: usernameLabel.right
                 //: generic-email account editor
                 //% "email"
                 placeholderText: qsTrId("components_accounts-generic_email_account_editor-email_ph")
+                horizontalAlignment: Text.AlignRight
                 property bool hasChanged: false
                 onTextChanged: {
                     if (text != "" && !hasChanged) {
@@ -104,9 +91,11 @@ AccountCreationPage {
                 id: passwordText
                 width: root.width
                 echoMode: TextInput.PasswordEchoOnEdit
+                anchors.right: passwordLabel.right
                 //: generic-email account editor
                 //% "password"
                 placeholderText: qsTrId("components_accounts-generic_email_account_editor-password_ph")
+                horizontalAlignment: Text.AlignRight
                 property bool hasChanged: false
                 onTextChanged: {
                     if (text != "" && !hasChanged) {
@@ -128,8 +117,12 @@ AccountCreationPage {
     function cleanup() {
         if (__isNewAccount) {
             // error occurred, new account, attempt to remove everything we added.
-            _ident.remove()
-            _account.remove()
+            if (_ident) {
+                _ident.remove()
+            }
+            if (_account) {
+                _account.remove()
+            }
         }
     }
 
@@ -139,19 +132,18 @@ AccountCreationPage {
 
         onStatusChanged: {
             if (status == Account.Initialized && !__isNewAccount) {
-console.log("modifying, initialized account.")
                 usernameText.text = _account.displayName // we save the username in the display name.
                 _ident.identifier = _account.identityIdentifier(__defaultServiceName) // if zero, will create new identity.
             } else if (status == Account.Synced) {
-console.log("account is saved successfully.")
                 // success
-                success()
+                console.log("SUCCESS in creating email account")
+                root.accountId = _account.identifier
+                root.success(true) // saveAccount is only called after forwardStep so has been popped already
             } else if (status == Account.Error) {
-console.log("error creating account")
                 // display "error" dialog
                 console.log("ERROR creating email account!")
-                cleanup()
-                root.failure()
+                root.cleanup()
+                root.failure(true) // saveAccount is only called after forwardStep so has been popped already
             }
         }
     }
@@ -162,23 +154,20 @@ console.log("error creating account")
 
         onStatusChanged: {
             if (status == Identity.Initialized) {
-console.log("identity initialized")
                 usernameText.text = userName
                 passwordText.text = secret
             } else if (status == Identity.Synced) {
-console.log("identity synced.  syncing account")
-                _account.displayName = usernameText.text // XXX TODO: ensure this is correct...
+                _account.displayName = usernameText.text
                 for (var i in provider.serviceNames) {
                     _account.enableWithService(provider.serviceNames[i])
                     _account.setIdentityIdentifier(_ident.identifier, provider.serviceNames[i])
                 }
                 _account.sync()
             } else if (status == Identity.Error) {
-console.log("identity error")
                 // display "error" dialog
                 console.log("ERROR creating email identity!")
-                cleanup()
-                failure()
+                root.cleanup()
+                root.failure(true) // saveAccount is only called after forwardStep so has been popped already
             }
         }
     }

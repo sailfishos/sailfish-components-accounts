@@ -12,17 +12,11 @@ Page {
     property int accountId: 0
 
     // EVERY provider-specific account creation page MUST call this function on successful save completion.
-    function success() {
-        UiNavigation.openAccountSettingsPage(root, true, accountsModel, accountId)
-    }
+    signal success(bool hasPopped)
 
     // EVERY provider-specific account creation page MUST call this function on failure / error
-    function failure() {
-        pageStack.pop();
-    }
+    signal failure(bool hasPopped)
 
     // EVERY provider-specific account creation page MUST call this function on cancel
-    function cancel() {
-        pageStack.pop();
-    }
+    signal cancel(bool hasPopped)
 }

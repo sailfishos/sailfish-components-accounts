@@ -12,7 +12,6 @@ BackgroundItem {
     //--------------------
     
     height: childrenRect.height
-    width: childrenRect.width
 
     // implementation datail... invisible text object
     Text {
@@ -26,8 +25,10 @@ BackgroundItem {
 
     Row {
         id: accountDelegateRow
+        width: parent.width
         spacing: 12
         Image {
+            id: accountIcon
             source: root.iconUrl
             height: 80
             width: 80
@@ -37,18 +38,23 @@ BackgroundItem {
 
         Column {
             id: accountDelegateColumn
+            width: parent.width - accountIcon.width
             visible: root.bottomLabelText != ""
             HeadingLabel {
                 id: topLabel
                 text: root.topLabelText
                 color: theme.primaryColor
                 font: root.labelFont
+                width: parent.width
+                truncationMode: TruncationMode.Fade
             }
             HeadingLabel {
                 id: bottomLabel
                 text: root.bottomLabelText
                 color: theme.secondaryColor
                 font: root.labelFont
+                width: parent.width
+                truncationMode: TruncationMode.Fade
             }
         }
 
@@ -60,6 +66,8 @@ BackgroundItem {
             color: theme.primaryColor
             anchors.verticalCenter: parent.verticalCenter
             font: root.labelFont
+            width: parent.width - accountIcon.width
+            truncationMode: TruncationMode.Fade
         }
     }
 }

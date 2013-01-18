@@ -22,13 +22,6 @@ Page {
 
         PullDownMenu {
             MenuItem {
-                //: Edit the account password
-                //% "Edit Account";
-                text: qsTrId("accounts-me-edit_account")
-                onClicked: UiNavigation.openAccountCreationPage(root, false, accountsModel, _provider.name, _account.identifier)
-            }
-
-            MenuItem {
                 //: Deletes the account
                 //% "Delete Account";
                 text: qsTrId("accounts-me-delete_account")
@@ -52,7 +45,6 @@ Page {
                 left: parent.left
                 right: parent.right
                 top: header.bottom
-                bottom: accountNameText.bottom
                 margins: 20
             }
 
@@ -62,6 +54,7 @@ Page {
                 //: account settings page
                 //% "Account Name"
                 text: qsTrId("components_accounts-account_settings_page-account_name")
+                truncationMode: TruncationMode.Fade
                 anchors.right: parent.right
             }
             TextField {
@@ -81,8 +74,11 @@ Page {
         Grid {
             id: grid
             columns: 2
-            anchors.top: accountNameColumn.bottom
-            anchors.topMargin: 20
+            anchors {
+                top: accountNameColumn.bottom
+                right: accountNameColumn.right
+                left: accountNameColumn.left
+            }
 
             AccountDelegate {
                 id: accountDelegate
@@ -90,6 +86,7 @@ Page {
                 topLabelText: _provider.displayName
                 bottomLabelText: _account.displayName
                 labelFont: fontProvider.font
+                width: parent.width - globalEnableSwitch.width
             }
             Switch {
                 id: globalEnableSwitch
@@ -166,8 +163,9 @@ Page {
                 }
             }
 
-            serviceDelegateFactory.createObject(grid, { "service": service })
-            toggleFactory.createObject(grid, { "account": _account, "service": service, "checked": accountIsEnabledWithService })
+            var toggle = toggleFactory.createObject(null, { "account": _account, "service": service, "checked": accountIsEnabledWithService })
+            serviceDelegateFactory.createObject(grid, { "service": service, "width": (grid.width - toggle.width) })
+            toggle.parent = grid
         }
     }
 
@@ -185,8 +183,7 @@ Page {
                 }
             } else if (status == Account.Error) {
                 // display "error" dialog
-                cleanup();
-                pageStack.pop() // Failed.
+                cleanup() // no need to pop, as already popped due to forwardStep.
             } else if (status == Account.Invalid) {
                 if (_hasInited) {
                     console.log("Successfully deleted.")

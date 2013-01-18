@@ -15,6 +15,14 @@
                     <setting name="AuthorizationEndpoint">https://secure.flickr.com/services/oauth/authorize</setting>
                     <setting name="AllowedSchemes" type="as">["https","http"]</setting>
 <!--
+                    We use the facebook redirect_uri as it exists, and works.
+                    QML WebView doesn't update its url property if the redirect url
+                    fails to resolve or load, and thus we can't examine changes to
+                    it to determine if oauth2 was successful, if the redirect url
+                    doesn't actually work (in jolla-signon-ui).
+-->
+                    <setting name="Callback">https://www.facebook.com/connect/login_success.html</setting>
+<!--
                     The following must be provided by the application via:
                         serviceAccount.setConfigurationValue("auth/oauth2/HMAC-SHA1/ConsumerKey", consumer_key)
                         serviceAccount.setConfigurationValue("auth/oauth2/HMAC-SHA1/ConsumerSecret", consumer_secret)

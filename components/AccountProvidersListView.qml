@@ -24,8 +24,8 @@ JollaListView {
             height: 147 // XXX TODO: design
             HeadingLabel {
                 //: account providers list view
-                //% "Account Providers"
-                text: qsTrId("components_accounts-account_providers_list_view-account_providers")
+                //% "Providers"
+                text: qsTrId("components_accounts-account_providers_list_view-providers")
                 anchors.centerIn: parent
                 color: theme.highlightColor
            }
@@ -39,6 +39,9 @@ JollaListView {
             onClicked: parent.parent.providerClicked(providerName)
             iconUrl: providerIcon
             topLabelText: providerDisplayName
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: 20
         }
     }
 }

@@ -9,6 +9,7 @@ AccountCreationPage {
     // the following are for extension plugins to set (if required)
     property variant _signonSessionData // ClientId/ClientKey, ConsumerKey/ConsumerSecret, etc
     property string _signonServiceName  // Which service should be signed onto by default
+    property string _signonUserNameKey  // Which key in the response data is the username.  None by default.
     property bool _needsCaption: false
     property bool _needsMechParamsAndSettings: false // by default, the following three properties' values are prefilled from .provider file.
     property variant _oauthParameters
@@ -21,6 +22,8 @@ AccountCreationPage {
     // implementation details.
     property bool __isNewAccount: accountId == 0
     property bool __saveOnInit: false
+    property bool __hasCancelledOrError: false
+    property bool __hasSynced: false
 
     backNavigation: false
     forwardNavigation: false
@@ -47,7 +50,7 @@ AccountCreationPage {
 
             ToolIcon {
                 iconSource: "image://theme/icon-header-cancel"
-                onClicked: { root.cleanup(); root.cancel(); }
+                onClicked: cancelOrBackstep()
                 anchors {
                     top: parent.top
                     bottom: parent.bottom
@@ -58,11 +61,23 @@ AccountCreationPage {
         }
 
         Label {
+            id: centreLabel
             //: oauth account editor
             //% "Loading web page..."
-            text: qsTrId("components_accounts-oauth_account_editor-loading")
+            property string loadingString: qsTrId("components_accounts-oauth_account_editor-loading")
+            //: oauth account editor
+            //% "Error occurred:"
+            property string errorString: qsTrId("components_accounts-oauth_account_editor-error_occurred")            
+            text: loadingString
             font.family: theme.fontFamilyHeading
             anchors.centerIn: parent
+        }
+        Label {
+            id: errorLabel
+            text: ""
+            anchors.top: centreLabel.bottom
+            anchors.horizontalCenter: centreLabel.horizontalCenter
+            font.family: theme.fontFamilyHeading
         }
     }
 
@@ -74,7 +89,7 @@ AccountCreationPage {
             if (_needsMechParamsAndSettings) {
                 _ident.setMethodMechanisms("oauth2", [_mechanism])
             }
-            _ident.userName = "OAuth2" // can't save without it.
+            _ident.caption = "caption" // have to set either caption or username in order to save :-/
             _ident.sync()
         } else {
             __saveOnInit = true
@@ -85,12 +100,39 @@ AccountCreationPage {
         if (__isNewAccount) {
             // error occurred, new account, attempt to remove everything we added.
             if (_ident != null) {
+                serviceIdent.signOut()
                 _ident.remove()
             }
             if (_account != null) {
                 _account.remove()
             }
         }
+    }
+
+    function cancelOrBackstep() {
+        if (!__hasCancelledOrError) {
+            __hasCancelledOrError = true
+            cleanup()
+            cancel(false)
+        }
+    }
+
+    function errorOccurred(errorMessage) {
+        if (!__hasCancelledOrError) {
+            __hasCancelledOrError = true
+            cleanup()
+            centreLabel.text = centreLabel.errorString
+            errorLabel.text = errorMessage
+            errorTimer.start()
+        }
+    }
+
+    Timer {
+        id: errorTimer
+        interval: 4000 // 4 seconds.
+        repeat: false
+        triggeredOnStart: false
+        onTriggered: root.failure(false)
     }
 
     property Account _account: Account {
@@ -104,9 +146,7 @@ AccountCreationPage {
                 // Successfully created the identity+account.  Begin signon.
                 serviceIdent.identifier = _ident.identifier
             } else if (status == Account.Error) {
-                // display "error" dialog
-                cleanup()
-                root.failure()
+                errorOccurred(errorMessage)
             }
         }
     }
@@ -121,29 +161,27 @@ AccountCreationPage {
                     saveAccount()
                 }
             } else if (status == Identity.Synced) {
-                if (__isNewAccount) {
-                    _account.displayName = "New Account"
-                }
-                for (var i in provider.serviceNames) {
-                    _account.enableWithService(provider.serviceNames[i])
-                    _account.setIdentityIdentifier(_ident.identifier, provider.serviceNames[i])
-                }
-                if (_needsMechParamsAndSettings) {
-                    _account.setConfigurationValue("auth/method", "oauth2")
-                    _account.setConfigurationValue("auth/mechanism", _mechanism)
-                    var prefix = "auth/oauth2/" + _mechanism + "/"
-                    for (var i in _oauthParameters) {
-                        _account.setConfigurationValue(prefix + i, _oauthParameters[i])
+                if (!__hasSynced) {
+                    __hasSynced = true
+                    for (var i in provider.serviceNames) {
+                        _account.enableWithService(provider.serviceNames[i])
+                        _account.setIdentityIdentifier(_ident.identifier, provider.serviceNames[i])
                     }
-                    for (var i in _accountSettings) {
-                        _account.setConfigurationValue(i, _accountSettings[i])
+                    if (_needsMechParamsAndSettings) {
+                        _account.setConfigurationValue("auth/method", "oauth2")
+                        _account.setConfigurationValue("auth/mechanism", _mechanism)
+                        var prefix = "auth/oauth2/" + _mechanism + "/"
+                        for (var i in _oauthParameters) {
+                            _account.setConfigurationValue(prefix + i, _oauthParameters[i])
+                        }
+                        for (var i in _accountSettings) {
+                            _account.setConfigurationValue(i, _accountSettings[i])
+                        }
                     }
+                    _account.sync()
                 }
-                _account.sync()
             } else if (status == Identity.Error) {
-                // display "error" dialog
-                cleanup()
-                root.failure()
+                errorOccurred(errorMessage)
             }
         }
     }
@@ -168,14 +206,24 @@ AccountCreationPage {
                 // begin sign on procedure.
                 signIn(serviceAccount.authData.method, serviceAccount.authData.mechanism, adp)
             } else if (status == ServiceAccountIdentity.Error) {
-                console.log("Error occurred during authentication: " + errorMessage)
-                cleanup()
-                root.failure()
+                if (error == ServiceAccountIdentity.CanceledError) {
+                    cancelOrBackstep()
+                } else {
+                    errorOccurred(errorMessage)
+                }
             }
         }
 
         onResponseReceived: {
-            root.success() // Woohoo!
+            root.accountId = _account.identifier
+            if (_signonUserNameKey != "" && data["ScreenName"] != undefined) {
+                _ident.userName = data[_signonUserNameKey]
+                _account.displayName = data[_signonUserNameKey]
+                _ident.sync()
+                _account.sync()
+            }
+            serviceIdent.signOut()
+            success(false) // Woohoo!
         }
     }
 }

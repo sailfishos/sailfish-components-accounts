@@ -5,7 +5,6 @@ import org.nemomobile.accounts 1.0
 Page {
     id: root
 
-    backNavigation: false
     signal providerSelected(string providerName)
 
     AccountProviderModel { id: providerModel }

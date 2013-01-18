@@ -7,4 +7,8 @@ import org.nemomobile.signon 1.0
 OAuthAccountCreationPage {
     _needsMechParamsAndSettings: false
     _needsCaption: false
+
+    // FOR TESTING PURPOSES ONLY
+    _signonSessionData: {"ClientId":"785386950238.apps.googleusercontent.com", "ClientSecret":"AGvXY_RSUKMD3WYDVlwabcyF", "Scope":"https://www.googleapis.com/auth/calendar"}
+    _signonServiceName: "google-pim"
 }
