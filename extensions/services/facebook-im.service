@@ -17,7 +17,7 @@
                     <setting name="Host">www.facebook.com</setting>
                     <setting name="AuthPath">/dialog/oauth</setting>
                     <setting name="RedirectUri">https://www.facebook.com/connect/login_success.html</setting>
-                    <setting name="Scope">"xmpp_login"</setting>
+                    <setting name="Scope">xmpp_login</setting>
 <!--
                     The following must be provided by the application via:
                         serviceAccount.setConfigurationValue("auth/oauth2/user_agent/ClientId", client_id)

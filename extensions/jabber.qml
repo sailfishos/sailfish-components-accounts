@@ -67,6 +67,7 @@ AccountCreationPage {
                 //: jabber account editor
                 //% "JabberID"
                 placeholderText: qsTrId("components_accounts-jabber_account_editor-jabberid_ph")
+                horizontalAlignment: Text.AlignRight
                 property bool hasChanged: false
                 onTextChanged: {
                     if (text != "" && !hasChanged) {
@@ -94,6 +95,7 @@ AccountCreationPage {
                 //: jabber account editor
                 //% "password"
                 placeholderText: qsTrId("components_accounts-jabber_account_editor-password_ph")
+                horizontalAlignment: Text.AlignRight
                 property bool hasChanged: false
                 onTextChanged: {
                     if (text != "" && !hasChanged) {
@@ -135,12 +137,11 @@ AccountCreationPage {
             } else if (status == Account.Synced) {
                 // success
                 root.accountId = _account.identifier
-                success()
+                root.success(true) // saveAccount is only called after forwardStep so has been popped already
             } else if (status == Account.Error) {
                 // display "error" dialog
-                console.log("ERROR creating jabber account!")
-                cleanup()
-                root.failure(true)
+                root.cleanup()
+                root.failure(true) // saveAccount is only called after forwardStep so has been popped already
             }
         }
     }
@@ -154,7 +155,7 @@ AccountCreationPage {
                 usernameText.text = userName
                 passwordText.text = secret
             } else if (status == Identity.Synced) {
-                _account.displayName = usernameText.text // XXX TODO: ensure this is correct...
+                _account.displayName = usernameText.text
                 for (var i in provider.serviceNames) {
                     _account.enableWithService(provider.serviceNames[i])
                     _account.setIdentityIdentifier(_ident.identifier, provider.serviceNames[i])
@@ -162,9 +163,8 @@ AccountCreationPage {
                 _account.sync()
             } else if (status == Identity.Error) {
                 // display "error" dialog
-                console.log("ERROR creating jabber identity!")
-                cleanup()
-                failure(true)
+                root.cleanup()
+                root.failure(true) // saveAccount is only called after forwardStep so has been popped already
             }
         }
     }

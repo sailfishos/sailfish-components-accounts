@@ -4,7 +4,7 @@ import com.jolla.components.accounts 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 
-// email address / password, optional server address, select POP3/IMAP etc
+// JabberID / password, optional server address
 AccountCreationPage {
     id: root
 
@@ -29,10 +29,10 @@ AccountCreationPage {
             if (navigation == PageNavigation.Forward) {
                 saveAccount()
             } else if (navigation == PageNavigation.Back) {
-                cancel(true) // already been popped // XXX TODO: incorrect.
+                cancel(true)
             }
         }
-    }    
+    }
 
     JollaFlickable {
         id: flick
@@ -54,9 +54,9 @@ AccountCreationPage {
 
             Label {
                 id: usernameLabel
-                //: generic-email account editor
-                //% "Email Address"
-                text: qsTrId("components_accounts-generic_email_account_editor-email_address")
+                //: gtalk account editor
+                //% "Google Talk Email"
+                text: qsTrId("components_accounts-gtalk_account_editor-gtalk_email")
                 anchors.right: parent.right
             }
 
@@ -64,9 +64,9 @@ AccountCreationPage {
                 id: usernameText
                 width: root.width
                 anchors.right: usernameLabel.right
-                //: generic-email account editor
-                //% "email"
-                placeholderText: qsTrId("components_accounts-generic_email_account_editor-email_ph")
+                //: gtalk account editor
+                //% "username@gmail.com"
+                placeholderText: qsTrId("components_accounts-gtalk_account_editor-gtalk_email_ph")
                 horizontalAlignment: Text.AlignRight
                 property bool hasChanged: false
                 onTextChanged: {
@@ -81,9 +81,9 @@ AccountCreationPage {
 
             Label {
                 id: passwordLabel
-                //: generic-email account editor
+                //: gtalk account editor
                 //% "Password"
-                text: qsTrId("components_accounts-generic_email_account_editor-password")
+                text: qsTrId("components_accounts-gtalk_account_editor-password")
                 anchors.right: parent.right
             }
 
@@ -92,9 +92,9 @@ AccountCreationPage {
                 width: root.width
                 echoMode: TextInput.PasswordEchoOnEdit
                 anchors.right: passwordLabel.right
-                //: generic-email account editor
+                //: gtalk account editor
                 //% "password"
-                placeholderText: qsTrId("components_accounts-generic_email_account_editor-password_ph")
+                placeholderText: qsTrId("components_accounts-gtalk_account_editor-password_ph")
                 horizontalAlignment: Text.AlignRight
                 property bool hasChanged: false
                 onTextChanged: {

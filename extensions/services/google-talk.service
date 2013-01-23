@@ -7,19 +7,28 @@
 
     <!-- default settings (account settings have precedence over these) -->
     <template>
-        <group name="telepathy">
-            <setting name="manager">gabble</setting>
-            <setting name="protocol">jabber</setting>
-            <setting name="ConnectAutomatically" type="b">true</setting>
-            <setting name="server">talk.google.com</setting>
-            <setting name="port" type="i">5223</setting>
-            <setting name="old-ssl" type="b">true</setting>
-            <setting name="fallback-conference-server">conference.jabber.org</setting>
+        <group name="auth">
+            <setting name="method">oauth2</setting>
+            <setting name="mechanism">web_server</setting>
+            <group name="oauth2">
+                <group name="web_server">
+                    <setting name="Host">accounts.google.com</setting>
+                    <setting name="AuthPath">o/oauth2/auth</setting>
+                    <setting name="TokenPath">o/oauth2/token</setting>
+                    <setting name="RedirectUri">urn:ietf:wg:oauth:2.0:oob</setting>
+                    <setting name="ResponseType">code</setting>
+                    <setting name="Scope">https://www.googleapis.com/auth/googletalk</setting>
+                    <setting name="AllowedSchemes" type="as">["https"]</setting>
+<!--
+                    The following must be provided by the application via:
+                        serviceAccount.setConfigurationValue("auth/oauth2/user_agent/ClientId", client_id)
+                        serviceAccount.setConfigurationValue("auth/oauth2/user_agent/ClientSecret", client_secret)
+                    <setting name="ClientId">application_client_id</setting>
+                    <setting name="ClientSecret">application_client_secret</setting>
+-->
+                </group>
+            </group>
         </group>
 
-        <group name="auth">
-            <setting name="method">password</setting>
-            <setting name="mechanism">password</setting>
-        </group>
     </template>
 </service>
