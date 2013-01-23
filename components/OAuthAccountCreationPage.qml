@@ -67,7 +67,7 @@ AccountCreationPage {
             property string loadingString: qsTrId("components_accounts-oauth_account_editor-loading")
             //: oauth account editor
             //% "Error occurred:"
-            property string errorString: qsTrId("components_accounts-oauth_account_editor-error_occurred")            
+            property string errorString: qsTrId("components_accounts-oauth_account_editor-error_occurred")
             text: loadingString
             font.family: theme.fontFamilyHeading
             anchors.centerIn: parent
@@ -199,8 +199,9 @@ AccountCreationPage {
                 }
 
                 // also ensure that we set up embedding / etc correctly
-                adp["WindowId"] = container.windowId()
-                adp["Embedded"] = false // just use dialog mode
+                // XXX TODO: fix this (broken due to recent orientation changes)
+                //adp["WindowId"] = container.windowId()
+                //adp["Embedded"] = false // just use dialog mode
                 adp["Title"] = provider.displayName
 
                 // begin sign on procedure.
