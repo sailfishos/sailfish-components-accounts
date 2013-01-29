@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<service-type id="email">
+<service-type id="e-mail">
   <name>E-Mail</name>
   <description>A service of this type allows sending and receiving emails</description>
   <icon>extensions/icons/icon-l-email.png</icon>

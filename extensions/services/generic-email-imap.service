@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<service id="IMAP">
-    <type>email</type>
-    <provider>generic-email</provider>
-    <name>IMAP Email</name>
-    <icon>extensions/icons/icon-l-email.png</icon>
-</service>

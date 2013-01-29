@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <service id="google-gmail">
-    <type>email</type>
+    <type>e-mail</type>
     <name>GMail</name>
     <provider>google</provider>
     <icon>extensions/icons/icon-l-gmail.png</icon>
