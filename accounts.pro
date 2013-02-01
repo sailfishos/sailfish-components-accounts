@@ -9,20 +9,13 @@ QT += declarative
 CONFIG += plugin
 
 SOURCES += plugin.cpp
-OTHER_FILES += components/*.qml \
-               components/*.js \
-               extensions/*.qml \
-               extensions/icons/*.png \
-               extensions/services/*.service \
-               extensions/providers/*.provider \
-               settings/*.json \
-               settings/*.qml
+OTHER_FILES += *.qml qmldir
 
 TS_FILE = $$OUT_PWD/components_accounts.ts
 EE_QM = $$OUT_PWD/components_accounts_eng_en.qm
 
 translations.commands += lupdate $$PWD -ts $$TS_FILE
-translations.depends = $$PWD/components/*.qml
+translations.depends = $$PWD/*.qml
 translations.CONFIG += no_check_exist no_link
 translations.output = $$TS_FILE
 translations.input = .
@@ -47,29 +40,9 @@ import.files = qmldir
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 
-components.files = components/*qml components/*js
-components.path = $$TARGETPATH/components/
-
-extensions.files = extensions/*qml
-extensions.path = $$TARGETPATH/extensions/
-extensions_icons.files = extensions/icons/*
-extensions_icons.path = $$TARGETPATH/extensions/icons/
-
-providers.files = extensions/providers/*provider
-providers.path = /usr/share/accounts/providers/
-
-services.files = extensions/services/*service
-services.path = /usr/share/accounts/services/
-
-service_types.files = extensions/service_types/*service-type
-service_types.path = /usr/share/accounts/service_types/
-
-settings_entry.files = settings/accounts.json
-settings_entry.path = /usr/share/jolla-settings/entries/
-settings_page.files = settings/mainpage.qml
-settings_page.path = /usr/share/jolla-settings/pages/accounts/
-
+components.files = *.qml *.js qmldir
+components.path = $$TARGETPATH
 QMAKE_EXTRA_TARGETS += translations engineering_english
 PRE_TARGETDEPS += translations engineering_english
 
-INSTALLS += target import components extensions extensions_icons providers services service_types settings_entry settings_page translations_install engineering_english_install
+INSTALLS += target import components translations_install engineering_english_install

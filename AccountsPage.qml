@@ -203,7 +203,7 @@ Page {
         }
 
         // load the per-provider account creation page
-        var componentName = "../extensions/" + provider.name + ".qml"
+        var componentName = "/usr/share/accounts/ui/" + provider.name + ".qml"
         var comp = Qt.createComponent(componentName)
         if (comp.status != Component.Ready) {
             throw new Error("Error creating provider-specific account creation page for provider \'" + provider.name + "\': " + comp.errorString())

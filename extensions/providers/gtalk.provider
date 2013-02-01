@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE provider>
-<provider version="1.0" id="gtalk">
-    <name>Google Talk</name>
-    <description>Google Talk Provider</description>
-    <icon>extensions/icons/icon-l-google.png</icon>
-    <sign-up-link>www.google.com</sign-up-link>
-    <domains>.*google\.com</domains>   
-</provider>
