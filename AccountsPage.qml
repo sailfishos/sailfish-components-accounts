@@ -120,78 +120,49 @@ Page {
         }
     }
 
-    Component.onCompleted: pageStack.busyChanged.connect(maybePushMaybePop)
-
     // ----------------------------------
 
     property Item _accountSettings
     property Item _accountPicker
     property Item _accountCreator
-    property QtObject pushPage: null
-    property bool __needsPush: false
-    property bool __needsPop: false
-
     property Item _contextMenu
+
+    property int _pendingSettingsAccountId: -1
 
     function _acceptedAccountPicker() {
         openAccountCreationPage(_accountPicker.selectedProvider)
     }
 
     function continueAccountCreation(alreadyPopped) {
-        // "queue up" showing the account settings page.
-        //continueTimer.accountId = _accountCreator.accountId
-        //continueTimer.start()
-
         if (!alreadyPopped) {
-            pageStackPop()
+            pageStack.pop()
         }
-        openAccountSettingsPage(_accountCreator.accountId)
+        _pendingSettingsAccountId = _accountCreator.accountId
     }
 
     function cancelAccountCreation(alreadyPopped) {
         if (!alreadyPopped) {
-            pageStackPop()
+            pageStack.pop()
         }
         _accountCreator.destroy() // manually clean it up.
         _accountCreator = null
     }
 
-    function maybePushMaybePop() {
-        if (!pageStack.busy) {
-            if (__needsPop) {
-                __needsPop = false
-                pageStack.pop()
-            } else if (_accountSettings && __needsPush) {
-                __needsPush = false
-                pagePushTimer.start()
-            }
+    onStatusChanged: {
+        if (status == PageStatus.Active && _pendingSettingsAccountId >= 0) {
+            // don't open the account page immediately, that causes an animation binding loop in Page
+            openSettingsTimer.start()
         }
     }
 
     Timer {
-        id: pagePushTimer
+        id: openSettingsTimer
         interval: 1
-        repeat: false
-        triggeredOnStart: false
-        onTriggered: pageStack.push(pushPage)
-    }
-
-    function pageStackPush(whichPage) {
-        if (!pageStack.busy) {
-            __needsPush = false
-            pageStack.openDialog(whichPage)
-        } else {
-            __needsPush = true
-            pushPage = whichPage
-        }
-    }
-
-    function pageStackPop() {
-        if (!pageStack.busy) {
-            __needsPop = false
-            pageStack.pop()
-        } else {
-            __needsPop = true
+        onTriggered: {
+            if (_pendingSettingsAccountId >= 0) {
+                openAccountSettingsPage(_pendingSettingsAccountId)
+                _pendingSettingsAccountId = -1
+            }
         }
     }
 
@@ -239,6 +210,6 @@ Page {
             _accountCreator = null
         }
 
-        pageStackPush(_accountSettings)
+        pageStack.openDialog(_accountSettings)
     }
 }
