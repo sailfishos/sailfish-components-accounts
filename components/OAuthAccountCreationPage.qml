@@ -132,7 +132,11 @@ AccountCreationPage {
         interval: 4000 // 4 seconds.
         repeat: false
         triggeredOnStart: false
-        onTriggered: root.failure(false)
+        onTriggered: {
+            root.cleanup()
+            root.failure(false)
+        }
+
     }
 
     property Account _account: Account {
