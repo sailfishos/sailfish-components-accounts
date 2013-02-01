@@ -15,13 +15,6 @@ AccountCreationPage {
     // allow forward flick to save
     forwardNavigation: true
 
-    AccountHeader {
-        id: header
-        width: parent.width
-        displayLabel: provider.displayName
-        iconImageUrl: provider.iconName
-    }
-
     QtObject {
         id: saveFlickHandler
         property int navigation: root._navigation
@@ -36,21 +29,36 @@ AccountCreationPage {
 
     SilicaFlickable {
         id: flick
-        contentHeight: childrenRect.height
 
-        anchors {
-            top: header.bottom
-            left: parent.left
-            right: parent.right
-            bottom: parent.bottom
-            margins: 20
-        }
+        anchors.fill: parent
+        contentHeight: col.height
 
         Column {
             id: col
-            anchors.left: parent.left
-            anchors.right: parent.right
             spacing: 20
+
+            // XXX temporary, this page will be turned into a dialog
+            PageHeader {
+                title: "Accept"
+            }
+
+            Item {
+                width: flick.width
+                height: 80
+                Image {
+                    id: icon
+                    width: 64
+                    height: 64
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: provider.iconName
+                }
+                Label {
+                    anchors.left: icon.right
+                    anchors.leftMargin: 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: provider.displayName
+                }
+            }
 
             Label {
                 id: usernameLabel

@@ -5,45 +5,117 @@ import org.nemomobile.accounts 1.0
 Page {
     id: root
 
-    // if true, shows per-service accounts.
-    // if false, shows per-provider accounts.
-    property bool showServiceAccounts: false
+    AccountModel {
+        id: accountsModel
+    }
 
-    // ------------------------------------
+    AccountManager {
+        id: accountManager
+    }
 
-    AccountModel { id: accountsModel }
-    ServiceAccountModel { id: serviceAccountsModel }
+    Component {
+        id: contextMenuComponent
 
-    ServiceAccountsListView {
-        id: serviceAccountsListView
-        visible: showServiceAccounts == true
-        anchors.fill: parent
-        accountsModel: serviceAccountsModel
-        onAccountClicked: openAccountSettings(accountId)
+        ContextMenu {
+            id: menu
+            property int accountId
 
-        PullDownMenu {
             MenuItem {
-                //: Initiates adding a new account
-                //% "Add Account";
-                text: qsTrId("accounts-me-add_account")
-                onClicked: openProviderSelector()
+                //: Removes a user account
+                //% "Remove";
+                text: qsTrId("components_accounts-me-remove_account")
+                onClicked: {
+                    var account = accountManager.account(menu.accountId)
+                    if (account !== null) {
+                        account.remove()
+                    }
+                }
             }
         }
     }
 
-    AccountsListView {
-        id: accountsListView
-        visible: showServiceAccounts == false
+    SilicaListView {
+        id: accountsView
+
         anchors.fill: parent
-        accountsModel: accountsModel
-        onAccountClicked: openAccountSettings(accountId)
+        model: AccountModel {}
+        spacing: 24
+        header: PageHeader {
+            //: accounts list view
+            //% "Accounts"
+            title: qsTrId("components_accounts-he-accounts_list")
+        }
+
+        delegate: Item {
+            id: delegateItem
+
+            width: ListView.view.width
+            height: (root._contextMenu != null && root._contextMenu.parent === delegateItem)
+                    ? root._contextMenu.height + contentItem.height
+                    : contentItem.height
+
+            BackgroundItem {
+                id: contentItem
+
+                height: 80
+
+                onClicked: {
+                    root.openAccountSettingsPage(model.accountId)
+                }
+
+                onPressAndHold: {
+                    if (!root._contextMenu) {
+                        root._contextMenu = contextMenuComponent.createObject(accountsView, {"accountId": model.accountId})
+                    } else {
+                        root._contextMenu.accountId = model.accountId
+                    }
+                    root._contextMenu.show(delegateItem)
+                }
+
+                Image {
+                    id: icon
+                    x: 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 64
+                    height: 64
+                    source: model.accountIcon
+                }
+                Label {
+                    id: accountName
+                    anchors.left: icon.right
+                    anchors.leftMargin: 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
+                    text: model.providerDisplayName
+                }
+                Label {
+                    anchors.left: icon.right
+                    anchors.leftMargin: 24
+                    anchors.top: accountName.bottom
+                    text: model.accountDisplayName
+                    color: theme.secondaryColor
+                }
+            }
+        }
+
+        VerticalScrollDecorator {}
 
         PullDownMenu {
             MenuItem {
                 //: Initiates adding a new account
                 //% "Add Account";
-                text: qsTrId("accounts-me-add_account")
-                onClicked: openProviderSelector()
+                text: qsTrId("components_accounts-me-add_account")
+                onClicked: {
+                    if (_accountPicker === null) {
+                        var comp = Qt.createComponent("AccountProviderPickerDialog.qml")
+                        if (comp.status !== Component.Ready) {
+                            throw new Error(comp.errorString())
+                        }
+                        _accountPicker = comp.createObject(root)
+                        _accountPicker.accepted.connect(root._acceptedAccountPicker)
+                    }
+                    _accountPicker.open()
+                }
             }
         }
     }
@@ -52,47 +124,36 @@ Page {
 
     // ----------------------------------
 
-    property Component _app: AccountProvidersPage {}
-    property QtObject _psp // provider selection page
-    property QtObject _acp // account creation page
-    property QtObject _asp // account settings page
+    property Item _accountSettings
+    property Item _accountPicker
+    property Item _accountCreator
     property QtObject pushPage: null
     property bool __needsPush: false
     property bool __needsPop: false
 
-    function openProviderSelector() {
-        if (_psp == null) {
-            _psp = _app.createObject(root)
-            _psp.providerSelected.connect(openAccountCreator)
-        }
-        pageStackPush(_psp)
-    }
+    property Item _contextMenu
 
-    function openAccountSettings(accId) {
-        openAccountSettingsPage(accId)
-    }
-
-    function openAccountCreator(providerName) {
-        openAccountCreationPage(providerName, 0)        
+    function _acceptedAccountPicker() {
+        openAccountCreationPage(_accountPicker.selectedProvider)
     }
 
     function continueAccountCreation(alreadyPopped) {
         // "queue up" showing the account settings page.
-        //continueTimer.accountId = _acp.accountId
+        //continueTimer.accountId = _accountCreator.accountId
         //continueTimer.start()
 
         if (!alreadyPopped) {
             pageStackPop()
         }
-        openAccountSettingsPage(_acp.accountId)
+        openAccountSettingsPage(_accountCreator.accountId)
     }
 
     function cancelAccountCreation(alreadyPopped) {
         if (!alreadyPopped) {
             pageStackPop()
         }
-        _acp.destroy() // manually clean it up.
-        _acp = null
+        _accountCreator.destroy() // manually clean it up.
+        _accountCreator = null
     }
 
     function maybePushMaybePop() {
@@ -100,7 +161,7 @@ Page {
             if (__needsPop) {
                 __needsPop = false
                 pageStack.pop()
-            } else if (_asp && __needsPush) {
+            } else if (_accountSettings && __needsPush) {
                 __needsPush = false
                 pagePushTimer.start()
             }
@@ -118,7 +179,7 @@ Page {
     function pageStackPush(whichPage) {
         if (!pageStack.busy) {
             __needsPush = false
-            pageStack.push(whichPage)
+            pageStack.openDialog(whichPage)
         } else {
             __needsPush = true
             pushPage = whichPage
@@ -134,23 +195,11 @@ Page {
         }
     }
 
-    /* Factory Functions. */
-
-    // providerName OR accountId must be given, not both
-    function openAccountCreationPage(providerName, accountId) {
-        var provider = null
-        if (accountId == 0) {
-            // creating a new account.
-            provider = accountsModel.provider(providerName)
-            if (!provider) {
-                throw new Error("Unable to obtain provider with name: " + providerName)
-            }
-        } else {
-            // editing an existing account.
-            provider = accountsModel.provider(accountId)
-            if (!provider) {
-                throw new Error("Unable to ascertain provider for account with id: " + accountId)
-            }
+    function openAccountCreationPage(providerName) {
+        console.log("openAccountCreationPage()", providerName)
+        var provider = accountsModel.provider(providerName)
+        if (!provider) {
+            throw new Error("Unable to obtain provider with name: " + providerName)
         }
 
         // load the per-provider account creation page
@@ -160,38 +209,36 @@ Page {
             throw new Error("Error creating provider-specific account creation page for provider \'" + provider.name + "\': " + comp.errorString())
         }
 
-        if (_acp != null) {
-            _acp.destroy() // clean up old creation page, if it exists.  This shouldn't happen, in practice, as it should be cleaned up on cancel.
+        if (_accountCreator != null) {
+            _accountCreator.destroy() // clean up old creation page, if it exists.  This shouldn't happen, in practice, as it should be cleaned up on cancel.
         }
 
         // I want to use a Dialog for this, but cannot currently
         // because it doesn't allow specifying initial property values.
-        _acp = comp.createObject(root, { "accountsModel": accountsModel, "provider": provider, "accountId": accountId })
-        _acp.success.connect(continueAccountCreation)
-        _acp.failure.connect(cancelAccountCreation)
-        _acp.cancel.connect(cancelAccountCreation)
-        pageStack.replace(_acp) // replace provider selection page with account creation page.
+        _accountCreator = comp.createObject(root, { "accountsModel": accountsModel, "provider": provider })
+        _accountCreator.success.connect(continueAccountCreation)
+        _accountCreator.failure.connect(cancelAccountCreation)
+        _accountCreator.cancel.connect(cancelAccountCreation)
+        pageStack.replace(_accountCreator) // replace provider selection page with account creation page.
     }
 
-    // accountId MUST be non-zero
     function openAccountSettingsPage(accountId) {
-        var componentName = "AccountSettingsPage.qml"
-        var comp = Qt.createComponent(componentName)
-        if (comp.status != Component.Ready) {
+        console.log("\nopenAccountSettingsPage()", accountId)
+        var comp = Qt.createComponent("AccountSettingsDialog.qml")
+        if (comp.status !== Component.Ready) {
             throw new Error("Error creating account settings page for account \'" + accountId + "\': " + comp.errorString())
         }
+        if (_accountSettings !== null) {
+            _accountSettings.destroy()
+        }
+        _accountSettings = comp.createObject(root, {"accountId": accountId})
 
-        if (_acp != null) {
+        if (_accountCreator != null) {
             // must be a continuation of an account creation.
-            _acp.destroy()
-            _acp = null
+            _accountCreator.destroy()
+            _accountCreator = null
         }
 
-        if (_asp != null) {
-            _asp.destroy() // clean up old settings page.
-        }
-
-        _asp = comp.createObject(root, { "accountsModel": accountsModel, "accountId": accountId })
-        pageStackPush(_asp)
+        pageStackPush(_accountSettings)
     }
 }

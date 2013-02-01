@@ -1,45 +1,41 @@
 import QtQuick 1.1
 import Sailfish.Silica 1.0
-import org.nemomobile.accounts 1.0
-import org.nemomobile.signon 1.0
 
 SilicaListView {
-    id: root
 
-    property ServiceAccountModel accountsModel // must be provided by client
     signal accountClicked(int accountId)
 
-    model: accountsModel // default sort should be providerDisplayName alphabetical followed by serviceDisplayName alphabetical
-    currentIndex: -1 // otherwise the last-added item steals focus
-    delegate: delegateComponent
-    header: headerComponent
-    spacing: 20
+    header: PageHeader {
+        //: service accounts list view
+        //% "Service Accounts"
+        title: qsTrId("components_accounts-he-service_accounts_list")
+    }
 
-    ScrollDecorator {}
-
-    Component {
-        id: headerComponent
-        Item {
-            width: root.width
-            height: 147 // XXX TODO: get real design
-
-            HeadingLabel {
-                //: service accounts list view
-                //% "Service Accounts"
-                text: qsTrId("components_accounts-service_accounts_list_view-service_accounts")
-                anchors.centerIn: parent
-            }
+    delegate: Item {
+        Image {
+            id: icon
+            x: 24
+            anchors.verticalCenter: parent.verticalCenter
+            width: 64
+            height: 64
+            source: model.serviceIcon
+        }
+        Label {
+            id: accountName
+            anchors.left: icon.right
+            anchors.leftMargin: 24
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
+            text: model.serviceDisplayName
+        }
+        Label {
+            anchors.left: icon.right
+            anchors.leftMargin: 24
+            anchors.top: accountName.bottom
+            text: model.accountDisplayName
+            color: theme.secondaryColor
         }
     }
 
-    Component {
-        id: delegateComponent
-        AccountDelegate {
-            id: accountDelegate
-            onClicked: parent.parent.accountClicked(accountId)
-            iconUrl: serviceIcon
-            topLabelText: serviceDisplayName
-            bottomLabelText: accountDisplayName
-        }
-    }
+    VerticalScrollDecorator {}
 }

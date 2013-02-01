@@ -1,14 +1,8 @@
 plugin jollacomponentsaccountsplugin
 AccountCreationPage 1.0 components/AccountCreationPage.qml
-AccountDelegate 1.0 components/AccountDelegate.qml
-AccountHeader 1.0 components/AccountHeader.qml
-AccountProvidersListView 1.0 components/AccountProvidersListView.qml
-AccountProvidersPage 1.0 components/AccountProvidersPage.qml
-AccountSettingsPage 1.0 components/AccountSettingsPage.qml
-AccountsListView 1.0 components/AccountsListView.qml
+AccountProviderPickerDialog 1.0 components/AccountProviderPickerDialog.qml
+AccountSettingsDialog 1.0 components/AccountSettingsDialog.qml
 AccountsPage 1.0 components/AccountsPage.qml
-HeadingLabel 1.0 components/HeadingLabel.qml
 OAuthAccountCreationPage 1.0 components/OAuthAccountCreationPage.qml
 OAuthSignOnButton 1.0 components/OAuthSignOnButton.qml
 ServiceAccountsListView 1.0 components/ServiceAccountsListView.qml
-ServiceAccountsPage 1.0 components/ServiceAccountsPage.qml
