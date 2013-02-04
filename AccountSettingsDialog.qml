@@ -85,7 +85,7 @@ Dialog {
         Column {
             id: contentColumn
             width: parent.width
-            spacing: 24
+            spacing: theme.paddingLarge
 
             DialogHeader {
                 //: Save the account settings
@@ -96,11 +96,11 @@ Dialog {
             Item {
                 id: accountHeadingItem
                 width: parent.width
-                height: 80
+                height: theme.itemSizeSmall
 
                 Image {
                     id: accountIcon
-                    x: 24
+                    x: theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                     width: 64
                     height: 64
@@ -108,7 +108,7 @@ Dialog {
                 Label {
                     id: accountName
                     anchors.left: accountIcon.right
-                    anchors.leftMargin: 24
+                    anchors.leftMargin: theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Switch {
@@ -121,7 +121,7 @@ Dialog {
             }
 
             Item {
-                x: 24
+                x: theme.paddingLarge
                 width: 1
                 height: accountDisplayNameLabel.height + accountDisplayName.height
 
@@ -138,7 +138,7 @@ Dialog {
                     id: accountDisplayName
                     anchors.top: accountDisplayNameLabel.bottom
                     text: account.displayName
-                    width: contentColumn.width - 24*2
+                    width: contentColumn.width - theme.paddingLarge*2
 
                     //: Placeholder text for short name or summary for a user account
                     //% "Enter account name"
@@ -154,11 +154,11 @@ Dialog {
 
                     Item {
                         width: contentColumn.width
-                        height: 80
+                        height: theme.itemSizeSmall
 
                         Image {
                             id: serviceIcon
-                            x: 24
+                            x: theme.paddingLarge
                             anchors.verticalCenter: parent.verticalCenter
                             width: 64
                             height: 64
@@ -166,7 +166,7 @@ Dialog {
                         }
                         Label {
                             anchors.left: serviceIcon.right
-                            anchors.leftMargin: 24
+                            anchors.leftMargin: theme.paddingLarge
                             anchors.verticalCenter: parent.verticalCenter
                             text: model.name
                         }

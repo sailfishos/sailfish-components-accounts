@@ -28,7 +28,7 @@ Dialog {
 
         delegate: BackgroundItem {
             width: ListView.view.width
-            height: 80
+            height: theme.itemSizeSmall
             opacity: 0.75
 
             onClicked: {
@@ -38,7 +38,7 @@ Dialog {
 
             Image {
                 id: icon
-                x: 24
+                x: theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 width: 64
                 height: 64
@@ -46,7 +46,7 @@ Dialog {
             }
             Label {
                 anchors.left: icon.right
-                anchors.leftMargin: 24
+                anchors.leftMargin: theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.providerDisplayName
             }

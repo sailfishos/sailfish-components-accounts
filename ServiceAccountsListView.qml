@@ -7,7 +7,7 @@ SilicaListView {
 
     signal serviceClicked(int accountId, string serviceName)
 
-    spacing: 24
+    spacing: theme.paddingLarge
     model: ServiceAccountModel {}
 
     header: PageHeader {
@@ -18,11 +18,11 @@ SilicaListView {
 
     delegate: Item {
         width: ListView.view.width
-        height: 80
+        height: theme.itemSizeSmall
 
         Image {
             id: icon
-            x: 24
+            x: theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             width: 64
             height: 64
@@ -31,14 +31,14 @@ SilicaListView {
         Label {
             id: accountName
             anchors.left: icon.right
-            anchors.leftMargin: 24
+            anchors.leftMargin: theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
             text: model.serviceDisplayName
         }
         Label {
             anchors.left: icon.right
-            anchors.leftMargin: 24
+            anchors.leftMargin: theme.paddingLarge
             anchors.top: accountName.bottom
             text: model.accountDisplayName
             color: theme.secondaryColor

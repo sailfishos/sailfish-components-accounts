@@ -39,7 +39,7 @@ Page {
 
         anchors.fill: parent
         model: AccountModel {}
-        spacing: 24
+        spacing: theme.paddingLarge
         header: PageHeader {
             //: accounts list view
             //% "Accounts"
@@ -57,7 +57,7 @@ Page {
             BackgroundItem {
                 id: contentItem
 
-                height: 80
+                height: theme.itemSizeSmall
 
                 onClicked: {
                     root.openAccountSettingsPage(model.accountId)
@@ -74,7 +74,7 @@ Page {
 
                 Image {
                     id: icon
-                    x: 24
+                    x: theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                     width: 64
                     height: 64
@@ -83,14 +83,14 @@ Page {
                 Label {
                     id: accountName
                     anchors.left: icon.right
-                    anchors.leftMargin: 24
+                    anchors.leftMargin: theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
                     text: model.providerDisplayName
                 }
                 Label {
                     anchors.left: icon.right
-                    anchors.leftMargin: 24
+                    anchors.leftMargin: theme.paddingLarge
                     anchors.top: accountName.bottom
                     text: model.accountDisplayName
                     color: theme.secondaryColor

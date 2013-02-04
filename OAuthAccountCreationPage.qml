@@ -36,7 +36,7 @@ AccountCreationPage {
             id: topBar
             width: parent.width
             anchors.top: parent.top
-            height: 80
+            height: theme.itemSizeSmall
 
             Label {
                 text: provider.displayName
@@ -44,18 +44,18 @@ AccountCreationPage {
                 anchors {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
-                    margins: 10
+                    margins: theme.paddingMedium
                 }
             }
 
-            ToolIcon {
+            IconButton {
                 iconSource: "image://theme/icon-header-cancel"
                 onClicked: cancelOrBackstep()
                 anchors {
                     top: parent.top
                     bottom: parent.bottom
                     left: parent.left
-                    margins: 10
+                    margins: theme.paddingMedium
                 }
             }
         }
