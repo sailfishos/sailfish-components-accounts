@@ -159,13 +159,14 @@ Page {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
                     text: model.providerDisplayName
+                    color: contentItem.down ? theme.highlightColor : theme.primaryColor
                 }
                 Label {
                     anchors.left: icon.right
                     anchors.leftMargin: theme.paddingLarge
                     anchors.top: accountName.bottom
                     text: model.accountDisplayName
-                    color: theme.secondaryColor
+                    color: contentItem.down ? theme.secondaryHighlightColor : theme.secondaryColor
                 }
             }
         }

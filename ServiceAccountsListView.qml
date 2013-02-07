@@ -34,6 +34,7 @@ SilicaListView {
             anchors.leftMargin: theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
+            color: mouseArea.pressed ? theme.highlightColor : theme.primaryColor
             text: model.serviceDisplayName
         }
         Label {
@@ -41,9 +42,11 @@ SilicaListView {
             anchors.leftMargin: theme.paddingLarge
             anchors.top: accountName.bottom
             text: model.accountDisplayName
-            color: theme.secondaryColor
+            color: mouseArea.pressed ? theme.secondaryHighlightColor : theme.secondaryColor
         }
         MouseArea {
+            id: mouseArea
+
             anchors.fill: parent
             onClicked: root.serviceClicked(model.accountId, model.serviceName)
         }
