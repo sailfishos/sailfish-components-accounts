@@ -5,12 +5,83 @@ import org.nemomobile.accounts 1.0
 Page {
     id: root
 
+    property Item _newAccountSettings
+    property Item _accountCreator
+    property Item _contextMenu
+    property string _accountToCreate
+
+    function _createNewAccountSettings(properties) {
+        var comp = Qt.createComponent("AccountSettingsDialog.qml")
+        if (comp.status !== Component.Ready) {
+            throw new Error("Error creating account settings page: " + comp.errorString())
+        }
+        if (_newAccountSettings !== null) {
+            _newAccountSettings.destroy()
+        }
+        _newAccountSettings = comp.createObject(root, properties)
+        return _newAccountSettings
+    }
+
     AccountModel {
-        id: accountsModel
+        id: accountModel
     }
 
     AccountManager {
         id: accountManager
+    }
+
+    // This allows AccountSettingsDialog::accountId to be updated when AccountCreationDialog has
+    // successfully saved an account and created a valid accountId.
+    QtObject {
+        id: accountIdRef
+        property int accountId
+    }
+    Connections {
+        target: root._accountCreator
+        onAccountIdChanged: accountIdRef.accountId = root._accountCreator.accountId
+    }
+
+    Component {
+        id: authDialogComponent
+
+        Dialog {
+            id: authDialog
+
+            anchors.fill: parent
+            acceptDestination: root._createNewAccountSettings(
+                                   {"_accountIdRef": accountIdRef,
+                                    "acceptDestination": root,
+                                    "acceptDestinationAction": PageStackAction.Pop})
+            acceptDestinationAction: PageStackAction.Push
+
+            onStatusChanged: {
+                if (status === PageStatus.Active && root._accountToCreate !== "") {
+                    var provider = accountModel.provider(root._accountToCreate)
+                    if (!provider) {
+                        throw new Error("Unable to obtain provider with name: " + root._accountToCreate)
+                    }
+                    root._accountToCreate = ""
+                    if (root._accountCreator !== null) {
+                        root._accountCreator.destroy()
+                        root._accountCreator = null
+                    }
+                    var componentFileName = "/usr/share/accounts/ui/" + provider.name + ".qml"
+                    var comp = Qt.createComponent(componentFileName)
+                    if (comp.status === Component.Ready) {
+                        root._accountCreator = comp.createObject(authDialog, {
+                                "dialog": authDialog,
+                                "accountModel": accountModel,
+                                "provider": provider
+                            })
+                        if (root._accountCreator === null) {
+                            console.log("AccountsPage: cannot load instance of " + componentFileName + ":", comp.errorString())
+                        }
+                    } else {
+                        console.log("AccountsPage: cannot load component file " + componentFileName + ":", comp.errorString())
+                    }
+                }
+            }
+        }
     }
 
     Component {
@@ -60,7 +131,8 @@ Page {
                 height: theme.itemSizeSmall
 
                 onClicked: {
-                    root.openAccountSettingsPage(model.accountId)
+                    pageStack.openDialog(Qt.resolvedUrl("AccountSettingsDialog.qml"),
+                                         {"accountId": model.accountId})
                 }
 
                 onPressAndHold: {
@@ -106,110 +178,15 @@ Page {
                 //% "Add Account";
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: {
-                    if (_accountPicker === null) {
-                        var comp = Qt.createComponent("AccountPickerDialog.qml")
-                        if (comp.status !== Component.Ready) {
-                            throw new Error(comp.errorString())
-                        }
-                        _accountPicker = comp.createObject(root)
-                        _accountPicker.accepted.connect(root._acceptedAccountPicker)
-                    }
-                    _accountPicker.open()
+                    var picker = pageStack.openDialog(
+                                Qt.resolvedUrl("AccountPickerDialog.qml"),
+                                {"acceptDestination": authDialogComponent,
+                                 "acceptDestinationAction": PageStackAction.Replace})
+                    picker.accepted.connect(function() {
+                        root._accountToCreate = picker.selectedProvider
+                    })
                 }
             }
         }
-    }
-
-    // ----------------------------------
-
-    property Item _accountSettings
-    property Item _accountPicker
-    property Item _accountCreator
-    property Item _contextMenu
-
-    property int _pendingSettingsAccountId: -1
-
-    function _acceptedAccountPicker() {
-        openAccountCreationPage(_accountPicker.selectedProvider)
-    }
-
-    function continueAccountCreation(alreadyPopped) {
-        if (!alreadyPopped) {
-            pageStack.pop()
-        }
-        _pendingSettingsAccountId = _accountCreator.accountId
-    }
-
-    function cancelAccountCreation(alreadyPopped) {
-        if (!alreadyPopped) {
-            pageStack.pop()
-        }
-        _accountCreator.destroy() // manually clean it up.
-        _accountCreator = null
-    }
-
-    onStatusChanged: {
-        if (status == PageStatus.Active && _pendingSettingsAccountId >= 0) {
-            // don't open the account page immediately, that causes an animation binding loop in Page
-            openSettingsTimer.start()
-        }
-    }
-
-    Timer {
-        id: openSettingsTimer
-        interval: 1
-        onTriggered: {
-            if (_pendingSettingsAccountId >= 0) {
-                openAccountSettingsPage(_pendingSettingsAccountId)
-                _pendingSettingsAccountId = -1
-            }
-        }
-    }
-
-    function openAccountCreationPage(providerName) {
-        console.log("openAccountCreationPage()", providerName)
-        var provider = accountsModel.provider(providerName)
-        if (!provider) {
-            throw new Error("Unable to obtain provider with name: " + providerName)
-        }
-
-        // load the per-provider account creation page
-        var componentName = "/usr/share/accounts/ui/" + provider.name + ".qml"
-        var comp = Qt.createComponent(componentName)
-        if (comp.status != Component.Ready) {
-            throw new Error("Error creating provider-specific account creation page for provider \'" + provider.name + "\': " + comp.errorString())
-        }
-
-        if (_accountCreator != null) {
-            _accountCreator.destroy() // clean up old creation page, if it exists.  This shouldn't happen, in practice, as it should be cleaned up on cancel.
-        }
-
-        // I want to use a Dialog for this, but cannot currently
-        // because it doesn't allow specifying initial property values.
-        _accountCreator = comp.createObject(root, { "accountsModel": accountsModel, "provider": provider })
-        _accountCreator.success.connect(continueAccountCreation)
-        _accountCreator.failure.connect(cancelAccountCreation)
-        _accountCreator.cancel.connect(cancelAccountCreation)
-        pageStack.replace(_accountCreator) // replace provider selection page with account creation page.
-    }
-
-    function openAccountSettingsPage(accountId) {
-        console.log("\nopenAccountSettingsPage()", accountId)
-        var comp = Qt.createComponent("AccountSettingsDialog.qml")
-        if (comp.status !== Component.Ready) {
-            throw new Error("Error creating account settings page for account \'" + accountId + "\': " + comp.errorString())
-        }
-        if (_accountSettings !== null) {
-            _accountSettings.destroy()
-        }
-        _accountSettings = comp.createObject(root, {"accountId": accountId})
-
-        if (_accountCreator != null) {
-            // must be a continuation of an account creation.
-            _accountCreator.destroy()
-            _accountCreator = null
-        }
-
-        pageStack.openDialog(_accountSettings)
     }
 }

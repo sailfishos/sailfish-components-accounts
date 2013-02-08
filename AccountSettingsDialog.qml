@@ -5,39 +5,83 @@ import org.nemomobile.accounts 1.0
 Dialog {
     id: root
 
-    property int accountId: 0
+    property int accountId: _accountIdRef === null ? 0 : _accountIdRef.accountId
+    property QtObject _accountIdRef
+    property Account _account
 
-    onAccepted: {
-        item.save()
+    function _populateSettingsModel() {
+        if (_account === null) {
+            return
+        }
+        serviceModel.clear()
+        for (var i in _account.supportedServiceNames) {
+            var service = accountManager.service(_account.supportedServiceNames[i])
+            var serviceEnabled = false
+            console.log("XXX TODO: for some reason, the enabledServiceNames for any account seems empty.... FIXME!")
+            for (var j in _account.enabledServiceNames) {
+                if (_account.enabledServiceNames[j] === service.name) {
+                    serviceEnabled = true
+                    break
+                }
+            }
+            serviceModel.append({"name": service.name, "icon": service.iconName, "enabled": serviceEnabled})
+        }
     }
 
-    width: parent.width
+    anchors.fill: parent
 
-    sourceComponent: SilicaFlickable {
+    onAccountIdChanged: {
+        if (_account !== null) {
+            _account.destroy()
+        }
+        _account = accountComponent.createObject(root, {"identifier": accountId})
+    }
+
+    onAccepted: {
+        if (_account) {
+            _account.displayName = accountDisplayNameField.text
+            _account.sync()
+        }
+    }
+
+    // Use this to delay Account creation until we have a valid identifier.
+    // XXX fix Account type to delay loading until its identifier is set.
+    Component {
+        id: accountComponent
+
+        Account {
+            onStatusChanged: {
+                if (status === Account.Initialized) {
+                    var provider = accountManager.provider(providerName)
+                    if (provider) {
+                        accountName.text = provider.displayName
+                        accountIcon.source = provider.iconName
+                    }
+                    root._populateSettingsModel()
+                } else if (status === Account.Synced) {
+                    // success
+                } else if (status === Account.Error) {
+                    // display "error" dialog
+                } else if (status === Account.Invalid) {
+                    // successfully deleted
+                    root.reject()
+                }
+            }
+        }
+    }
+
+    AccountManager {
+        id: accountManager
+    }
+
+    ListModel {
+        id: serviceModel
+    }
+
+    SilicaFlickable {
         anchors.fill: parent
         contentWidth: width
         contentHeight: contentColumn.height
-
-        function save() {
-            account.displayName = accountDisplayName.text
-            account.sync()
-        }
-
-        function _populateSettingsModel() {
-            serviceModel.clear()
-            for (var i in account.supportedServiceNames) {
-                var service = accountManager.service(account.supportedServiceNames[i])
-                var serviceEnabled = false
-                console.log("XXX TODO: for some reason, the enabledServiceNames for any account seems empty.... FIXME!")
-                for (var j in account.enabledServiceNames) {
-                    if (account.enabledServiceNames[j] === service.name) {
-                        serviceEnabled = true
-                        break
-                    }
-                }
-                serviceModel.append({"name": service.name, "icon": service.iconName, "enabled": serviceEnabled})
-            }
-        }
 
         VerticalScrollDecorator {}
 
@@ -46,40 +90,12 @@ Dialog {
                 //: Deletes the account
                 //% "Delete Account";
                 text: qsTrId("accounts-me-delete_account")
-                onClicked: account.remove() // when removes successfully, will pop the page automatically.
-            }
-        }
-
-        Account {
-            id: account
-
-            identifier: root.accountId
-
-            onStatusChanged: {
-                if (status === Account.Initialized) {
-                    var provider = accountManager.provider(account.providerName)
-                    if (provider) {
-                        accountName.text = provider.displayName
-                        accountIcon.source = provider.iconName
+                onClicked: {
+                    if (root._account) {
+                        root._account.remove()
                     }
-                    _populateSettingsModel()
-
-                } else if (status === Account.Error) {
-                    // display "error" dialog
-
-                } else if (status === Account.Invalid) {
-                    // successfully deleted
-                    reject()
                 }
             }
-        }
-
-        AccountManager {
-            id: accountManager
-        }
-
-        ListModel {
-            id: serviceModel
         }
 
         Column {
@@ -114,16 +130,20 @@ Dialog {
                 Switch {
                     id: switchButton
                     anchors.right: parent.right
-                    checked: account.enabled
+                    checked: root._account !== null && root._account.enabled
 
-                    onCheckedChanged: account.enabled = checked
+                    onCheckedChanged: {
+                        if (root._account) {
+                            root._account.enabled = checked
+                        }
+                    }
                 }
             }
 
             Item {
                 x: theme.paddingLarge
                 width: 1
-                height: accountDisplayNameLabel.height + accountDisplayName.height
+                height: accountDisplayNameLabel.height + accountDisplayNameField.height
 
                 Label {
                     id: accountDisplayNameLabel
@@ -135,9 +155,9 @@ Dialog {
                 }
 
                 TextField {
-                    id: accountDisplayName
+                    id: accountDisplayNameField
                     anchors.top: accountDisplayNameLabel.bottom
-                    text: account.displayName
+                    text: root._account !== null ? root._account.displayName : ""
                     width: contentColumn.width - theme.paddingLarge*2
 
                     //: Placeholder text for short name or summary for a user account
@@ -174,10 +194,12 @@ Dialog {
                             anchors.right: parent.right
                             checked: model.enabled
                             onCheckedChanged: {
-                                if (checked) {
-                                    account.enableWithService(model.name)
-                                } else {
-                                    account.disableWithService(model.name)
+                                if (root._account !== null) {
+                                    if (checked) {
+                                        root._account.enableWithService(model.name)
+                                    } else {
+                                        root._account.disableWithService(model.name)
+                                    }
                                 }
                             }
                         }
