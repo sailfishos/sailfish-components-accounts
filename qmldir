@@ -1,6 +1,6 @@
 plugin jollacomponentsaccountsplugin
 AccountCreationPage 1.0 AccountCreationPage.qml
-AccountProviderPickerDialog 1.0 AccountProviderPickerDialog.qml
+AccountPickerDialog 1.0 AccountPickerDialog.qml
 AccountSettingsDialog 1.0 AccountSettingsDialog.qml
 AccountsPage 1.0 AccountsPage.qml
 OAuthAccountCreationPage 1.0 OAuthAccountCreationPage.qml

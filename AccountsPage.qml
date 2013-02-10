@@ -107,7 +107,7 @@ Page {
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: {
                     if (_accountPicker === null) {
-                        var comp = Qt.createComponent("AccountProviderPickerDialog.qml")
+                        var comp = Qt.createComponent("AccountPickerDialog.qml")
                         if (comp.status !== Component.Ready) {
                             throw new Error(comp.errorString())
                         }
