@@ -17,7 +17,6 @@ Dialog {
         for (var i in _account.supportedServiceNames) {
             var service = accountManager.service(_account.supportedServiceNames[i])
             var serviceEnabled = false
-            console.log("XXX TODO: for some reason, the enabledServiceNames for any account seems empty.... FIXME!")
             for (var j in _account.enabledServiceNames) {
                 if (_account.enabledServiceNames[j] === service.name) {
                     serviceEnabled = true
