@@ -10,7 +10,7 @@ Page {
     property Item _contextMenu
     property string _accountToCreate
 
-    function _reloadAccountSettings(properties) {
+    function _reloadAccountSettings(isNewAccount, properties) {
         var comp = Qt.createComponent("AccountSettingsDialog.qml")
         if (comp.status !== Component.Ready) {
             throw new Error("Error creating account settings page: " + comp.errorString())
@@ -19,7 +19,25 @@ Page {
             _accountSettings.destroy()
         }
         _accountSettings = comp.createObject(root, properties)
+        if (isNewAccount) {
+            _accountSettings.rejected.connect(function() {
+                _deleteAccount(_accountCreator.account)
+            })
+        }
         return _accountSettings
+    }
+
+    function _deleteAccount(accountObj) {
+        if (accountObj !== null) {
+            var identifiers = accountObj.identityIdentifiers
+            for (var serviceName in identifiers) {
+                var identityObj = identityManager.identity(identifiers[serviceName])
+                if (identityObj) {
+                    identityObj.remove()
+                }
+            }
+            accountObj.remove()
+        }
     }
 
     AccountModel {
@@ -48,7 +66,7 @@ Page {
             id: authDialog
 
             anchors.fill: parent
-            acceptDestination: root._reloadAccountSettings(
+            acceptDestination: root._reloadAccountSettings(true,
                                    {"_accountIdRef": accountIdRef,
                                     "acceptDestination": root,
                                     "acceptDestinationAction": PageStackAction.Pop})
@@ -131,7 +149,7 @@ Page {
                 height: theme.itemSizeSmall
 
                 onClicked: {
-                    pageStack.openDialog(root._reloadAccountSettings({"accountId": model.accountId}))
+                    pageStack.openDialog(root._reloadAccountSettings(false, {"accountId": model.accountId}))
                 }
 
                 onPressAndHold: {
