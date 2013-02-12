@@ -5,21 +5,21 @@ import org.nemomobile.accounts 1.0
 Page {
     id: root
 
-    property Item _newAccountSettings
+    property Item _accountSettings
     property Item _accountCreator
     property Item _contextMenu
     property string _accountToCreate
 
-    function _createNewAccountSettings(properties) {
+    function _reloadAccountSettings(properties) {
         var comp = Qt.createComponent("AccountSettingsDialog.qml")
         if (comp.status !== Component.Ready) {
             throw new Error("Error creating account settings page: " + comp.errorString())
         }
-        if (_newAccountSettings !== null) {
-            _newAccountSettings.destroy()
+        if (_accountSettings !== null) {
+            _accountSettings.destroy()
         }
-        _newAccountSettings = comp.createObject(root, properties)
-        return _newAccountSettings
+        _accountSettings = comp.createObject(root, properties)
+        return _accountSettings
     }
 
     AccountModel {
@@ -48,7 +48,7 @@ Page {
             id: authDialog
 
             anchors.fill: parent
-            acceptDestination: root._createNewAccountSettings(
+            acceptDestination: root._reloadAccountSettings(
                                    {"_accountIdRef": accountIdRef,
                                     "acceptDestination": root,
                                     "acceptDestinationAction": PageStackAction.Pop})
@@ -131,8 +131,7 @@ Page {
                 height: theme.itemSizeSmall
 
                 onClicked: {
-                    pageStack.openDialog(Qt.resolvedUrl("AccountSettingsDialog.qml"),
-                                         {"accountId": model.accountId})
+                    pageStack.openDialog(root._reloadAccountSettings({"accountId": model.accountId}))
                 }
 
                 onPressAndHold: {
