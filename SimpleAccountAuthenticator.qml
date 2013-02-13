@@ -78,22 +78,22 @@ AccountAuthenticator {
         id: flickable
 
         anchors.fill: parent
-        anchors.leftMargin: theme.paddingLarge
-        anchors.rightMargin: theme.paddingLarge
         contentHeight: contentColumn.height
 
         Column {
             id: contentColumn
 
             spacing: theme.paddingLarge
+            width: parent.width
 
             DialogHeader {
                 dialog: root.dialog
             }
 
             Item {
-                width: flickable.width
+                width: parent.width
                 height: theme.itemSizeSmall
+                x: theme.paddingLarge
 
                 Image {
                     id: icon
@@ -111,51 +111,35 @@ AccountAuthenticator {
             }
 
             Text {
-                width: flickable.width
+                x: theme.paddingLarge
+                width: parent.width - theme.paddingLarge
                 text: root.description
             }
 
-            Item {
-                width: 1
-                height: usernameLabel.height + usernameField.height
-
-                Label {
-                    id: usernameLabel
-                    text: root.usernameLabel
-                    color: theme.secondaryColor
-                }
-
-                TextField {
-                    id: usernameField
-                    anchors.top: usernameLabel.bottom
-                    width: flickable.width
-                    placeholderText: root.usernamePlaceholderText
-                    onTextChanged: root.username = text
-                    Keys.onReturnPressed: passwordField.focus = true
-                }
+            TextField {
+                id: usernameField
+                width: parent.width
+                placeholderText: root.usernamePlaceholderText
+                label: root.usernameLabel
+                onTextChanged: root.username = text
+                Keys.onReturnPressed: passwordField.focus = true
             }
 
-            Item {
-                width: 1
-                height: passwordLabel.height + passwordField.height
+            TextField {
+                id: passwordField
+                width: parent.width
+                inputMethodHints: Qt.ImhNoPredictiveText
+                echoMode: TextInput.Password
 
-                Label {
-                    id: passwordLabel
+                //: Password for account login action
+                //% "Password"
+                label: qsTrId("components_accounts-la-password")
 
-                    //: Password for account login action
-                    //% "Password"
-                    text: qsTrId("components_accounts-la-password")
-                    color: theme.secondaryColor
-                }
-                TextField {
-                    id: passwordField
-                    anchors.top: passwordLabel.bottom
-                    width: flickable.width
-                    inputMethodHints: Qt.ImhNoPredictiveText
-                    echoMode: TextInput.Password
-                    onTextChanged: root.password = text
-                    Keys.onReturnPressed: flickable.focus = true
-                }
+                //: Placeholder text for password of account login
+                //% "Enter password"
+                placeholderText: qsTrId("components_accounts-ph-password")
+                onTextChanged: root.password = text
+                Keys.onReturnPressed: flickable.focus = true
             }
         }
     }

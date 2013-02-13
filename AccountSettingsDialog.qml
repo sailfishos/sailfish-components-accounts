@@ -139,30 +139,18 @@ Dialog {
                 }
             }
 
-            Item {
-                x: theme.paddingLarge
-                width: 1
-                height: accountDisplayNameLabel.height + accountDisplayNameField.height
+            TextField {
+                id: accountDisplayNameField
+                text: root._account !== null ? root._account.displayName : ""
+                width: parent.width
 
-                Label {
-                    id: accountDisplayNameLabel
-                    color: theme.secondaryColor
+                //: Short name or summary for a user account
+                //% "Account Identification"
+                label: qsTrId("components_accounts-la-settings_account_name")
 
-                    //: Short name or summary for a user account
-                    //% "Account Identification"
-                    text: qsTrId("components_accounts-la-settings_account_name")
-                }
-
-                TextField {
-                    id: accountDisplayNameField
-                    anchors.top: accountDisplayNameLabel.bottom
-                    text: root._account !== null ? root._account.displayName : ""
-                    width: contentColumn.width - theme.paddingLarge*2
-
-                    //: Placeholder text for short name or summary for a user account
-                    //% "Enter account name"
-                    placeholderText: qsTrId("components_accounts-ph-settings_account_name")
-                }
+                //: Placeholder text for short name or summary for a user account
+                //% "Enter account name"
+                placeholderText: qsTrId("components_accounts-ph-settings_account_name")
             }
 
             Column {
