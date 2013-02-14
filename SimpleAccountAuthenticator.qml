@@ -19,7 +19,7 @@ AccountAuthenticator {
     property string username
     property string password
 
-    property Account account: Account {
+    account: Account {
         identifier: root.accountId
         providerName: root.accountId != 0 ? "" : provider.name
 

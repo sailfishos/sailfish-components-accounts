@@ -7,5 +7,6 @@ Item {
 
     property AccountModel accountModel
     property Provider provider
+    property Account account
     property int accountId: 0
 }

@@ -47,8 +47,8 @@ AccountAuthenticator {
                 serviceIdent.signOut()
                 ident.remove()
             }
-            if (_account != null) {
-                _account.remove()
+            if (account != null) {
+                account.remove()
             }
         }
     }
@@ -139,14 +139,13 @@ AccountAuthenticator {
         }
     }
 
-    Account {
-        id: _account
+    account: Account { // this property may be accessed by provider extension ui qml
         identifier: root.accountId
         providerName: root.accountId != 0 ? "" : root.provider.name
 
         onStatusChanged: {
             if (status === Account.Initialized && !__isNewAccount) {
-                ident.identifier = _account.identityIdentifier(_signonServiceName) // if zero, will create new identity.
+                ident.identifier = account.identityIdentifier(_signonServiceName) // if zero, will create new identity.
             } else if (status === Account.Synced) {
                 // Successfully created the identity+account.  Begin signon.
                 serviceIdent.identifier = ident.identifier
@@ -162,7 +161,7 @@ AccountAuthenticator {
 
     Identity {
         id: ident
-        identifier: root.accountId ? _account.identityIdentifier(_signonServiceName) : 0
+        identifier: root.accountId ? account.identityIdentifier(_signonServiceName) : 0
         identifierPending: root.accountId != 0
 
         onStatusChanged: {
@@ -174,21 +173,21 @@ AccountAuthenticator {
                 if (!__hasSynced) {
                     __hasSynced = true
                     for (var i in root.provider.serviceNames) {
-                        _account.enableWithService(root.provider.serviceNames[i])
-                        _account.setIdentityIdentifier(ident.identifier, root.provider.serviceNames[i])
+                        account.enableWithService(root.provider.serviceNames[i])
+                        account.setIdentityIdentifier(ident.identifier, root.provider.serviceNames[i])
                     }
                     if (_needsMechParamsAndSettings) {
-                        _account.setConfigurationValue("auth/method", "oauth2")
-                        _account.setConfigurationValue("auth/mechanism", _mechanism)
+                        account.setConfigurationValue("auth/method", "oauth2")
+                        account.setConfigurationValue("auth/mechanism", _mechanism)
                         var prefix = "auth/oauth2/" + _mechanism + "/"
                         for (var i in _oauthParameters) {
-                            _account.setConfigurationValue(prefix + i, _oauthParameters[i])
+                            account.setConfigurationValue(prefix + i, _oauthParameters[i])
                         }
                         for (var i in _accountSettings) {
-                            _account.setConfigurationValue(i, _accountSettings[i])
+                            account.setConfigurationValue(i, _accountSettings[i])
                         }
                     }
-                    _account.sync()
+                    account.sync()
                 }
             } else if (status === Identity.Error) {
                 root._errorOccurred(errorMessage)
@@ -200,7 +199,7 @@ AccountAuthenticator {
         id: serviceIdent
         onStatusChanged: {
             if (status === ServiceAccountIdentity.Initialized) {
-                var serviceAccount = accountMgr.serviceAccount(_account.identifier, _signonServiceName)
+                var serviceAccount = accountMgr.serviceAccount(account.identifier, _signonServiceName)
                 var adp = serviceAccount.authData.parameters
                 for (var i in _signonSessionData) {
                     adp[i] = _signonSessionData[i]
@@ -224,12 +223,12 @@ AccountAuthenticator {
         }
 
         onResponseReceived: {
-            root.accountId = _account.identifier
+            root.accountId = account.identifier
             if (_signonUserNameKey != "" && data["ScreenName"] != undefined) {
                 ident.userName = data[_signonUserNameKey]
-                _account.displayName = data[_signonUserNameKey]
+                account.displayName = data[_signonUserNameKey]
                 ident.sync()
-                _account.sync()
+                account.sync()
             }
             serviceIdent.signOut()
             root._closeDialog(DialogResult.Accepted)
