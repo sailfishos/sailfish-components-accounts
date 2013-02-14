@@ -89,17 +89,27 @@ Page {
 
         ContextMenu {
             id: menu
+
             property int accountId
+            property bool _removePending
 
             MenuItem {
                 //: Removes a user account
                 //% "Remove";
                 text: qsTrId("components_accounts-me-remove_account")
-                onClicked: {
-                    var account = accountManager.account(menu.accountId)
+
+                // delay deletion until menu is closed, otherwise deleting an accountsView item
+                // while its menu is closing will confuse accountsView's total height calculation
+                onClicked: menu._removePending = true
+            }
+
+            onVisibleChanged: {
+                if (!visible && _removePending) {
+                    var account = accountManager.account(accountId)
                     if (account !== null) {
                         account.remove()
                     }
+                    _removePending = false
                 }
             }
         }
