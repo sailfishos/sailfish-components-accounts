@@ -6,18 +6,14 @@ import org.nemomobile.signon 1.0
 AccountAuthenticator {
     id: root
 
-    // the following are for extension plugins to set (if required)
+    // The following are for extension plugins to set.
     property variant _signonSessionData // ClientId/ClientKey, ConsumerKey/ConsumerSecret, etc
     property string _signonServiceName  // Which service should be signed onto by default
-    property string _signonUserNameKey  // Which key in the response data is the username.  None by default.
-    property bool _needsCaption: false
-    property bool _needsMechParamsAndSettings: false // by default, the following three properties' values are prefilled from .provider file.
-    property variant _oauthParameters
-    property variant _accountSettings
-    property string _mechanism
+    // Extension plugins may also implement: function postSignIn(variant signInResponseData) {}
+    // If they implement this function, they _must_ call the postSignInFinished() function when finished.
+    // The implementation of postSignIn may (for example) set the user name appropriately.
 
-    // the following contains the available mechanisms.  _mechanism must be set to one of these.
-    property variant _mechanisms: ["user_agent", "web_server", "HMAC-SHA1", "PLAINTEXT", "RSA-SHA1"]
+    //--------------------------------
 
     // implementation details.
     property bool __isNewAccount: accountId == 0
@@ -30,9 +26,6 @@ AccountAuthenticator {
     function saveAccount() {
         if (ident.status == Identity.Initialized) {
             // we actually save the identity first.
-            if (_needsMechParamsAndSettings) {
-                ident.setMethodMechanisms("oauth2", [_mechanism])
-            }
             ident.caption = "caption" // have to set either caption or username in order to save :-/
             ident.sync()
         } else {
@@ -139,6 +132,10 @@ AccountAuthenticator {
         }
     }
 
+    AccountManager {
+        id: accountMgr
+    }
+
     account: Account { // this property may be accessed by provider extension ui qml
         identifier: root.accountId
         providerName: root.accountId != 0 ? "" : root.provider.name
@@ -153,10 +150,6 @@ AccountAuthenticator {
                 root._errorOccurred(errorMessage)
             }
         }
-    }
-
-    AccountManager {
-        id: accountMgr
     }
 
     Identity {
@@ -176,17 +169,6 @@ AccountAuthenticator {
                         account.enableWithService(root.provider.serviceNames[i])
                         account.setIdentityIdentifier(ident.identifier, root.provider.serviceNames[i])
                     }
-                    if (_needsMechParamsAndSettings) {
-                        account.setConfigurationValue("auth/method", "oauth2")
-                        account.setConfigurationValue("auth/mechanism", _mechanism)
-                        var prefix = "auth/oauth2/" + _mechanism + "/"
-                        for (var i in _oauthParameters) {
-                            account.setConfigurationValue(prefix + i, _oauthParameters[i])
-                        }
-                        for (var i in _accountSettings) {
-                            account.setConfigurationValue(i, _accountSettings[i])
-                        }
-                    }
                     account.sync()
                 }
             } else if (status === Identity.Error) {
@@ -205,8 +187,8 @@ AccountAuthenticator {
                     adp[i] = _signonSessionData[i]
                 }
 
-                // also ensure that we set up embedding / etc correctly
-                // XXX TODO: fix this (broken due to recent orientation changes)
+                // also ensure that we set up embedding / etc correctly:
+                //container.show()
                 //adp["WindowId"] = container.windowId()
                 //adp["Embedded"] = false // just use dialog mode
                 adp["Title"] = root.provider.displayName
@@ -224,14 +206,16 @@ AccountAuthenticator {
 
         onResponseReceived: {
             root.accountId = account.identifier
-            if (_signonUserNameKey != "" && data["ScreenName"] != undefined) {
-                ident.userName = data[_signonUserNameKey]
-                account.displayName = data[_signonUserNameKey]
-                ident.sync()
-                account.sync()
+            if (postSignIn != undefined && postSignIn != null) {
+                postSignIn(data)
+            } else {
+                postSignInFinished()
             }
-            serviceIdent.signOut()
-            root._closeDialog(DialogResult.Accepted)
         }
+    }
+
+    function postSignInFinished() {
+        serviceIdent.signOut()
+        root._closeDialog(DialogResult.Accepted)
     }
 }
