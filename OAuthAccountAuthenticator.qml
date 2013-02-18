@@ -99,11 +99,16 @@ AccountAuthenticator {
         root.dialog.statusChanged.connect(_dialogStatusChanged)
     }
 
-    SignOnUiContainer {
+    Component.onDestruction: {
+        jolla_signon_ui_service.inProcessParent = null // no longer servicing signon requests
+    }
+
+    Item {
         id: container
         anchors.fill: root
 
         PageHeader {
+            id: pageHeader
             //: Title of page for signing into a user account
             //% "Authentication"
             title: qsTrId("components_accounts-he-oauth_authentication")
@@ -129,6 +134,16 @@ AccountAuthenticator {
             anchors.horizontalCenter: centreLabel.horizontalCenter
             font.family: theme.fontFamilyHeading
             text: root.__errorMessage
+        }
+
+        Item {
+            id: webViewContainer
+            anchors {
+                top: pageHeader.bottom
+                bottom: parent.bottom
+                left: parent.left
+                right: parent.right
+            }
         }
     }
 
@@ -188,10 +203,10 @@ AccountAuthenticator {
                 }
 
                 // also ensure that we set up embedding / etc correctly:
-                //container.show()
-                //adp["WindowId"] = container.windowId()
-                //adp["Embedded"] = false // just use dialog mode
                 adp["Title"] = root.provider.displayName
+                adp["InProcessServiceName"] = "com.jolla.settings"
+                adp["InProcessObjectPath"] = "/JollaSettingsSignonUi"
+                jolla_signon_ui_service.inProcessParent = webViewContainer
 
                 // begin sign on procedure.
                 signIn(serviceAccount.authData.method, serviceAccount.authData.mechanism, adp)
@@ -206,12 +221,13 @@ AccountAuthenticator {
 
         onResponseReceived: {
             root.accountId = account.identifier
-            if (postSignIn != undefined && postSignIn != null) {
-                postSignIn(data)
-            } else {
-                postSignInFinished()
-            }
+            postSignIn(data)
         }
+    }
+
+    function postSignIn(data) {
+        // default implementation just calls finished function
+        postSignInFinished()
     }
 
     function postSignInFinished() {
