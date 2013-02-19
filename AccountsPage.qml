@@ -223,7 +223,7 @@ Page {
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: {
                     var picker = pageStack.openDialog(
-                                Qt.resolvedUrl("AccountPickerDialog.qml"),
+                                Qt.resolvedUrl("AccountProviderPickerDialog.qml"),
                                 {"acceptDestination": authDialogComponent,
                                  "acceptDestinationAction": PageStackAction.Replace})
                     picker.accepted.connect(function() {
