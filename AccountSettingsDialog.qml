@@ -7,7 +7,6 @@ Dialog {
 
     property int accountId: _accountIdRef === null ? 0 : _accountIdRef.accountId
     property QtObject _accountIdRef
-    property Account account
 
     function _populateSettingsModel() {
         serviceModel.clear()

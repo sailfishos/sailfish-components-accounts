@@ -139,10 +139,7 @@ Page {
 
             onVisibleChanged: {
                 if (!visible && _removePending) {
-                    var account = accountManager.account(accountId)
-                    if (account !== null) {
-                        account.remove()
-                    }
+                    root._deleteAccount(accountId)
                     _removePending = false
                 }
             }
