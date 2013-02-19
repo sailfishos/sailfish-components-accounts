@@ -232,5 +232,12 @@ Page {
                 }
             }
         }
+
+        ViewPlaceholder {
+            enabled: accountsView.count == 0
+
+            //% "Pull down to add accounts"
+            text: qsTrId("components_accounts-he-pull_down_to_add_account")
+        }
     }
 }
