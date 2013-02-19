@@ -48,7 +48,9 @@ Dialog {
                 // display "error" dialog
             } else if (status === Account.Invalid) {
                 // successfully deleted
-                root.reject()
+                if (root.status == PageStatus.Active) {
+                    root.reject()
+                }
             }
         }
     }
