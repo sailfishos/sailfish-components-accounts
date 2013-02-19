@@ -29,7 +29,6 @@ Dialog {
         delegate: BackgroundItem {
             width: ListView.view.width
             height: theme.itemSizeSmall
-            opacity: 0.75
 
             onClicked: {
                 root.selectedProvider = model.providerName

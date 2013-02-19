@@ -2,7 +2,6 @@ import QtQuick 1.1
 import Sailfish.Silica 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
-import org.nemomobile.accounts 1.0
 
 AccountAuthenticator {
     id: root
@@ -65,14 +64,7 @@ AccountAuthenticator {
     property string __defaultServiceName: provider.serviceNames[0]
     property bool __isNewAccount: accountId == 0
 
-
     anchors.fill: parent
-
-    onDialogChanged: {
-        dialog.backNavigation = true
-        dialog.forwardNavigation = true
-    }
-
 
     SilicaFlickable {
         id: flickable

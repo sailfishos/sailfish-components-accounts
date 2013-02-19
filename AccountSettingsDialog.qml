@@ -7,18 +7,15 @@ Dialog {
 
     property int accountId: _accountIdRef === null ? 0 : _accountIdRef.accountId
     property QtObject _accountIdRef
-    property Account _account
+    property Account account
 
     function _populateSettingsModel() {
-        if (_account === null) {
-            return
-        }
         serviceModel.clear()
-        for (var i in _account.supportedServiceNames) {
-            var service = accountManager.service(_account.supportedServiceNames[i])
+        for (var i in account.supportedServiceNames) {
+            var service = accountManager.service(account.supportedServiceNames[i])
             var serviceEnabled = false
-            for (var j in _account.enabledServiceNames) {
-                if (_account.enabledServiceNames[j] === service.name) {
+            for (var j in account.enabledServiceNames) {
+                if (account.enabledServiceNames[j] === service.name) {
                     serviceEnabled = true
                     break
                 }
@@ -27,44 +24,31 @@ Dialog {
         }
     }
 
-    anchors.fill: parent
-
-    onAccountIdChanged: {
-        if (_account !== null) {
-            _account.destroy()
-        }
-        _account = accountComponent.createObject(root, {"identifier": accountId})
-    }
-
     onAccepted: {
-        if (_account) {
-            _account.displayName = accountDisplayNameField.text
-            _account.sync()
-        }
+        account.displayName = accountDisplayNameField.text
+        account.sync()
     }
 
-    // Use this to delay Account creation until we have a valid identifier.
-    // XXX fix Account type to delay loading until its identifier is set.
-    Component {
-        id: accountComponent
+    Account {
+        id: account
 
-        Account {
-            onStatusChanged: {
-                if (status === Account.Initialized) {
-                    var provider = accountManager.provider(providerName)
-                    if (provider) {
-                        accountName.text = provider.displayName
-                        accountIcon.source = provider.iconName
-                    }
-                    root._populateSettingsModel()
-                } else if (status === Account.Synced) {
-                    // success
-                } else if (status === Account.Error) {
-                    // display "error" dialog
-                } else if (status === Account.Invalid) {
-                    // successfully deleted
-                    root.reject()
+        identifier: root.accountId
+
+        onStatusChanged: {
+            if (status === Account.Initialized) {
+                var provider = accountManager.provider(providerName)
+                if (provider) {
+                    accountName.text = provider.displayName
+                    accountIcon.source = provider.iconName
                 }
+                root._populateSettingsModel()
+            } else if (status === Account.Synced) {
+                // success
+            } else if (status === Account.Error) {
+                // display "error" dialog
+            } else if (status === Account.Invalid) {
+                // successfully deleted
+                root.reject()
             }
         }
     }
@@ -90,9 +74,7 @@ Dialog {
                 //% "Delete Account";
                 text: qsTrId("accounts-me-delete_account")
                 onClicked: {
-                    if (root._account) {
-                        root._account.remove()
-                    }
+                    account.remove()
                 }
             }
         }
@@ -129,19 +111,17 @@ Dialog {
                 Switch {
                     id: switchButton
                     anchors.right: parent.right
-                    checked: root._account !== null && root._account.enabled
+                    checked: account.enabled
 
                     onCheckedChanged: {
-                        if (root._account) {
-                            root._account.enabled = checked
-                        }
+                        account.enabled = checked
                     }
                 }
             }
 
             TextField {
                 id: accountDisplayNameField
-                text: root._account !== null ? root._account.displayName : ""
+                text: account.displayName
                 width: parent.width
 
                 //: Short name or summary for a user account
@@ -181,12 +161,10 @@ Dialog {
                             anchors.right: parent.right
                             checked: model.enabled
                             onCheckedChanged: {
-                                if (root._account !== null) {
-                                    if (checked) {
-                                        root._account.enableWithService(model.name)
-                                    } else {
-                                        root._account.disableWithService(model.name)
-                                    }
+                                if (checked) {
+                                    account.enableWithService(model.name)
+                                } else {
+                                    account.disableWithService(model.name)
                                 }
                             }
                         }
