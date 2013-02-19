@@ -1,6 +1,7 @@
 import QtQuick 1.1
 import Sailfish.Silica 1.0
 import org.nemomobile.accounts 1.0
+import org.nemomobile.signon 1.0
 
 Page {
     id: root
@@ -9,6 +10,7 @@ Page {
     property Item _accountCreator
     property Item _contextMenu
     property string _accountToCreate
+    property int _lastCreatedAccountId: -1
 
     function _reloadAccountSettings(isNewAccount, properties) {
         var comp = Qt.createComponent("AccountSettingsDialog.qml")
@@ -21,23 +23,29 @@ Page {
         _accountSettings = comp.createObject(root, properties)
         if (isNewAccount) {
             _accountSettings.rejected.connect(function() {
-                _deleteAccount(_accountCreator.account)
+                _deleteAccount(_lastCreatedAccountId)
             })
         }
         return _accountSettings
     }
 
-    function _deleteAccount(accountObj) {
-        if (accountObj !== null) {
-            var identifiers = accountObj.identityIdentifiers
-            for (var serviceName in identifiers) {
-                var identityObj = identityManager.identity(identifiers[serviceName])
-                if (identityObj) {
-                    identityObj.remove()
-                }
-            }
-            accountObj.remove()
+    function _deleteAccount(accountId) {
+        var account = accountManager.account(accountId)
+        if (account === null) {
+            return
         }
+        account.statusChanged.connect(function() {
+            if (account.status === Account.Initialized) {
+                var identifiers = account.identityIdentifiers
+                for (var serviceName in identifiers) {
+                    var identity = identityManager.identity(identifiers[serviceName])
+                    if (identity) {
+                        identity.remove()
+                    }
+                }
+                account.remove()
+            }
+        })
     }
 
     AccountModel {
@@ -48,6 +56,10 @@ Page {
         id: accountManager
     }
 
+    IdentityManager {
+        id: identityManager
+    }
+
     // This allows AccountSettingsDialog::accountId to be updated when AccountCreationDialog has
     // successfully saved an account and created a valid accountId.
     QtObject {
@@ -56,7 +68,10 @@ Page {
     }
     Connections {
         target: root._accountCreator
-        onAccountIdChanged: accountIdRef.accountId = root._accountCreator.accountId
+        onAccountIdChanged: {
+            root._lastCreatedAccountId = root._accountCreator.accountId
+            accountIdRef.accountId = root._lastCreatedAccountId
+        }
     }
 
     Component {
@@ -70,7 +85,7 @@ Page {
                                    {"_accountIdRef": accountIdRef,
                                     "acceptDestination": root,
                                     "acceptDestinationAction": PageStackAction.Pop})
-            acceptDestinationAction: PageStackAction.Push
+            acceptDestinationAction: PageStackAction.Replace
 
             onStatusChanged: {
                 if (status === PageStatus.Active && root._accountToCreate !== "") {
@@ -83,6 +98,7 @@ Page {
                         root._accountCreator.destroy()
                         root._accountCreator = null
                     }
+                    _lastCreatedAccountId = -1
                     var componentFileName = "/usr/share/accounts/ui/" + provider.name + ".qml"
                     var comp = Qt.createComponent(componentFileName)
                     if (comp.status === Component.Ready) {

@@ -48,7 +48,6 @@ AccountAuthenticator {
 
     function _cancel() {
         if (!__hasCancelledOrError) {
-            root.dialog.backNavigation = true
             __hasCancelledOrError = true
 
             _cleanUp()
@@ -58,7 +57,6 @@ AccountAuthenticator {
 
     function _errorOccurred(errorMessage) {
         if (!__hasCancelledOrError) {
-            root.dialog.backNavigation = true
             __hasCancelledOrError = true
 
             _cleanUp()
@@ -80,23 +78,17 @@ AccountAuthenticator {
         }
     }
 
-    function _dialogStatusChanged() {
-        if (status === PageStatus.Active) {
-            if (__hasCancelledOrError) {
-                root.dialog.forwardNavigation = false
-            }
-        }
-        if (__pendingResult >= 0) {
-            _closeDialog(__pendingResult)
-        }
+    Timer {
+        // can't set it immediately or else forward nav is not available later on
+        running: true
+        interval: 100
+        onTriggered: root.dialog.forwardNavigation = false
     }
 
     anchors.fill: parent
 
     Component.onCompleted: {
         saveAccount()
-        root.dialog.backNavigation = false
-        root.dialog.statusChanged.connect(_dialogStatusChanged)
     }
 
     Component.onDestruction: {
