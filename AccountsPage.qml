@@ -10,7 +10,6 @@ Page {
     property Item _accountCreator
     property Item _contextMenu
     property string _accountToCreate
-    property int _lastCreatedAccountId: -1
 
     function _reloadAccountSettings(isNewAccount, properties) {
         var comp = Qt.createComponent("AccountSettingsDialog.qml")
@@ -23,7 +22,7 @@ Page {
         _accountSettings = comp.createObject(root, properties)
         if (isNewAccount) {
             _accountSettings.rejected.connect(function() {
-                _deleteAccount(_lastCreatedAccountId)
+                _deleteAccount(lastCreatedAccountRef.accountId)
             })
         }
         return _accountSettings
@@ -48,6 +47,15 @@ Page {
         })
     }
 
+    function _cleanUpAccountCreation() {
+        if (_accountCreator !== null) {
+            _accountCreator.destroy()
+            _accountCreator = null
+        }
+        lastCreatedAccountRef.accountId = 0
+        _accountToCreate = ""
+    }
+
     AccountModel {
         id: accountModel
     }
@@ -63,15 +71,12 @@ Page {
     // This allows AccountSettingsDialog::accountId to be updated when AccountCreationDialog has
     // successfully saved an account and created a valid accountId.
     QtObject {
-        id: accountIdRef
+        id: lastCreatedAccountRef
         property int accountId
     }
     Connections {
         target: root._accountCreator
-        onAccountIdChanged: {
-            root._lastCreatedAccountId = root._accountCreator.accountId
-            accountIdRef.accountId = root._lastCreatedAccountId
-        }
+        onAccountIdChanged: lastCreatedAccountRef.accountId = root._accountCreator.accountId
     }
 
     Component {
@@ -82,7 +87,7 @@ Page {
 
             anchors.fill: parent
             acceptDestination: root._reloadAccountSettings(true,
-                                   {"_accountIdRef": accountIdRef,
+                                   {"_accountIdRef": lastCreatedAccountRef,
                                     "acceptDestination": root,
                                     "acceptDestinationAction": PageStackAction.Pop})
             acceptDestinationAction: PageStackAction.Replace
@@ -93,12 +98,6 @@ Page {
                     if (!provider) {
                         throw new Error("Unable to obtain provider with name: " + root._accountToCreate)
                     }
-                    root._accountToCreate = ""
-                    if (root._accountCreator !== null) {
-                        root._accountCreator.destroy()
-                        root._accountCreator = null
-                    }
-                    _lastCreatedAccountId = -1
                     var componentFileName = "/usr/share/accounts/ui/" + provider.name + ".qml"
                     var comp = Qt.createComponent(componentFileName)
                     if (comp.status === Component.Ready) {
@@ -219,6 +218,7 @@ Page {
                 //% "Add Account";
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: {
+                    root._cleanUpAccountCreation()
                     var picker = pageStack.openDialog(
                                 Qt.resolvedUrl("AccountProviderPickerDialog.qml"),
                                 {"acceptDestination": authDialogComponent,
