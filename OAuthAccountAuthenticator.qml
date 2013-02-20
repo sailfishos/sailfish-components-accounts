@@ -17,19 +17,19 @@ AccountAuthenticator {
 
     // implementation details.
     property bool __isNewAccount: accountId == 0
-    property bool __saveOnInit
     property bool __hasCancelledOrError
-    property bool __hasSynced
-    property int __pendingResult: -1
+    property bool __canSyncAccount
+    property bool __canSyncIdentity: true
     property string __errorMessage
 
-    function saveAccount() {
-        if (ident.status == Identity.Initialized) {
+    function _syncIdentity() {
+        if (__canSyncIdentity && ident.status == Identity.Initialized) {
+            __canSyncIdentity = false
+            __canSyncAccount = true
+
             // we actually save the identity first.
             ident.caption = "caption" // have to set either caption or username in order to save :-/
             ident.sync()
-        } else {
-            __saveOnInit = true
         }
     }
 
@@ -64,31 +64,13 @@ AccountAuthenticator {
         }
     }
 
-    function _closeDialog(result) {
-        if (status === PageStatus.Active) {
-            __pendingResult = -1
-            if (result === DialogResult.Accepted) {
-                root.dialog.forwardNavigation = true
-                root.dialog.accept()
-            } else {
-                root.dialog.reject()
-            }
-        } else {
-            __pendingResult = result
-        }
-    }
+    anchors.fill: parent
 
     Timer {
         // can't set it immediately or else forward nav is not available later on
         running: true
         interval: 100
         onTriggered: root.dialog.forwardNavigation = false
-    }
-
-    anchors.fill: parent
-
-    Component.onCompleted: {
-        saveAccount()
     }
 
     Component.onDestruction: {
@@ -166,12 +148,10 @@ AccountAuthenticator {
 
         onStatusChanged: {
             if (status == Identity.Initialized) {
-                if (__saveOnInit) {
-                    saveAccount()
-                }
+                root._syncIdentity()
             } else if (status === Identity.Synced) {
-                if (!__hasSynced) {
-                    __hasSynced = true
+                if (__canSyncAccount) {
+                    __canSyncAccount = false
                     for (var i in root.provider.serviceNames) {
                         account.enableWithService(root.provider.serviceNames[i])
                         account.setIdentityIdentifier(ident.identifier, root.provider.serviceNames[i])
@@ -181,6 +161,10 @@ AccountAuthenticator {
             } else if (status === Identity.Error) {
                 root._errorOccurred(errorMessage)
             }
+        }
+
+        Component.onCompleted: {
+            root._syncIdentity()
         }
     }
 
@@ -224,6 +208,7 @@ AccountAuthenticator {
 
     function postSignInFinished() {
         serviceIdent.signOut()
-        root._closeDialog(DialogResult.Accepted)
+        root.dialog.forwardNavigation = true
+        root.dialog.accept()
     }
 }
