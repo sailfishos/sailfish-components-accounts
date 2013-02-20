@@ -106,26 +106,32 @@ AccountAuthenticator {
             title: qsTrId("components_accounts-he-oauth_authentication")
         }
 
-        Label {
-            id: centreLabel
-
-            //: Message displayed when waiting for authentication web page to be loaded
-            //% "Loading web page..."
-            property string loadingString: qsTrId("components_accounts-la-oauth_loading_web_page")
-
-            //: Message displayed when error occurs during user authentication
-            //% "Error occurred:"
-            property string errorString: qsTrId("components_accounts-la-oauth_error")
-
-            text: root.__errorMessage === "" ? loadingString : errorString
-            font.family: theme.fontFamilyHeading
+        Column {
             anchors.centerIn: parent
-        }
-        Label {
-            anchors.top: centreLabel.bottom
-            anchors.horizontalCenter: centreLabel.horizontalCenter
-            font.family: theme.fontFamilyHeading
-            text: root.__errorMessage
+            width: parent.width - theme.paddingLarge*2
+            spacing: theme.paddingMedium
+
+            Label {
+                //: Message displayed when waiting for authentication web page to be loaded
+                //% "Loading web page..."
+                property string loadingString: qsTrId("components_accounts-la-oauth_loading_web_page")
+
+                //: Message displayed when error occurs during user authentication
+                //% "Error while loading:"
+                property string errorString: qsTrId("components_accounts-la-oauth_error")
+
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                font.family: theme.fontFamilyHeading
+                font.pixelSize: theme.fontSizeLarge
+                text: root.__errorMessage === "" ? loadingString : errorString
+            }
+            Label {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                font.family: theme.fontFamilyHeading
+                text: root.__errorMessage
+            }
         }
 
         Item {
