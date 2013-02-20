@@ -35,12 +35,15 @@ AccountAuthenticator {
 
     function _cleanUp() {
         if (__isNewAccount) {
-            // error occurred, new account, attempt to remove everything we added.
-            if (ident != null) {
-                serviceIdent.signOut()
-                ident.remove()
-            }
+            serviceIdent.signOut()
             if (account != null) {
+                var identifiers = account.identityIdentifiers
+                for (var serviceName in identifiers) {
+                    var identity = identityManager.identity(identifiers[serviceName])
+                    if (identity) {
+                        identity.remove()
+                    }
+                }
                 account.remove()
             }
         }
@@ -75,6 +78,15 @@ AccountAuthenticator {
 
     Component.onDestruction: {
         jolla_signon_ui_service.inProcessParent = null // no longer servicing signon requests
+    }
+
+    Connections {
+        target: root.dialog
+        onDone: {
+            if (result === DialogResult.Rejected) {
+                root._cleanUp()
+            }
+        }
     }
 
     Item {
