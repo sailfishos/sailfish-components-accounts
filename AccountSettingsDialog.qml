@@ -160,10 +160,26 @@ Dialog {
                             text: model.name
                         }
                         Switch {
+                            property bool isInitialised: false
                             anchors.right: parent.right
-                            checked: model.enabled
+                            checked: initialiseChecked()
+
+                            function initialiseChecked() {
+                                if (!isInitialised) {
+                                    isInitialised = true
+                                    if (root._isNewAccount) {
+                                        account.enableWithService(model.name)
+                                        return true
+                                    } else if (model.enabled) {
+                                        return true
+                                    }
+                                }
+
+                                return false
+                            }
+
                             onCheckedChanged: {
-                                if (checked || root._isNewAccount) {
+                                if (checked) {
                                     account.enableWithService(model.name)
                                 } else {
                                     account.disableWithService(model.name)

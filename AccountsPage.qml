@@ -22,7 +22,7 @@ Page {
 
         // by default, we enable all services in a new account.
         var modifiedProperties = properties
-        modifiedProperties["isNewAccount"] = isNewAccount
+        modifiedProperties["_isNewAccount"] = isNewAccount
         _accountSettings = comp.createObject(root, modifiedProperties)
         if (isNewAccount) {
             _accountSettings.rejected.connect(function() {
