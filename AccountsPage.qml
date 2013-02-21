@@ -19,7 +19,11 @@ Page {
         if (_accountSettings !== null) {
             _accountSettings.destroy()
         }
-        _accountSettings = comp.createObject(root, properties)
+
+        // by default, we enable all services in a new account.
+        var modifiedProperties = properties
+        modifiedProperties["isNewAccount"] = isNewAccount
+        _accountSettings = comp.createObject(root, modifiedProperties)
         if (isNewAccount) {
             _accountSettings.rejected.connect(function() {
                 _deleteAccount(lastCreatedAccountRef.accountId)

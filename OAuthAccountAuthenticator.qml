@@ -171,7 +171,7 @@ AccountAuthenticator {
                 if (__canSyncAccount) {
                     __canSyncAccount = false
                     for (var i in root.provider.serviceNames) {
-                        account.enableWithService(root.provider.serviceNames[i])
+                        account.disableWithService(root.provider.serviceNames[i]) // ensure disabled until Save in Settings page.
                         account.setIdentityIdentifier(ident.identifier, root.provider.serviceNames[i])
                     }
                     account.sync()

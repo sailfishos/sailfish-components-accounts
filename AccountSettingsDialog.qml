@@ -7,6 +7,7 @@ Dialog {
 
     property int accountId: _accountIdRef === null ? 0 : _accountIdRef.accountId
     property QtObject _accountIdRef
+    property bool _isNewAccount: false
 
     function _populateSettingsModel() {
         serviceModel.clear()
@@ -162,7 +163,7 @@ Dialog {
                             anchors.right: parent.right
                             checked: model.enabled
                             onCheckedChanged: {
-                                if (checked) {
+                                if (checked || root._isNewAccount) {
                                     account.enableWithService(model.name)
                                 } else {
                                     account.disableWithService(model.name)
