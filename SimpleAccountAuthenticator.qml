@@ -6,8 +6,8 @@ import org.nemomobile.signon 1.0
 AccountAuthenticator {
     id: root
 
-    property string name: provider.displayName
-    property string iconSource: provider.iconName
+    property string name: provider ? provider.displayName : ""
+    property string iconSource: provider ? provider.iconName : ""
     property string description
 
     //: Username for account login action
@@ -20,7 +20,7 @@ AccountAuthenticator {
 
     account: Account {
         identifier: root.accountId
-        providerName: root.accountId != 0 ? "" : provider.name
+        providerName: root.accountId != 0 ? "" : (provider ? provider.name : "")
 
         onStatusChanged: {
             if (status === Account.Initialized && !root.__isNewAccount) {
@@ -61,7 +61,7 @@ AccountAuthenticator {
     }
 
     // implementation details.
-    property string __defaultServiceName: provider.serviceNames[0]
+    property string __defaultServiceName: provider ? provider.serviceNames[0] : ""
     property bool __isNewAccount: accountId == 0
 
     anchors.fill: parent

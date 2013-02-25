@@ -145,7 +145,7 @@ AccountAuthenticator {
 
     account: Account { // this property may be accessed by provider extension ui qml
         identifier: root.accountId
-        providerName: root.accountId != 0 ? "" : root.provider.name
+        providerName: root.accountId != 0 ? "" : (root.provider ? root.provider.name : "")
 
         onStatusChanged: {
             if (status === Account.Initialized && !__isNewAccount) {
