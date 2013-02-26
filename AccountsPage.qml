@@ -11,11 +11,18 @@ Page {
     property Item _contextMenu
     property string _accountToCreate
 
-    function _reloadAccountSettings(isNewAccount, properties) {
-        var comp = Qt.createComponent("AccountSettingsDialog.qml")
+    function _reloadAccountSettings(isNewAccount, providerName, properties) {
+        var componentFileName = "/usr/share/accounts/ui/" + providerName + "-settings.qml"
+        var comp = Qt.createComponent(componentFileName)
         if (comp.status !== Component.Ready) {
-            throw new Error("Error creating account settings page: " + comp.errorString())
+            // unable to create provider-specific settings page; create the default one instead
+            console.log("Unable to create provider-specific settings page: " + comp.errorString())
+            comp = Qt.createComponent("AccountSettingsDialog.qml")
+            if (comp.status !== Component.Ready) {
+                throw new Error("Error creating default account settings page: " + comp.errorString())
+            }
         }
+
         if (_accountSettings !== null) {
             _accountSettings.destroy()
         }
@@ -89,8 +96,10 @@ Page {
         Dialog {
             id: authDialog
 
+            property string _providerName
+
             anchors.fill: parent
-            acceptDestination: root._reloadAccountSettings(true,
+            acceptDestination: root._reloadAccountSettings(true, _providerName,
                                    {"_accountIdRef": lastCreatedAccountRef,
                                     "acceptDestination": root,
                                     "acceptDestinationAction": PageStackAction.Pop})
@@ -102,7 +111,8 @@ Page {
                     if (!provider) {
                         throw new Error("Unable to obtain provider with name: " + root._accountToCreate)
                     }
-                    var componentFileName = "/usr/share/accounts/ui/" + provider.name + ".qml"
+                    _providerName = provider.name
+                    var componentFileName = "/usr/share/accounts/ui/" + _providerName + ".qml"
                     var comp = Qt.createComponent(componentFileName)
                     if (comp.status === Component.Ready) {
                         root._accountCreator = comp.createObject(authDialog, {
@@ -175,7 +185,9 @@ Page {
                 height: theme.itemSizeSmall
 
                 onClicked: {
-                    pageStack.openDialog(root._reloadAccountSettings(false, {"accountId": model.accountId}))
+                    pageStack.openDialog(root._reloadAccountSettings(false,
+                            accountModel.provider(model.accountId).name,
+                            {"accountId": model.accountId}))
                 }
 
                 onPressAndHold: {
