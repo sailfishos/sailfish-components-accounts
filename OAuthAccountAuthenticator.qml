@@ -198,8 +198,8 @@ AccountAuthenticator {
 
                 // also ensure that we set up embedding / etc correctly:
                 adp["Title"] = root.provider.displayName
-                adp["InProcessServiceName"] = "com.jolla.settings"
-                adp["InProcessObjectPath"] = "/JollaSettingsSignonUi"
+                adp["InProcessServiceName"] = jolla_signon_ui_service.inProcessServiceName
+                adp["InProcessObjectPath"] = jolla_signon_ui_service.inProcessObjectPath
                 jolla_signon_ui_service.inProcessParent = webViewContainer
 
                 // begin sign on procedure.
