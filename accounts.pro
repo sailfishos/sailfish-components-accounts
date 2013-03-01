@@ -8,7 +8,8 @@ TARGETPATH = $$[QT_INSTALL_IMPORTS]/$$MODULENAME
 QT += declarative
 CONFIG += plugin
 
-SOURCES += plugin.cpp
+SOURCES += plugin.cpp encodedkeyprovider.cpp
+HEADERS += encodedkeyprovider_p.h
 OTHER_FILES += *.qml qmldir
 
 TS_FILE = $$OUT_PWD/components_accounts.ts
