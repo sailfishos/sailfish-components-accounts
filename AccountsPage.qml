@@ -185,7 +185,7 @@ Page {
                 height: theme.itemSizeSmall
 
                 onClicked: {
-                    pageStack.openDialog(root._reloadAccountSettings(false,
+                    pageStack.push(root._reloadAccountSettings(false,
                             accountModel.provider(model.accountId).name,
                             {"accountId": model.accountId}))
                 }
@@ -235,7 +235,7 @@ Page {
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: {
                     root._cleanUpAccountCreation()
-                    var picker = pageStack.openDialog(
+                    var picker = pageStack.push(
                                 Qt.resolvedUrl("AccountProviderPickerDialog.qml"),
                                 {"acceptDestination": authDialogComponent,
                                  "acceptDestinationAction": PageStackAction.Replace})
