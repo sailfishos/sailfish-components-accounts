@@ -5,14 +5,10 @@ import org.nemomobile.accounts 1.0
 Dialog {
     id: root
 
-    property string selectedProvider
+    signal providerSelected(string providerName)
 
     AccountProviderModel {
         id: providerModel
-    }
-
-    onRejected: {
-        selectedProvider = ""
     }
 
     sourceComponent: SilicaListView {
@@ -31,7 +27,7 @@ Dialog {
             height: theme.itemSizeSmall
 
             onClicked: {
-                root.selectedProvider = model.providerName
+                providerSelected(model.providerName)
                 root.accept()
             }
 

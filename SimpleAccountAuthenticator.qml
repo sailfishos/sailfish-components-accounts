@@ -32,7 +32,10 @@ AccountAuthenticator {
             } else if (status === Account.Error) {
                 // XXX display "error" dialog?
                 console.log("SimpleAccountAuthenticator account error:", errorMessage)
-                root.dialog.reject()
+                if (root.dialog.result !== DialogResult.Rejected) {
+                    // only reject if not already rejected
+                    root.dialog.reject()
+                }
             }
         }
     }
@@ -55,7 +58,10 @@ AccountAuthenticator {
             } else if (status === Identity.Error) {
                 // XXX display "error" dialog?
                 console.log("SimpleAccountAuthenticator identity error:", errorMessage)
-                root.dialog.reject()
+                if (root.dialog.result !== DialogResult.Rejected) {
+                    // only reject if not already rejected
+                    root.dialog.reject()
+                }
             }
         }
     }

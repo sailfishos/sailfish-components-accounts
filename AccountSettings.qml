@@ -2,9 +2,11 @@ import QtQuick 1.1
 import Sailfish.Silica 1.0
 import org.nemomobile.accounts 1.0
 
-Dialog {
+Item {
     id: root
+    anchors.fill: parent
 
+    property Dialog dialog // provided by AccountsPage.qml
     property int accountId: _accountIdRef === null ? 0 : _accountIdRef.accountId
     property QtObject _accountIdRef
     property bool _isNewAccount: false
@@ -24,9 +26,12 @@ Dialog {
         }
     }
 
-    onAccepted: {
-        account.displayName = accountDisplayNameField.text
-        account.sync()
+    Connections {
+        target: dialog
+        onAccepted: {
+            account.displayName = accountDisplayNameField.text
+            account.sync()
+        }
     }
 
     Account {

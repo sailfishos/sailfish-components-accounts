@@ -52,16 +52,16 @@ AccountAuthenticator {
     function _cancel() {
         if (!__hasCancelledOrError) {
             __hasCancelledOrError = true
-
             _cleanUp()
-            root.dialog.reject()
+            if (root.dialog !== null) {
+                root.dialog.reject()
+            }
         }
     }
 
     function _errorOccurred(errorMessage) {
         if (!__hasCancelledOrError) {
             __hasCancelledOrError = true
-
             _cleanUp()
             root.__errorMessage = errorMessage
         }
@@ -69,11 +69,9 @@ AccountAuthenticator {
 
     anchors.fill: parent
 
-    Timer {
-        // can't set it immediately or else forward nav is not available later on
-        running: true
-        interval: 100
-        onTriggered: root.dialog.forwardNavigation = false
+    // Note: we can't set forwardNavigation: false otherwise the reject/pop navigation also fails...
+    Component.onCompleted: {
+        root.dialog.canAccept = false
     }
 
     Component.onDestruction: {
@@ -82,10 +80,8 @@ AccountAuthenticator {
 
     Connections {
         target: root.dialog
-        onDone: {
-            if (result === DialogResult.Rejected) {
-                root._cleanUp()
-            }
+        onRejected: {
+            root._cleanUp()
         }
     }
 
@@ -226,7 +222,7 @@ AccountAuthenticator {
 
     function postSignInFinished() {
         serviceIdent.signOut()
-        root.dialog.forwardNavigation = true
+        root.dialog.canAccept = true
         root.dialog.accept()
     }
 }
