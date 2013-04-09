@@ -2,6 +2,7 @@ import QtQuick 1.1
 import Sailfish.Silica 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
+import com.jolla.components.accounts.private 1.0
 
 AccountAuthenticator {
     id: root
@@ -15,63 +16,14 @@ AccountAuthenticator {
 
     //--------------------------------
 
-    // implementation details.
-    property bool __isNewAccount: accountId == 0
-    property bool __hasCancelledOrError
-    property bool __canSyncAccount
-    property bool __canSyncIdentity: true
     property string __errorMessage
-
-    function _syncIdentity() {
-        if (__canSyncIdentity && ident.status == Identity.Initialized) {
-            __canSyncIdentity = false
-            __canSyncAccount = true
-
-            // we actually save the identity first.
-            ident.caption = "caption" // have to set either caption or username in order to save :-/
-            ident.sync()
-        }
-    }
-
-    function _cleanUp() {
-        if (__isNewAccount) {
-            serviceIdent.signOut()
-            if (account != null) {
-                var identifiers = account.identityIdentifiers
-                for (var serviceName in identifiers) {
-                    var identity = identityManager.identity(identifiers[serviceName])
-                    if (identity) {
-                        identity.remove()
-                    }
-                }
-                account.remove()
-            }
-        }
-    }
-
-    function _cancel() {
-        if (!__hasCancelledOrError) {
-            __hasCancelledOrError = true
-            _cleanUp()
-            if (root.dialog !== null) {
-                root.dialog.reject()
-            }
-        }
-    }
-
-    function _errorOccurred(errorMessage) {
-        if (!__hasCancelledOrError) {
-            __hasCancelledOrError = true
-            _cleanUp()
-            root.__errorMessage = errorMessage
-        }
-    }
 
     anchors.fill: parent
 
     // Note: we can't set forwardNavigation: false otherwise the reject/pop navigation also fails...
     Component.onCompleted: {
         root.dialog.canAccept = false
+        accountFactory.beginCreation()
     }
 
     Component.onDestruction: {
@@ -81,7 +33,7 @@ AccountAuthenticator {
     Connections {
         target: root.dialog
         onRejected: {
-            root._cleanUp()
+            accountFactory.cancel()
         }
     }
 
@@ -135,83 +87,36 @@ AccountAuthenticator {
         }
     }
 
-    AccountManager {
-        id: accountMgr
-    }
+    AccountFactory {
+        id: accountFactory
 
-    account: Account { // this property may be accessed by provider extension ui qml
-        identifier: root.accountId
-        providerName: root.accountId != 0 ? "" : (root.provider ? root.provider.name : "")
-
-        onStatusChanged: {
-            if (status === Account.Initialized && !__isNewAccount) {
-                ident.identifier = account.identityIdentifier(_signonServiceName) // if zero, will create new identity.
-            } else if (status === Account.Synced) {
-                // Successfully created the identity+account.  Begin signon.
-                serviceIdent.identifier = ident.identifier
-            } else if (status === Account.Error) {
-                root._errorOccurred(errorMessage)
+        function beginCreation() {
+            // pass through the signon session data from the extension ui
+            var params = {}
+            for (var i in _signonSessionData) {
+                params[i] = _signonSessionData[i]
             }
-        }
-    }
 
-    Identity {
-        id: ident
-        identifier: root.accountId ? account.identityIdentifier(_signonServiceName) : 0
-        identifierPending: root.accountId != 0
+            // also ensure that we set up embedding / etc correctly:
+            params["Title"] = root.provider.displayName
+            params["InProcessServiceName"] = jolla_signon_ui_service.inProcessServiceName
+            params["InProcessObjectPath"] = jolla_signon_ui_service.inProcessObjectPath
+            jolla_signon_ui_service.inProcessParent = webViewContainer
 
-        onStatusChanged: {
-            if (status == Identity.Initialized) {
-                root._syncIdentity()
-            } else if (status === Identity.Synced) {
-                if (__canSyncAccount) {
-                    __canSyncAccount = false
-                    for (var i in root.provider.serviceNames) {
-                        account.disableWithService(root.provider.serviceNames[i]) // ensure disabled until Save in Settings page.
-                        account.setIdentityIdentifier(ident.identifier, root.provider.serviceNames[i])
-                    }
-                    account.sync()
-                }
-            } else if (status === Identity.Error) {
-                root._errorOccurred(errorMessage)
-            }
+            // and trigger signon / account creation
+            accountFactory.createOAuthAccount(root.provider.name, _signonServiceName, params)
         }
 
-        Component.onCompleted: {
-            root._syncIdentity()
-        }
-    }
-
-    ServiceAccountIdentity {
-        id: serviceIdent
-        onStatusChanged: {
-            if (status === ServiceAccountIdentity.Initialized) {
-                var serviceAccount = accountMgr.serviceAccount(account.identifier, _signonServiceName)
-                var adp = serviceAccount.authData.parameters
-                for (var i in _signonSessionData) {
-                    adp[i] = _signonSessionData[i]
-                }
-
-                // also ensure that we set up embedding / etc correctly:
-                adp["Title"] = root.provider.displayName
-                adp["InProcessServiceName"] = jolla_signon_ui_service.inProcessServiceName
-                adp["InProcessObjectPath"] = jolla_signon_ui_service.inProcessObjectPath
-                jolla_signon_ui_service.inProcessParent = webViewContainer
-
-                // begin sign on procedure.
-                signIn(serviceAccount.authData.method, serviceAccount.authData.mechanism, adp)
-            } else if (status === ServiceAccountIdentity.Error) {
-                if (error === ServiceAccountIdentity.CanceledError) {
-                    root._cancel()
-                } else {
-                    root._errorOccurred(errorMessage)
-                }
-            }
+        onError: {
+            // XXX TODO: show error dialog.
+            console.log("ERROR: " + message)
+            root.__errorMessage = message
+            // the user must backstep now that an error has occurred.
         }
 
-        onResponseReceived: {
-            root.accountId = account.identifier
-            postSignIn(data)
+        onSuccess: {
+            root.accountId = newAccountId // signal parameter
+            postSignIn(responseData)      // call the post-sign-in hook
         }
     }
 
@@ -221,7 +126,7 @@ AccountAuthenticator {
     }
 
     function postSignInFinished() {
-        serviceIdent.signOut()
+        accountFactory.signOut()
         root.dialog.canAccept = true
         root.dialog.accept()
     }

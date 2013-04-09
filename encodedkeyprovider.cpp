@@ -1,4 +1,5 @@
 #include "encodedkeyprovider_p.h"
+#include "accountvalueencoding_p.h"
 
 #include <QtDebug>
 
@@ -29,3 +30,7 @@ QVariantMap EncodedKeyProvider::encodedKeys(const QString &providerName) const
     return retn;
 }
 
+QString EncodedKeyProvider::decodeKey(const QString &encodedKey, const QString &scheme, const QString &decodingKey) const
+{
+    return decodeValue(encodedKey, scheme, decodingKey);
+}

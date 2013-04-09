@@ -8,8 +8,11 @@ TARGETPATH = $$[QT_INSTALL_IMPORTS]/$$MODULENAME
 QT += declarative
 CONFIG += plugin
 
-SOURCES += plugin.cpp encodedkeyprovider.cpp
-HEADERS += encodedkeyprovider_p.h
+CONFIG += link_pkgconfig
+PKGCONFIG += accounts-qt libsignon-qt
+
+SOURCES += plugin.cpp encodedkeyprovider.cpp accountfactory.cpp
+HEADERS += accountvalueencoding_p.h encodedkeyprovider_p.h accountfactory_p.h
 OTHER_FILES += *.qml qmldir
 
 TS_FILE = $$OUT_PWD/components_accounts.ts

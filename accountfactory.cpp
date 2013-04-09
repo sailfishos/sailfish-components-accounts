@@ -1,0 +1,248 @@
+#include "accountfactory_p.h"
+
+#include <QtDebug>
+
+AccountFactory::AccountFactory(QObject *parent)
+    : QObject(parent)
+    , m_busy(false)
+    , m_created(false)
+    , m_settingName(false)
+    , m_am(new Accounts::Manager(this))
+    , m_newAccount(0)
+    , m_accountService(0)
+    , m_ident(0)
+    , m_session(0)
+{
+}
+
+AccountFactory::~AccountFactory()
+{
+    resetState(AccountFactory::CleanupArtifacts);
+    m_am->deleteLater();
+}
+
+/*
+    Creates an OAuth account (and associated credentials) with the provider
+    identified by the given \a providerName.  It will use the signon parameters
+    specified for the service identified by the given \a serviceName by
+    default, overridden or extended by the parameters specified by \a params.
+
+    If an error occurs, the \l error() signal will be emitted.
+
+    If signon is successful, the account will be created and the identity used
+    during signon will be set as the credentials for all services offered by
+    the provider in that account.  The auth session will remain signed in until
+    \l signOut() method is invoked.
+
+    The account will be created with all services disabled.
+*/
+void AccountFactory::createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params)
+{
+    // we still have to create the account first, then the service account, then the identity
+    // simply because the accounts framework doesn't allow us to access parameters from the
+    // service itself :-/
+
+    // could be creating an account already
+    if (m_busy) {
+        //: Error emitted if the function is called while creation is in progress
+        //% "Cannot create account - already busy!"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-already_busy"));
+        return;
+    }
+
+    // could have created an account, but not signed out after success()
+    if (m_ident || m_session) {
+        //: Error emitted if the function is called while signed in to previously created account
+        //% "Cannot create account - still signed in to previously created account!"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-still_signed_in"));
+        return;
+    }
+
+    // create the account, create a new identity, sign in.
+    m_busy = true;     // we're busy creating an account until it succeeds or fails.
+    m_created = false; // haven't yet successfully created the account.
+    m_srv = m_am->service(serviceName);
+    if (!m_srv.isValid()) {
+        //: Error emitted if the given serviceName isn't valid
+        //% "Not a valid signon service: %1"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-invalid_service").arg(serviceName));
+        return;
+    }
+
+    m_newAccount = m_am->createAccount(providerName);
+    if (!m_newAccount) {
+        //: Error emitted if an error occurred while creating an account for the given providerName
+        //% "Could not create account with provider %1"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-account_create_failed").arg(providerName));
+        return;
+    }
+
+    m_accountService = new Accounts::AccountService(m_newAccount, m_srv);
+    if (!m_accountService) {
+        m_newAccount->remove();
+        //: Error emitted if an error occurred while creating a service account
+        //% "Could not create service account for service %1"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-service_account_create_failed").arg(serviceName));
+        return;
+    }
+
+    QVariantMap adp = m_accountService->authData().parameters();
+    QStringList paramKeys = params.keys();
+    foreach (const QString &key, paramKeys) {
+        QVariant pv = params.value(key);
+        if (pv.type() == QVariant::List) {
+            adp.insert(key, pv.toStringList());
+        } else {
+            adp.insert(key, pv);
+        }
+    }
+
+    // now create the identity and attempt sign in
+    m_ident = SignOn::Identity::newIdentity();
+    if (!m_ident) {
+        m_newAccount->remove(); // XXX TODO: do I have to sync() the remove?
+        //: Error emitted if an error occurred while creating an identity (signon credentials)
+        //% "Unable to create credentials to sign in to service %1 from provider %2"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-credentials_create_failed").arg(serviceName).arg(providerName));
+        return;
+    }
+
+    m_session = m_ident->createSession(m_accountService->authData().method());
+    if (!m_session) {
+        m_newAccount->remove();
+        m_ident->remove();
+        //: Error emitted if an error occurred while creating a signon session
+        //% "Unable to create signon session to provider %1"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-session_create_failed").arg(providerName));
+        return;
+    }
+
+    connect(m_session, SIGNAL(response(SignOn::SessionData)), this, SLOT(handleResponse(SignOn::SessionData)));
+    connect(m_session, SIGNAL(error(SignOn::Error)), this, SLOT(handleSignOnError(SignOn::Error)));
+
+    m_session->process(SignOn::SessionData(adp), m_accountService->authData().mechanism());
+}
+
+void AccountFactory::setAccountDisplayName(const QString &displayName)
+{
+    if (!m_busy && m_created && m_newAccount) {
+        m_settingName = true;
+        m_newAccount->setDisplayName(displayName);
+        m_newAccount->sync();
+    } else {
+        //: Error emitted if the function is called prior to creation succeeding
+        //% "Unable to set display name of account prior to creation"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-displayname_invalid"));
+    }
+}
+
+void AccountFactory::signOut()
+{
+    if (!m_busy && !m_settingName) {
+        resetState(AccountFactory::ResetOnly); // reset state, but don't remove the account/identity.
+    } else {
+        //: Error emitted if the function is called while busy
+        //% "Unable to sign out - still creating account or setting name"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-signout_busy"));
+    }
+}
+
+void AccountFactory::cancel()
+{
+    resetState(AccountFactory::CleanupArtifacts);
+}
+
+void AccountFactory::handleResponse(const SignOn::SessionData &data)
+{
+    if (m_busy && !m_created) {
+        // first, cache the response data.
+        m_responseData.clear();
+        QStringList keys = data.propertyNames();
+        foreach (const QString &key, keys) {
+            m_responseData.insert(key, data.getProperty(key));
+        }
+
+        // then sync the account.  First, set the credentials for all services from the provider.
+        Accounts::ServiceList srvList = m_am->serviceList();
+        foreach (const Accounts::Service &srv, srvList) {
+            if (srv.provider() == m_newAccount->providerName()) {
+                m_newAccount->selectService(srv);
+                m_newAccount->setCredentialsId(m_ident->id());
+                m_newAccount->setEnabled(false);
+                m_newAccount->selectService(Accounts::Service());
+            }
+        }
+        m_newAccount->setEnabled(false); // return a globally disabled account
+
+        connect(m_newAccount, SIGNAL(synced()), this, SLOT(handleSynced()), Qt::UniqueConnection);
+        connect(m_newAccount, SIGNAL(error()), this, SLOT(handleAccountError()), Qt::UniqueConnection);
+
+        m_newAccount->sync();
+    }
+}
+
+void AccountFactory::handleSynced()
+{
+    if (m_busy && !m_created) {
+        // successfully created a new account
+        m_busy = false;
+        m_created = true;
+        emit success(m_newAccount->id(), m_ident->id(), m_responseData);
+    } else if (m_settingName) {
+        // successfully set the name of the account
+        m_settingName = false;
+    }
+}
+
+void AccountFactory::handleSignOnError(const SignOn::Error &err)
+{
+    resetState(AccountFactory::CleanupArtifacts);
+    QString errMess = err.message();
+    if (errMess == QLatin1String("userActionFinished error: 5")) {
+        //: Error emitted if signon failed due to network connection failure
+        //% "Network connection failure"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-network_failure"));
+    }
+    emit error(errMess);
+}
+
+void AccountFactory::handleAccountError()
+{
+    QString providerName = m_newAccount->providerName();
+    resetState(AccountFactory::CleanupArtifacts);
+    //: Error emitted if account creation failed at the database level
+    //% "Unable to save %1 account in database"
+    emit error(qtTrId("jollacomponents_internal-accountfactory-account_database").arg(providerName));
+}
+
+void AccountFactory::resetState(AccountFactory::ResetMode mode)
+{
+    if (m_ident) {
+        if (m_session) {
+            m_ident->destroySession(m_session);
+        }
+        m_ident->signOut();
+        if (mode == AccountFactory::CleanupArtifacts) {
+            m_ident->remove();
+        }
+        m_ident->deleteLater();
+    }
+    if (m_newAccount) {
+        if (mode == AccountFactory::CleanupArtifacts) {
+            m_newAccount->remove();
+        }
+        m_newAccount->deleteLater();
+    }
+    if (m_accountService) {
+        m_accountService->deleteLater();
+    }
+    m_newAccount = 0;
+    m_ident = 0;
+    m_accountService = 0;
+    m_session = 0;
+    m_responseData = QVariantMap();
+    m_srv = Accounts::Service();
+    m_busy = false;
+    m_created = false;
+    m_settingName = false;
+}
