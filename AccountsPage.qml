@@ -129,9 +129,11 @@ Page {
             anchors.fill: parent
             acceptDestination: settingsDialogComponent
             acceptDestinationAction: PageStackAction.Replace
+            property bool firstPushStarted: false
 
             onStatusChanged: {
-                if (status === PageStatus.Activating) {
+                if (status === PageStatus.Activating && firstPushStarted == false) {
+                    firstPushStarted = true
                     if (root._accountToCreate == "") {
                         // NOTE: if root._accountToCreate isn't set prior to this dialog being activated, we bail out.
                         throw new Error("Error: account creation page activated without provider name being set!")

@@ -8,6 +8,7 @@ AccountAuthenticator {
     id: root
 
     // The following are for extension plugins to set.
+    property Dialog _consentDialog      // Dialog requesting acceptance of terms and conditions etc
     property variant _signonSessionData // ClientId/ClientKey, ConsumerKey/ConsumerSecret, etc
     property string _signonServiceName  // Which service should be signed onto by default
     // Extension plugins may also implement: function postSignIn(variant signInResponseData) {}
@@ -17,13 +18,56 @@ AccountAuthenticator {
     //--------------------------------
 
     property string __errorMessage
+    property bool __needsConsentDialogPush: false
+    property bool __needsConsentDialogReject: false
+    property bool __needsConsentDialogAccept: false
 
     anchors.fill: parent
 
     // Note: we can't set forwardNavigation: false otherwise the reject/pop navigation also fails...
     Component.onCompleted: {
         root.dialog.canAccept = false
-        accountFactory.beginCreation()
+        if (_consentDialog == null) {
+            root.opacity = 1.0
+            root.dialog.opacity = 1.0
+            accountFactory.beginCreation()
+        } else {
+            root.opacity = 0.0
+            root.dialog.opacity = 0.0
+            __needsConsentDialogPush = true
+        }
+    }
+
+    Connections {
+        target: root.dialog
+        onStatusChanged: handleConsentDialogTransitions()
+    }
+
+    function handleConsentDialogTransitions() {
+        if (root.dialog.status === PageStatus.Active) {
+            if (__needsConsentDialogPush) {
+                __needsConsentDialogPush = false
+                _consentDialog.accepted.connect(function() {
+                    root.__needsConsentDialogAccept = true
+                })
+                _consentDialog.rejected.connect(function() {
+                    root.dialog.opacity = 0.0
+                    root.opacity = 0.0
+                    root.__needsConsentDialogReject = true
+                })
+                root.dialog.opacity = 1.0
+                root.opacity = 1.0
+                pageStack.push(_consentDialog, {}, PageStackAction.Immediate)
+            } else if (__needsConsentDialogAccept) {
+                __needsConsentDialogAccept = false
+                accountFactory.beginCreation()
+            } else if (__needsConsentDialogReject) {
+                __needsConsentDialogReject = false
+                root.dialog.opacity = 0.0
+                root.opacity = 0.0
+                root.dialog.reject() // would be nice if we could use Immediate but that causes a flicker
+            }
+        }
     }
 
     Component.onDestruction: {
@@ -41,11 +85,11 @@ AccountAuthenticator {
         id: container
         anchors.fill: root
 
-        PageHeader {
+        DialogHeader {
             id: pageHeader
             //: Title of page for signing into a user account
             //% "Authentication"
-            title: qsTrId("components_accounts-he-oauth_authentication")
+            acceptText: qsTrId("components_accounts-he-oauth_authentication")
         }
 
         Column {
@@ -54,6 +98,8 @@ AccountAuthenticator {
             spacing: theme.paddingMedium
 
             Label {
+                id: activityLabel
+
                 //: Message displayed when waiting for authentication web page to be loaded
                 //% "Loading web page..."
                 property string loadingString: qsTrId("components_accounts-la-oauth_loading_web_page")
@@ -108,8 +154,6 @@ AccountAuthenticator {
         }
 
         onError: {
-            // XXX TODO: show error dialog.
-            console.log("ERROR: " + message)
             root.__errorMessage = message
             // the user must backstep now that an error has occurred.
         }
