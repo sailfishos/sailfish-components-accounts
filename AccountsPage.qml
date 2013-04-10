@@ -168,24 +168,13 @@ Page {
         ContextMenu {
             id: menu
 
-            property int accountId
-            property bool _removePending
+            signal removeAccount()
 
             MenuItem {
                 //: Removes a user account
                 //% "Remove";
                 text: qsTrId("components_accounts-me-remove_account")
-
-                // delay deletion until menu is closed, otherwise deleting an accountsView item
-                // while its menu is closing will confuse accountsView's total height calculation
-                onClicked: menu._removePending = true
-            }
-
-            onVisibleChanged: {
-                if (!visible && _removePending) {
-                    root._deleteAccount(accountId)
-                    _removePending = false
-                }
+                onClicked: menu.removeAccount()
             }
         }
     }
@@ -202,60 +191,51 @@ Page {
             title: qsTrId("components_accounts-he-accounts_list")
         }
 
-        delegate: Item {
-            id: delegateItem
+        delegate: ListItem {
+            showMenuOnPressAndHold: false
+            menu: contextMenuComponent
 
-            width: ListView.view.width
-            height: (root._contextMenu != null && root._contextMenu.parent === delegateItem)
-                    ? root._contextMenu.height + contentItem.height
-                    : contentItem.height
+            onPressAndHold: {
+                var menu = showMenu()
+                menu.removeAccount.connect(function() {
+                    //: Deleting this account in 5 seconds
+                    //% "Removing account"
+                    remorseAction(qsTrId("component_accounts-la-remove_account"),
+                                  function() { root._deleteAccount(model.accountId) })
+                })
+            }
 
-            BackgroundItem {
-                id: contentItem
+            onClicked: {
+                pageStack.push(settingsDialogComponent.createObject(root, {
+                                   "_isNewAccount": false,
+                                   "_providerName": accountModel.provider(model.accountId).name,
+                                   "_properties": { "accountId": model.accountId }
+                               }))
+            }
 
-                height: theme.itemSizeSmall
-
-                onClicked: {
-                    pageStack.push(settingsDialogComponent.createObject(root, {
-                                       "_isNewAccount": false,
-                                       "_providerName": accountModel.provider(model.accountId).name,
-                                       "_properties": { "accountId": model.accountId }
-                                   }))
-                }
-
-                onPressAndHold: {
-                    if (!root._contextMenu) {
-                        root._contextMenu = contextMenuComponent.createObject(accountsView, {"accountId": model.accountId})
-                    } else {
-                        root._contextMenu.accountId = model.accountId
-                    }
-                    root._contextMenu.show(delegateItem)
-                }
-
-                Image {
-                    id: icon
-                    x: theme.paddingLarge
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 64
-                    height: 64
-                    source: model.accountIcon
-                }
-                Label {
-                    id: accountName
-                    anchors.left: icon.right
-                    anchors.leftMargin: theme.paddingLarge
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
-                    text: model.providerDisplayName
-                    color: contentItem.down ? theme.highlightColor : theme.primaryColor
-                }
-                Label {
-                    anchors.left: icon.right
-                    anchors.leftMargin: theme.paddingLarge
-                    anchors.top: accountName.bottom
-                    text: model.accountDisplayName
-                    color: contentItem.down ? theme.secondaryHighlightColor : theme.secondaryColor
-                }
+            Image {
+                id: icon
+                x: theme.paddingLarge
+                anchors.verticalCenter: parent.verticalCenter
+                width: 64
+                height: 64
+                source: model.accountIcon
+            }
+            Label {
+                id: accountName
+                anchors.left: icon.right
+                anchors.leftMargin: theme.paddingLarge
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
+                text: model.providerDisplayName
+                color: contentItem.down ? theme.highlightColor : theme.primaryColor
+            }
+            Label {
+                anchors.left: icon.right
+                anchors.leftMargin: theme.paddingLarge
+                anchors.top: accountName.bottom
+                text: model.accountDisplayName
+                color: contentItem.down ? theme.secondaryHighlightColor : theme.secondaryColor
             }
         }
 
