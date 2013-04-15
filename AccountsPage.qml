@@ -8,7 +8,6 @@ Page {
 
     property Item _accountSettings // saving settings changes is async, so we can't delete it immediately on accept/pop.
     property Item _accountCreator
-    property Item _contextMenu
     property string _accountToCreate
 
     function selectedAccountToCreate(providerName) {
@@ -164,23 +163,6 @@ Page {
         }
     }
 
-    Component {
-        id: contextMenuComponent
-
-        ContextMenu {
-            id: menu
-
-            signal removeAccount()
-
-            MenuItem {
-                //: Removes a user account
-                //% "Remove";
-                text: qsTrId("components_accounts-me-remove_account")
-                onClicked: menu.removeAccount()
-            }
-        }
-    }
-
     SilicaListView {
         id: accountsView
 
@@ -194,17 +176,23 @@ Page {
         }
 
         delegate: ListItem {
-            showMenuOnPressAndHold: false
-            menu: contextMenuComponent
+            menu: Component {
+                ContextMenu {
+                    MenuItem {
+                        //: Removes a user account
+                        //% "Remove";
+                        text: qsTrId("components_accounts-me-remove_account")
+                        onClicked: removeAccount()
+                    }
+                }
+            }
 
-            onPressAndHold: {
-                var menu = showMenu()
-                menu.removeAccount.connect(function() {
-                    //: Deleting this account in 5 seconds
-                    //% "Removing account"
-                    remorseAction(qsTrId("component_accounts-la-remove_account"),
-                                  function() { root._deleteAccount(model.accountId) })
-                })
+            function removeAccount() {
+                //: Deleting this account in 5 seconds
+                //% "Removing account"
+                remorseAction(qsTrId("component_accounts-la-remove_account"),
+                              function() { root._deleteAccount(model.accountId) })
+
             }
 
             onClicked: {
@@ -214,6 +202,8 @@ Page {
                                    "_properties": { "accountId": model.accountId }
                                }))
             }
+
+            ListView.onRemove: animateRemoval()
 
             Image {
                 id: icon
