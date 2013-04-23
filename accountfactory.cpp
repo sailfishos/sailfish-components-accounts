@@ -7,6 +7,7 @@ AccountFactory::AccountFactory(QObject *parent)
     , m_busy(false)
     , m_created(false)
     , m_settingName(false)
+    , m_resettingState(false)
     , m_am(new Accounts::Manager(this))
     , m_newAccount(0)
     , m_accountService(0)
@@ -17,7 +18,7 @@ AccountFactory::AccountFactory(QObject *parent)
 
 AccountFactory::~AccountFactory()
 {
-    resetState(AccountFactory::CleanupArtifacts);
+    resetState(AccountFactory::ResetOnly);
     m_am->deleteLater();
 }
 
@@ -59,8 +60,9 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
     }
 
     // create the account, create a new identity, sign in.
-    m_busy = true;     // we're busy creating an account until it succeeds or fails.
-    m_created = false; // haven't yet successfully created the account.
+    m_busy = true;            // we're busy creating an account until it succeeds or fails.
+    m_created = false;        // haven't yet successfully created the account.
+    m_resettingState = false; // and we're not in the middle of resetting our state.
     m_srv = m_am->service(serviceName);
     if (!m_srv.isValid()) {
         //: Error emitted if the given serviceName isn't valid
@@ -96,9 +98,13 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
             adp.insert(key, pv);
         }
     }
+    m_signonSessionParams = adp;
 
-    // now create the identity and attempt sign in
-    m_ident = SignOn::Identity::newIdentity();
+    m_identInfo.setUserName(QLatin1String("Facebook")); // otherwise it won't save - invalid.
+    m_identInfo.setMethod(m_accountService->authData().method(), QStringList() << m_accountService->authData().mechanism());
+
+    // now create the identity and attempt to store credentials.  Once that's complete, we'll sign in.
+    m_ident = SignOn::Identity::newIdentity(m_identInfo);
     if (!m_ident) {
         m_newAccount->remove(); // XXX TODO: do I have to sync() the remove?
         //: Error emitted if an error occurred while creating an identity (signon credentials)
@@ -107,20 +113,10 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
         return;
     }
 
-    m_session = m_ident->createSession(m_accountService->authData().method());
-    if (!m_session) {
-        m_newAccount->remove();
-        m_ident->remove();
-        //: Error emitted if an error occurred while creating a signon session
-        //% "Unable to create signon session to provider %1"
-        emit error(qtTrId("jollacomponents_internal-accountfactory-session_create_failed").arg(providerName));
-        return;
-    }
+    connect(m_ident, SIGNAL(error(SignOn::Error)), this, SLOT(handleCredentialsFailed(SignOn::Error)));
+    connect(m_ident, SIGNAL(credentialsStored(quint32)), this, SLOT(handleCredentialsStored(quint32)));
 
-    connect(m_session, SIGNAL(response(SignOn::SessionData)), this, SLOT(handleResponse(SignOn::SessionData)));
-    connect(m_session, SIGNAL(error(SignOn::Error)), this, SLOT(handleSignOnError(SignOn::Error)));
-
-    m_session->process(SignOn::SessionData(adp), m_accountService->authData().mechanism());
+    m_ident->storeCredentials(m_identInfo);
 }
 
 void AccountFactory::setAccountDisplayName(const QString &displayName)
@@ -152,6 +148,26 @@ void AccountFactory::cancel()
     resetState(AccountFactory::CleanupArtifacts);
 }
 
+void AccountFactory::handleCredentialsStored(quint32 id)
+{
+    m_ident->deleteLater();
+    m_ident = SignOn::Identity::existingIdentity(id);
+    m_session = m_ident->createSession(m_accountService->authData().method());
+    if (!m_session) {
+        m_newAccount->remove();
+        m_ident->remove();
+        //: Error emitted if an error occurred while creating a signon session
+        //% "Unable to create signon session"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-session_create_failed"));
+        return;
+    }
+
+    connect(m_session, SIGNAL(response(SignOn::SessionData)), this, SLOT(handleResponse(SignOn::SessionData)));
+    connect(m_session, SIGNAL(error(SignOn::Error)), this, SLOT(handleSignOnError(SignOn::Error)));
+
+    m_session->process(SignOn::SessionData(m_signonSessionParams), m_accountService->authData().mechanism());
+}
+
 void AccountFactory::handleResponse(const SignOn::SessionData &data)
 {
     if (m_busy && !m_created) {
@@ -172,7 +188,7 @@ void AccountFactory::handleResponse(const SignOn::SessionData &data)
                 m_newAccount->selectService(Accounts::Service());
             }
         }
-        m_newAccount->setEnabled(false); // return a globally disabled account
+        m_newAccount->setCredentialsId(m_ident->id()); // set credentials for global service
 
         connect(m_newAccount, SIGNAL(synced()), this, SLOT(handleSynced()), Qt::UniqueConnection);
         connect(m_newAccount, SIGNAL(error()), this, SLOT(handleAccountError()), Qt::UniqueConnection);
@@ -184,7 +200,7 @@ void AccountFactory::handleResponse(const SignOn::SessionData &data)
 void AccountFactory::handleSynced()
 {
     if (m_busy && !m_created) {
-        // successfully created a new account
+        // successfully created a new account and stored the credentials.
         m_busy = false;
         m_created = true;
         emit success(m_newAccount->id(), m_ident->id(), m_responseData);
@@ -192,6 +208,15 @@ void AccountFactory::handleSynced()
         // successfully set the name of the account
         m_settingName = false;
     }
+}
+
+void AccountFactory::handleCredentialsFailed(const SignOn::Error &err)
+{
+    QString providerName = m_newAccount->providerName();
+    resetState(AccountFactory::CleanupArtifacts);
+    //: Error emitted if account credentials creation failed at the database level
+    //% "Unable to save credentials for %1 account in database: %2"
+    emit error(qtTrId("jollacomponents_internal-accountfactory-credentials_database").arg(providerName).arg(err.message()));
 }
 
 void AccountFactory::handleSignOnError(const SignOn::Error &err)
@@ -202,8 +227,9 @@ void AccountFactory::handleSignOnError(const SignOn::Error &err)
         //: Error emitted if signon failed due to network connection failure
         //% "Network connection failure"
         emit error(qtTrId("jollacomponents_internal-accountfactory-network_failure"));
+    } else {
+        emit error(errMess);
     }
-    emit error(errMess);
 }
 
 void AccountFactory::handleAccountError()
@@ -217,32 +243,36 @@ void AccountFactory::handleAccountError()
 
 void AccountFactory::resetState(AccountFactory::ResetMode mode)
 {
-    if (m_ident) {
-        if (m_session) {
-            m_ident->destroySession(m_session);
+    if (!m_resettingState) {
+        m_resettingState = true;
+        if (m_ident) {
+            if (m_session) {
+                m_ident->destroySession(m_session);
+            }
+            if (mode == AccountFactory::CleanupArtifacts) {
+                m_ident->signOut();
+                m_ident->remove();
+            }
+            m_ident->deleteLater();
         }
-        m_ident->signOut();
-        if (mode == AccountFactory::CleanupArtifacts) {
-            m_ident->remove();
+        if (m_newAccount) {
+            if (mode == AccountFactory::CleanupArtifacts) {
+                m_newAccount->remove();
+            }
+            m_newAccount->deleteLater();
         }
-        m_ident->deleteLater();
-    }
-    if (m_newAccount) {
-        if (mode == AccountFactory::CleanupArtifacts) {
-            m_newAccount->remove();
+        if (m_accountService) {
+            m_accountService->deleteLater();
         }
-        m_newAccount->deleteLater();
+        m_newAccount = 0;
+        m_ident = 0;
+        m_accountService = 0;
+        m_session = 0;
+        m_responseData = QVariantMap();
+        m_signonSessionParams = QVariantMap();
+        m_srv = Accounts::Service();
+        m_busy = false;
+        m_created = false;
+        m_settingName = false;
     }
-    if (m_accountService) {
-        m_accountService->deleteLater();
-    }
-    m_newAccount = 0;
-    m_ident = 0;
-    m_accountService = 0;
-    m_session = 0;
-    m_responseData = QVariantMap();
-    m_srv = Accounts::Service();
-    m_busy = false;
-    m_created = false;
-    m_settingName = false;
 }

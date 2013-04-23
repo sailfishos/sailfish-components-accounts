@@ -34,6 +34,8 @@ Q_SIGNALS:
     void success(int newAccountId, int newIdentityId, const QVariantMap &responseData);
 
 private Q_SLOTS:
+    void handleCredentialsStored(quint32);
+    void handleCredentialsFailed(const SignOn::Error &err);
     void handleResponse(const SignOn::SessionData &data);
     void handleSynced();
     void handleSignOnError(const SignOn::Error &err);
@@ -50,11 +52,14 @@ private:
     bool m_busy;
     bool m_created;
     bool m_settingName;
+    bool m_resettingState;
     Accounts::Service m_srv;
     QVariantMap m_responseData;
+    QVariantMap m_signonSessionParams;
     Accounts::Manager *m_am;
     Accounts::Account *m_newAccount;
     Accounts::AccountService *m_accountService;
+    SignOn::IdentityInfo m_identInfo;
     SignOn::Identity *m_ident;
     SignOn::AuthSession *m_session;
 };
