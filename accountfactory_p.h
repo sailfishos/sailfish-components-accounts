@@ -30,6 +30,8 @@ public:
     Q_INVOKABLE void cancel();
 
 Q_SIGNALS:
+    void startedSignon();
+    void finishedSignon();
     void error(const QString &message);
     void success(int newAccountId, int newIdentityId, const QVariantMap &responseData);
 

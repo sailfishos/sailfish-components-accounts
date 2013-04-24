@@ -104,15 +104,20 @@ AccountAuthenticator {
                 //% "Loading web page..."
                 property string loadingString: qsTrId("components_accounts-la-oauth_loading_web_page")
 
+                //: Message displayed when storing credentials after web page signon has succeeded
+                //% "Storing credentials..."
+                property string storingString: qsTrId("components_accounts-la-storing_credentials")
+
                 //: Message displayed when error occurs during user authentication
                 //% "Error while loading:"
                 property string errorString: qsTrId("components_accounts-la-oauth_error")
 
+                property bool hasLoadedWebPage: false
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
                 font.family: theme.fontFamilyHeading
                 font.pixelSize: theme.fontSizeLarge
-                text: root.__errorMessage === "" ? loadingString : errorString
+                text: root.__errorMessage === "" ? (hasLoadedWebPage ? storingString : loadingString) : errorString
             }
             Label {
                 width: parent.width
@@ -161,6 +166,17 @@ AccountAuthenticator {
         onSuccess: {
             root.accountId = newAccountId // signal parameter
             postSignIn(responseData)      // call the post-sign-in hook
+        }
+
+        onStartedSignon: {
+            changeBannerTimer.running = true
+        }
+
+        property Timer changeBannerTimer: Timer {
+            repeat: false
+            interval: 4000 // enough time for the web page to load
+            running: false
+            onTriggered: activityLabel.hasLoadedWebPage = true // change the banner
         }
     }
 

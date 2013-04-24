@@ -81,7 +81,7 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
 
     m_accountService = new Accounts::AccountService(m_newAccount, m_srv);
     if (!m_accountService) {
-        m_newAccount->remove();
+        resetState(AccountFactory::CleanupArtifacts);
         //: Error emitted if an error occurred while creating a service account
         //% "Could not create service account for service %1"
         emit error(qtTrId("jollacomponents_internal-accountfactory-service_account_create_failed").arg(serviceName));
@@ -100,13 +100,14 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
     }
     m_signonSessionParams = adp;
 
-    m_identInfo.setUserName(QLatin1String("Facebook")); // otherwise it won't save - invalid.
-    m_identInfo.setMethod(m_accountService->authData().method(), QStringList() << m_accountService->authData().mechanism());
-
     // now create the identity and attempt to store credentials.  Once that's complete, we'll sign in.
+    Accounts::Provider prv = m_am->provider(providerName);
+    QMap<QString, QStringList> methodMechs;
+    methodMechs.insert(m_accountService->authData().method(), QStringList() << m_accountService->authData().mechanism());
+    m_identInfo = SignOn::IdentityInfo(prv.displayName(), prv.displayName(), methodMechs);
     m_ident = SignOn::Identity::newIdentity(m_identInfo);
     if (!m_ident) {
-        m_newAccount->remove(); // XXX TODO: do I have to sync() the remove?
+        resetState(AccountFactory::CleanupArtifacts);
         //: Error emitted if an error occurred while creating an identity (signon credentials)
         //% "Unable to create credentials to sign in to service %1 from provider %2"
         emit error(qtTrId("jollacomponents_internal-accountfactory-credentials_create_failed").arg(serviceName).arg(providerName));
@@ -150,12 +151,17 @@ void AccountFactory::cancel()
 
 void AccountFactory::handleCredentialsStored(quint32 id)
 {
-    m_ident->deleteLater();
-    m_ident = SignOn::Identity::existingIdentity(id);
+    if (m_ident->id() != id) {
+        resetState(AccountFactory::CleanupArtifacts);
+        //: Error emitted if an error occurred while storing credentials
+        //% "Unable to store credentials - invalid id"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-identity_id_failed"));
+        return;
+    }
+
     m_session = m_ident->createSession(m_accountService->authData().method());
     if (!m_session) {
-        m_newAccount->remove();
-        m_ident->remove();
+        resetState(AccountFactory::CleanupArtifacts);
         //: Error emitted if an error occurred while creating a signon session
         //% "Unable to create signon session"
         emit error(qtTrId("jollacomponents_internal-accountfactory-session_create_failed"));
@@ -166,10 +172,13 @@ void AccountFactory::handleCredentialsStored(quint32 id)
     connect(m_session, SIGNAL(error(SignOn::Error)), this, SLOT(handleSignOnError(SignOn::Error)));
 
     m_session->process(SignOn::SessionData(m_signonSessionParams), m_accountService->authData().mechanism());
+    emit startedSignon();
 }
 
 void AccountFactory::handleResponse(const SignOn::SessionData &data)
 {
+    emit finishedSignon();
+
     if (m_busy && !m_created) {
         // first, cache the response data.
         m_responseData.clear();
@@ -191,7 +200,7 @@ void AccountFactory::handleResponse(const SignOn::SessionData &data)
         m_newAccount->setCredentialsId(m_ident->id()); // set credentials for global service
 
         connect(m_newAccount, SIGNAL(synced()), this, SLOT(handleSynced()), Qt::UniqueConnection);
-        connect(m_newAccount, SIGNAL(error()), this, SLOT(handleAccountError()), Qt::UniqueConnection);
+        connect(m_newAccount, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountError()), Qt::UniqueConnection);
 
         m_newAccount->sync();
     }
