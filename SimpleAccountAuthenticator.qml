@@ -120,7 +120,8 @@ AccountAuthenticator {
                 placeholderText: root.usernamePlaceholderText
                 label: root.usernameLabel
                 onTextChanged: root.username = text
-                Keys.onReturnPressed: passwordField.focus = true
+                EnterKey.iconSource: "image://theme/icon-m-enter-next"
+                EnterKey.onClicked: passwordField.focus = true
             }
 
             TextField {
@@ -137,7 +138,8 @@ AccountAuthenticator {
                 //% "Enter password"
                 placeholderText: qsTrId("components_accounts-ph-password")
                 onTextChanged: root.password = text
-                Keys.onReturnPressed: flickable.focus = true
+                EnterKey.iconSource: "image://theme/icon-m-enter-next"
+                EnterKey.onClicked: usernameField.focus = true
             }
         }
     }
