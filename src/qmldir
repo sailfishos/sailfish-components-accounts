@@ -1,4 +1,4 @@
-plugin jollacomponentsaccountsplugin
+plugin sailfishaccountsplugin
 AccountProviderPickerDialog 1.0 AccountProviderPickerDialog.qml
 AccountSettings 1.0 AccountSettings.qml
 AccountsPage 1.0 AccountsPage.qml
