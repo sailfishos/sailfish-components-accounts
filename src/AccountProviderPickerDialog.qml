@@ -44,7 +44,7 @@ Dialog {
                 anchors.leftMargin: theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.providerDisplayName
-                color: parent.down ? theme.highlightColor : theme.primaryColor
+                color: highlighted ? theme.highlightColor : theme.primaryColor
             }
         }
 

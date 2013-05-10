@@ -168,7 +168,6 @@ Page {
 
         anchors.fill: parent
         model: AccountModel {}
-        spacing: theme.paddingLarge
         header: PageHeader {
             //: accounts list view
             //% "Accounts"
@@ -176,6 +175,7 @@ Page {
         }
 
         delegate: ListItem {
+            contentHeight: theme.itemSizeMedium
             menu: Component {
                 ContextMenu {
                     MenuItem {
@@ -220,14 +220,14 @@ Page {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
                 text: model.providerDisplayName
-                color: contentItem.down ? theme.highlightColor : theme.primaryColor
+                color: highlighted ? theme.highlightColor : theme.primaryColor
             }
             Label {
                 anchors.left: icon.right
                 anchors.leftMargin: theme.paddingLarge
                 anchors.top: accountName.bottom
                 text: model.accountDisplayName
-                color: contentItem.down ? theme.secondaryHighlightColor : theme.secondaryColor
+                color: highlighted ? theme.secondaryHighlightColor : theme.secondaryColor
             }
         }
 
