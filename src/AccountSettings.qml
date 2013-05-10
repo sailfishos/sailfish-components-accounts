@@ -102,12 +102,10 @@ Item {
                 width: parent.width
                 height: theme.itemSizeSmall
 
-                Image {
+                AccountIcon {
                     id: accountIcon
                     x: theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 64
-                    height: 64
                 }
                 Label {
                     id: accountName
@@ -150,12 +148,10 @@ Item {
                         width: contentColumn.width
                         height: theme.itemSizeSmall
 
-                        Image {
+                        AccountIcon {
                             id: serviceIcon
                             x: theme.paddingLarge
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 64
-                            height: 64
                             source: model.icon
                         }
                         Label {

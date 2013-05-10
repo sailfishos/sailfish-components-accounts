@@ -20,12 +20,10 @@ SilicaListView {
         width: ListView.view.width
         height: theme.itemSizeSmall
 
-        Image {
+        AccountIcon {
             id: icon
             x: theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
-            width: 64
-            height: 64
             source: model.serviceIcon
         }
         Label {

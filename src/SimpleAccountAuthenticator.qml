@@ -93,10 +93,8 @@ AccountAuthenticator {
                 height: theme.itemSizeSmall
                 x: theme.paddingLarge
 
-                Image {
+                AccountIcon {
                     id: icon
-                    width: 64
-                    height: 64
                     anchors.verticalCenter: parent.verticalCenter
                     source: root.iconSource
                 }

@@ -205,12 +205,10 @@ Page {
 
             ListView.onRemove: animateRemoval()
 
-            Image {
+            AccountIcon {
                 id: icon
                 x: theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
-                width: 64
-                height: 64
                 source: model.accountIcon
             }
             Label {
