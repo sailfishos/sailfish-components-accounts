@@ -15,8 +15,8 @@ SOURCES += plugin.cpp encodedkeyprovider.cpp accountfactory.cpp
 HEADERS += accountvalueencoding_p.h encodedkeyprovider_p.h accountfactory_p.h
 OTHER_FILES += *.qml qmldir
 
-TS_FILE = $$OUT_PWD/sailfish_accounts.ts
-EE_QM = $$OUT_PWD/sailfish_accounts_eng_en.qm
+TS_FILE = $$OUT_PWD/sailfish_components_accounts.ts
+EE_QM = $$OUT_PWD/sailfish_components_accounts_eng_en.qm
 
 translations.commands += lupdate $$PWD -ts $$TS_FILE
 translations.depends = $$PWD/*.qml
