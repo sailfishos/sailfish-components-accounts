@@ -14,7 +14,7 @@ BuildRequires:  pkgconfig(QtOpenGL)
 BuildRequires:  pkgconfig(libsignon-qt)
 BuildRequires:  pkgconfig(accounts-qt)
 
-Requires:  sailfishsilica
+Requires:  sailfishsilica >= 0.8.33
 Requires:  nemo-qml-plugins-accounts >= 0.2.1
 Requires:  nemo-qml-plugins-signon >= 0.2.1
 Requires:  jolla-signon-ui
