@@ -1,11 +1,11 @@
-Name:       sailfish-accounts
+Name:       sailfish-components-accounts
 
 Summary:    Sailfish Accounts UI Components
 Version:    0.0.1
 Release:    1
 Group:      System/Libraries
 License:    TBD
-URL:        https://bitbucket.org/jolla/ui-sailfish-accounts
+URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(QtCore) >= 4.8.0
 BuildRequires:  pkgconfig(QtDeclarative)
@@ -21,6 +21,9 @@ Requires:  jolla-signon-ui
 Requires:  libbluez-qt
 Requires:  libjollasignonuiservice
 
+Obsoletes: sailfish-accounts <= 0.0.2
+Provides:  sailfish-accounts > 0.0.2
+
 %description
 Sailfish Accounts UI Components
 
@@ -35,12 +38,12 @@ Requires:   qtest-qml
 This package contains QML unit tests for Sailfish Accounts UI Components
 
 %package ts-devel
-Summary:   Translation source for sailfish-accounts
+Summary:   Translation source for sailfish-components-accounts
 License:   TBD
 Group:     System/Libraries
 
 %description ts-devel
-Translation source for sailfish-accounts
+Translation source for sailfish-components-accounts
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -62,12 +65,12 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %{_libdir}/qt4/imports/Sailfish/Accounts/*
-%{_datadir}/translations/sailfish_accounts_eng_en.qm
+%{_datadir}/translations/sailfish_components_accounts_eng_en.qm
 
 #
 # Jolla Components internal translation files
 #
 %files ts-devel
 %defattr(-,root,root,-)
-%{_datadir}/translations/source/sailfish_accounts.ts
+%{_datadir}/translations/source/sailfish_components_accounts.ts
 

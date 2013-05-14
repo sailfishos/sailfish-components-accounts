@@ -40,8 +40,8 @@ public:
 
         AppTranslator *engineeringEnglish = new AppTranslator(engine);
         AppTranslator *translator = new AppTranslator(engine);
-        engineeringEnglish->load("sailfish_accounts_eng_en", "/usr/share/translations");
-        translator->load(QLocale(), "sailfish_accounts", "-", "/usr/share/translations");
+        engineeringEnglish->load("sailfish_components_accounts_eng_en", "/usr/share/translations");
+        translator->load(QLocale(), "sailfish_components_accounts", "-", "/usr/share/translations");
     }
 
     virtual void registerTypes(const char *uri)
