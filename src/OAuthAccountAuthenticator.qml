@@ -1,5 +1,6 @@
-import QtQuick 1.1
+import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 import Sailfish.Accounts.private 1.0
@@ -94,8 +95,8 @@ AccountAuthenticator {
 
         Column {
             anchors.centerIn: parent
-            width: parent.width - theme.paddingLarge*2
-            spacing: theme.paddingMedium
+            width: parent.width - Theme.paddingLarge*2
+            spacing: Theme.paddingMedium
 
             Label {
                 id: activityLabel
@@ -115,14 +116,14 @@ AccountAuthenticator {
                 property bool hasLoadedWebPage: false
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                font.family: theme.fontFamilyHeading
-                font.pixelSize: theme.fontSizeLarge
+                font.family: Theme.fontFamilyHeading
+                font.pixelSize: Theme.fontSizeLarge
                 text: root.__errorMessage === "" ? (hasLoadedWebPage ? storingString : loadingString) : errorString
             }
             Label {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                font.family: theme.fontFamilyHeading
+                font.family: Theme.fontFamilyHeading
                 text: root.__errorMessage
             }
         }

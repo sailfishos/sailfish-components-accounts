@@ -1,9 +1,9 @@
-#include <QDeclarativeExtensionPlugin>
-#include <QDeclarativeEngine>
-#include <QtDeclarative>
+#include <QQmlExtensionPlugin>
+#include <QQmlEngine>
+#include <QtQml>
 
 #include <QTranslator>
-#include <QApplication>
+#include <QGuiApplication>
 #include <QLocale>
 
 #include "encodedkeyprovider_p.h"
@@ -27,21 +27,22 @@ public:
 };
 
 
-class SailfishAccountsPlugin : public QDeclarativeExtensionPlugin
+class SailfishAccountsPlugin : public QQmlExtensionPlugin
 {
     Q_OBJECT
+    Q_PLUGIN_METADATA(IID "org.sailfish.components.accounts")
 
 public:
 
-    void initializeEngine(QDeclarativeEngine *engine, const char *uri)
+    void initializeEngine(QQmlEngine *engine, const char *uri)
     {
         Q_UNUSED(uri)
         Q_ASSERT(QLatin1String(uri) == QLatin1String("Sailfish.Accounts"));
 
         AppTranslator *engineeringEnglish = new AppTranslator(engine);
         AppTranslator *translator = new AppTranslator(engine);
-        engineeringEnglish->load("sailfish_components_accounts_eng_en", "/usr/share/translations");
-        translator->load(QLocale(), "sailfish_components_accounts", "-", "/usr/share/translations");
+        engineeringEnglish->load("sailfish_components_accounts_qt5_eng_en", "/usr/share/translations");
+        translator->load(QLocale(), "sailfish_components_accounts_qt5", "-", "/usr/share/translations");
     }
 
     virtual void registerTypes(const char *uri)
@@ -55,6 +56,4 @@ public:
 };
 
 #include "plugin.moc"
-
-Q_EXPORT_PLUGIN2(sailfishaccountsplugin, SailfishAccountsPlugin);
 

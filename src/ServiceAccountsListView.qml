@@ -1,5 +1,6 @@
-import QtQuick 1.1
+import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 
 SilicaListView {
@@ -7,7 +8,7 @@ SilicaListView {
 
     signal serviceClicked(int accountId, string serviceName)
 
-    spacing: theme.paddingLarge
+    spacing: Theme.paddingLarge
     model: ServiceAccountModel {}
 
     header: PageHeader {
@@ -18,29 +19,29 @@ SilicaListView {
 
     delegate: Item {
         width: ListView.view.width
-        height: theme.itemSizeSmall
+        height: Theme.itemSizeSmall
 
         AccountIcon {
             id: icon
-            x: theme.paddingLarge
+            x: Theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             source: model.serviceIcon
         }
         Label {
             id: accountName
             anchors.left: icon.right
-            anchors.leftMargin: theme.paddingLarge
+            anchors.leftMargin: Theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
-            color: mouseArea.pressed ? theme.highlightColor : theme.primaryColor
+            color: mouseArea.pressed ? Theme.highlightColor : Theme.primaryColor
             text: model.serviceDisplayName
         }
         Label {
             anchors.left: icon.right
-            anchors.leftMargin: theme.paddingLarge
+            anchors.leftMargin: Theme.paddingLarge
             anchors.top: accountName.bottom
             text: model.accountDisplayName
-            color: mouseArea.pressed ? theme.secondaryHighlightColor : theme.secondaryColor
+            color: mouseArea.pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor
         }
         MouseArea {
             id: mouseArea
