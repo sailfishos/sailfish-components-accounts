@@ -1,5 +1,6 @@
-import QtQuick 1.1
+import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 
@@ -175,7 +176,7 @@ Page {
         }
 
         delegate: ListItem {
-            contentHeight: theme.itemSizeMedium
+            contentHeight: Theme.itemSizeMedium
             menu: Component {
                 ContextMenu {
                     MenuItem {
@@ -207,25 +208,25 @@ Page {
 
             AccountIcon {
                 id: icon
-                x: theme.paddingLarge
+                x: Theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 source: model.accountIcon
             }
             Label {
                 id: accountName
                 anchors.left: icon.right
-                anchors.leftMargin: theme.paddingLarge
+                anchors.leftMargin: Theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
                 text: model.providerDisplayName
-                color: highlighted ? theme.highlightColor : theme.primaryColor
+                color: highlighted ? Theme.highlightColor : Theme.primaryColor
             }
             Label {
                 anchors.left: icon.right
-                anchors.leftMargin: theme.paddingLarge
+                anchors.leftMargin: Theme.paddingLarge
                 anchors.top: accountName.bottom
                 text: model.accountDisplayName
-                color: highlighted ? theme.secondaryHighlightColor : theme.secondaryColor
+                color: highlighted ? Theme.secondaryHighlightColor : Theme.secondaryColor
             }
         }
 

@@ -3,20 +3,20 @@ TARGET  = sailfishaccountsplugin
 TARGET = $$qtLibraryTarget($$TARGET)
 
 MODULENAME = Sailfish/Accounts
-TARGETPATH = $$[QT_INSTALL_IMPORTS]/$$MODULENAME
+TARGETPATH = $$[QT_INSTALL_QML]/$$MODULENAME
 
-QT += declarative
+QT += qml quick
 CONFIG += plugin
 
 CONFIG += link_pkgconfig
-PKGCONFIG += accounts-qt libsignon-qt
+PKGCONFIG += accounts-qt5 libsignon-qt5
 
 SOURCES += plugin.cpp encodedkeyprovider.cpp accountfactory.cpp
 HEADERS += accountvalueencoding_p.h encodedkeyprovider_p.h accountfactory_p.h
 OTHER_FILES += *.qml qmldir
 
-TS_FILE = $$OUT_PWD/sailfish_components_accounts.ts
-EE_QM = $$OUT_PWD/sailfish_components_accounts_eng_en.qm
+TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
+EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
 
 translations.commands += lupdate $$PWD -ts $$TS_FILE
 translations.depends = $$PWD/*.qml

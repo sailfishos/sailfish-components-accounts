@@ -1,5 +1,6 @@
-import QtQuick 1.1
+import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 
 Item {
@@ -89,7 +90,7 @@ Item {
         Column {
             id: contentColumn
             width: parent.width
-            spacing: theme.paddingLarge
+            spacing: Theme.paddingLarge
 
             DialogHeader {
                 //: Save the account settings
@@ -100,17 +101,17 @@ Item {
             Item {
                 id: accountHeadingItem
                 width: parent.width
-                height: theme.itemSizeSmall
+                height: Theme.itemSizeSmall
 
                 AccountIcon {
                     id: accountIcon
-                    x: theme.paddingLarge
+                    x: Theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Label {
                     id: accountName
                     anchors.left: accountIcon.right
-                    anchors.leftMargin: theme.paddingLarge
+                    anchors.leftMargin: Theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Switch {
@@ -146,17 +147,17 @@ Item {
 
                     Item {
                         width: contentColumn.width
-                        height: theme.itemSizeSmall
+                        height: Theme.itemSizeSmall
 
                         AccountIcon {
                             id: serviceIcon
-                            x: theme.paddingLarge
+                            x: Theme.paddingLarge
                             anchors.verticalCenter: parent.verticalCenter
                             source: model.icon
                         }
                         Label {
                             anchors.left: serviceIcon.right
-                            anchors.leftMargin: theme.paddingLarge
+                            anchors.leftMargin: Theme.paddingLarge
                             anchors.verticalCenter: parent.verticalCenter
                             text: model.name
                         }

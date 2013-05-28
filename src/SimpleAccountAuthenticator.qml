@@ -1,5 +1,6 @@
-import QtQuick 1.1
+import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 
@@ -81,7 +82,7 @@ AccountAuthenticator {
         Column {
             id: contentColumn
 
-            spacing: theme.paddingLarge
+            spacing: Theme.paddingLarge
             width: parent.width
 
             DialogHeader {
@@ -90,8 +91,8 @@ AccountAuthenticator {
 
             Item {
                 width: parent.width
-                height: theme.itemSizeSmall
-                x: theme.paddingLarge
+                height: Theme.itemSizeSmall
+                x: Theme.paddingLarge
 
                 AccountIcon {
                     id: icon
@@ -100,15 +101,15 @@ AccountAuthenticator {
                 }
                 Label {
                     anchors.left: icon.right
-                    anchors.leftMargin: theme.paddingLarge
+                    anchors.leftMargin: Theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.name
                 }
             }
 
             Text {
-                x: theme.paddingLarge
-                width: parent.width - theme.paddingLarge
+                x: Theme.paddingLarge
+                width: parent.width - Theme.paddingLarge
                 text: root.description
             }
 

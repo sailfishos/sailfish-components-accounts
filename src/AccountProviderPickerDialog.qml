@@ -1,5 +1,6 @@
-import QtQuick 1.1
+import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 
 Dialog {
@@ -24,7 +25,7 @@ Dialog {
 
         delegate: BackgroundItem {
             width: ListView.view.width
-            height: theme.itemSizeSmall
+            height: Theme.itemSizeSmall
 
             onClicked: {
                 providerSelected(model.providerName)
@@ -33,16 +34,16 @@ Dialog {
 
             AccountIcon {
                 id: icon
-                x: theme.paddingLarge
+                x: Theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 source: model.providerIcon
             }
             Label {
                 anchors.left: icon.right
-                anchors.leftMargin: theme.paddingLarge
+                anchors.leftMargin: Theme.paddingLarge
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.providerDisplayName
-                color: highlighted ? theme.highlightColor : theme.primaryColor
+                color: highlighted ? Theme.highlightColor : Theme.primaryColor
             }
         }
 

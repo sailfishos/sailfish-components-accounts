@@ -1,4 +1,4 @@
-Name:       sailfish-components-accounts
+Name:       sailfish-components-accounts-qt5
 
 Summary:    Sailfish Accounts UI Components
 Version:    0.0.1
@@ -7,22 +7,21 @@ Group:      System/Libraries
 License:    TBD
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
-BuildRequires:  pkgconfig(QtCore) >= 4.8.0
-BuildRequires:  pkgconfig(QtDeclarative)
-BuildRequires:  pkgconfig(QtGui)
-BuildRequires:  pkgconfig(QtOpenGL)
-BuildRequires:  pkgconfig(libsignon-qt)
-BuildRequires:  pkgconfig(accounts-qt)
+BuildRequires:  pkgconfig(Qt5Core)
+BuildRequires:  pkgconfig(Qt5Qml)
+BuildRequires:  pkgconfig(Qt5Quick)
+BuildRequires:  pkgconfig(Qt5Gui)
+BuildRequires:  pkgconfig(Qt5OpenGL)
+BuildRequires:  pkgconfig(libsignon-qt5)
+BuildRequires:  pkgconfig(accounts-qt5)
+BuildRequires:  qt5-qttools
+BuildRequires:  qt5-qttools-linguist
 
-Requires:  sailfishsilica >= 0.8.33
-Requires:  nemo-qml-plugins-accounts >= 0.2.1
-Requires:  nemo-qml-plugins-signon >= 0.2.1
+Requires:  sailfishsilica-qt5
+Requires:  nemo-qml-plugin-accounts-qt5
+Requires:  nemo-qml-plugin-signon-qt5
 Requires:  jolla-signon-ui
-Requires:  libbluez-qt
 Requires:  libjollasignonuiservice
-
-Obsoletes: sailfish-accounts <= 0.0.2
-Provides:  sailfish-accounts > 0.0.2
 
 %description
 Sailfish Accounts UI Components
@@ -30,9 +29,9 @@ Sailfish Accounts UI Components
 %package tests
 Summary:    Unit tests for Sailfish Accounts UI Components
 Group:      System/Libraries
-BuildRequires:  pkgconfig(QtTest)
+BuildRequires:  pkgconfig(Qt5Test)
 Requires:   %{name} = %{version}-%{release}
-Requires:   qtest-qml
+Requires:   qt5-qtdeclarative-devel-tools
 
 %description tests
 This package contains QML unit tests for Sailfish Accounts UI Components
@@ -50,27 +49,27 @@ Translation source for sailfish-components-accounts
 
 %build
 
-%qmake
+%qmake5
 
 make %{?jobs:-j%jobs}
 
 %install
 rm -rf %{buildroot}
 
-%qmake_install
+%qmake5_install
 
 #
 # Jolla Components internal files
 #
 %files
 %defattr(-,root,root,-)
-%{_libdir}/qt4/imports/Sailfish/Accounts/*
-%{_datadir}/translations/sailfish_components_accounts_eng_en.qm
+%{_libdir}/qt5/qml/Sailfish/Accounts/*
+%{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
 
 #
 # Jolla Components internal translation files
 #
 %files ts-devel
 %defattr(-,root,root,-)
-%{_datadir}/translations/source/sailfish_components_accounts.ts
+%{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
 
