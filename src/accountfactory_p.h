@@ -24,7 +24,12 @@ public:
     AccountFactory(QObject *parent = 0);
     ~AccountFactory();
 
+    Q_INVOKABLE void createAccount(const QString &providerName, const QString &serviceName,
+                                   const QString &username, const QString &password,
+                                   const QString displayName = QString(),
+                                   const QVariantMap &configuration = QVariantMap());
     Q_INVOKABLE void createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params);
+
     Q_INVOKABLE void setAccountDisplayName(const QString &displayName);
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void cancel();
@@ -49,11 +54,13 @@ private:
         CleanupArtifacts
     };
     void resetState(ResetMode mode);
+    void initializeAccountCreation(const QString &providerName, const QString &serviceName);
+    void startAccountCreation();
+    void setConfigurationValues(const QVariantMap &configurationValues, const QString &configurationServiceName);
 
 private:
     bool m_busy;
     bool m_created;
-    bool m_settingName;
     bool m_resettingState;
     Accounts::Service m_srv;
     QVariantMap m_responseData;
