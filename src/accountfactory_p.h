@@ -30,7 +30,6 @@ public:
                                    const QVariantMap &configuration = QVariantMap());
     Q_INVOKABLE void createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params);
 
-    Q_INVOKABLE void setAccountDisplayName(const QString &displayName);
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void cancel();
 
