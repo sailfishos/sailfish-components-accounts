@@ -2,15 +2,13 @@ import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
+import org.nemomobile.signon 1.0
 
-Item {
+Dialog {
     id: root
-    anchors.fill: parent
 
-    property Dialog dialog // provided by AccountsPage.qml
-    property int accountId: _accountIdRef === null ? 0 : _accountIdRef.accountId
-    property QtObject _accountIdRef
-    property bool _isNewAccount: false
+    property int accountId
+    property bool isNewAccount: false
 
     function _populateSettingsModel() {
         serviceModel.clear()
@@ -27,12 +25,15 @@ Item {
         }
     }
 
-    Connections {
-        target: dialog
-        onAccepted: {
-            account.displayName = accountDisplayNameField.text
-            account.sync()
-        }
+    canAccept: contentColumn.visible
+
+    onAccepted: {
+        account.displayName = accountDisplayNameField.text
+        account.sync()
+    }
+
+    IdentityManager {
+        id: identityManager
     }
 
     Account {
@@ -118,6 +119,7 @@ Item {
                     id: switchButton
                     anchors.right: parent.right
                     checked: account.enabled
+                    automaticCheck: false
 
                     onCheckedChanged: {
                         account.enabled = checked
@@ -169,7 +171,7 @@ Item {
                             function initialiseChecked() {
                                 if (!isInitialised) {
                                     isInitialised = true
-                                    if (root._isNewAccount) {
+                                    if (root.isNewAccount) {
                                         account.enableWithService(model.name)
                                         return true
                                     } else if (model.enabled) {

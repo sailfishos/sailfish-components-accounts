@@ -7,17 +7,11 @@ import org.nemomobile.signon 1.0
 Page {
     id: root
 
-    property Item _accountSettings // saving settings changes is async, so we can't delete it immediately on accept/pop.
+    // When an account creation or settings dialog is created, we keep a reference to them here
+    // because they call Account::sync() which is asynchronous and we need to make sure the dialog
+    // is not deleted (and thus deleting their account child) before the operation is complete.
     property Item _accountCreator
-    property string _accountToCreate
-
-    function selectedAccountToCreate(providerName) {
-        root._accountToCreate = providerName
-    }
-
-    function _rejectAccountCreation() {
-        root._deleteAccount(lastCreatedAccountRef.accountId)
-    }
+    property Item _accountSettings
 
     function _deleteAccount(accountId) {
         var account = accountManager.account(accountId)
@@ -38,12 +32,55 @@ Page {
         })
     }
 
-    function _cleanUpAccountCreator() {
-        if (_accountCreator !== null) {
-            _accountCreator.destroy()
-            _accountCreator = null
+    function _createAccount(providerName) {
+        var provider = accountModel.provider(providerName)
+        if (!provider) {
+            throw new Error("Unable to obtain provider with name: " + providerName)
         }
-        lastCreatedAccountRef.accountId = 0
+        var props = {
+            "accountProvider": provider,
+            "acceptDestination": _createSettingsPage(providerName, {}),
+            "acceptDestinationAction": PageStackAction.Replace,
+            "acceptDestinationProperties": {"isNewAccount": true}
+        }
+        pageStack.replace(_createAccountCreationPage(providerName, props))
+    }
+
+    function _createSettingsPage(providerName, properties) {
+        var componentFileName = "/usr/share/accounts/ui/" + providerName + "-settings.qml"
+        var comp = Qt.createComponent(componentFileName)
+        if (comp.status !== Component.Ready) {
+            comp = Qt.createComponent(Qt.resolvedUrl("AccountSettings.qml"))
+        }
+        if (root._accountSettings !== null) {
+            root._accountSettings.destroy()
+        }
+        var obj = comp.status === Component.Ready
+                ? comp.createObject(root, properties)
+                : null
+        obj.rejected.connect(function() {
+            if (obj === root._accountSettings && obj.isNewAccount) {
+                root._deleteAccount(obj.accountId)
+            }
+        })
+        root._accountSettings = obj
+        return root._accountSettings
+    }
+
+    function _createAccountCreationPage(providerName, properties) {
+        var componentFileName = "/usr/share/accounts/ui/" + providerName + ".qml"
+        var comp = Qt.createComponent(componentFileName)
+        if (comp.status !== Component.Ready) {
+            throw new Error("Unable to load account creation page "
+                            + componentFileName + ": " + comp.errorString())
+        }
+        if (root._accountCreator !== null) {
+            root._accountCreator.destroy()
+        }
+        root._accountCreator = comp.status === Component.Ready
+                ? comp.createObject(root, properties)
+                : null
+        return root._accountCreator
     }
 
     AccountModel {
@@ -58,117 +95,11 @@ Page {
         id: identityManager
     }
 
-    // This allows AccountSettings::accountId to be updated when AccountCreationDialog has
-    // successfully saved an account and created a valid accountId.
-    QtObject {
-        id: lastCreatedAccountRef
-        property int accountId
-    }
-    Connections {
-        target: root._accountCreator
-        onAccountIdChanged: lastCreatedAccountRef.accountId = root._accountCreator.accountId
-    }
-
-    Component {
-        id: settingsDialogComponent
-        Dialog {
-            id: settingsDialog
-            anchors.fill: parent
-            property bool _isNewAccount
-            property string _providerName
-            property variant _properties
-            onStatusChanged: {
-                if (status === PageStatus.Activating) {
-                    if (_providerName == "") {
-                        // assume constructed via new account.
-                        _isNewAccount = true
-                        _providerName = root._accountToCreate
-                        _properties = { "_accountIdRef": lastCreatedAccountRef }
-                    }
-
-                    // construct the settings page, set me as its dialog.
-                    var componentFileName = "/usr/share/accounts/ui/" + _providerName + "-settings.qml"
-                    var comp = Qt.createComponent(componentFileName)
-                    if (comp.status !== Component.Ready) {
-                        // unable to create provider-specific settings page; create the default one instead
-                        console.log("Unable to create provider-specific settings page: " + comp.errorString())
-                        comp = Qt.createComponent("AccountSettings.qml")
-                        if (comp.status !== Component.Ready) {
-                            throw new Error("Error creating default account settings page: " + comp.errorString())
-                        }
-                    }
-
-                    // delete the old settings page, if it exists.
-                    if (_accountSettings !== null) {
-                        _accountSettings.destroy()
-                    }
-
-                    // by default, we enable all services in a new account.
-                    var modifiedProperties = _properties
-                    modifiedProperties["_isNewAccount"] = _isNewAccount
-                    modifiedProperties["dialog"] = settingsDialog
-                    modifiedProperties["parent"] = settingsDialog // itemParent must be dialog so that it is rendered correctly
-                    root._accountSettings = comp.createObject(root, modifiedProperties) // note: QObject parent must be root to avoid gc on dialog pop.
-                    if (root._accountSettings === null) {
-                        throw new Error("Error: cannot load instance of " + componentFileName + ":", comp.errorString())
-                    }
-                    if (_isNewAccount) {
-                        _accountSettings.dialog.rejected.connect(root._rejectAccountCreation)
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: authDialogComponent
-
-        Dialog {
-            id: authDialog
-
-            anchors.fill: parent
-            acceptDestination: settingsDialogComponent
-            acceptDestinationAction: PageStackAction.Replace
-            property bool firstPushStarted: false
-
-            onStatusChanged: {
-                if (status === PageStatus.Activating && firstPushStarted == false) {
-                    firstPushStarted = true
-                    if (root._accountToCreate == "") {
-                        // NOTE: if root._accountToCreate isn't set prior to this dialog being activated, we bail out.
-                        throw new Error("Error: account creation page activated without provider name being set!")
-                    }
-
-                    var provider = accountModel.provider(root._accountToCreate)
-                    if (!provider) {
-                        throw new Error("Unable to obtain provider with name: " + root._accountToCreate)
-                    }
-                    var componentFileName = "/usr/share/accounts/ui/" + root._accountToCreate + ".qml"
-                    var comp = Qt.createComponent(componentFileName)
-                    root._cleanUpAccountCreator() // delete the old account creator page
-                    if (comp.status === Component.Ready) {
-                        root._accountCreator = comp.createObject(root, { // QObject parent must be root to avoid gc on dialog pop.
-                                "dialog": authDialog,
-                                "accountModel": accountModel,
-                                "provider": provider,
-                                "parent": authDialog // itemParent set to authDialog so it gets rendered correctly
-                            })
-                        if (root._accountCreator === null) {
-                            throw new Error("Error: cannot load instance of " + componentFileName + ":", comp.errorString())
-                        }
-                    } else {
-                        throw new Error("Error: cannot load component file " + componentFileName + ":", comp.errorString())
-                    }
-                }
-            }
-        }
-    }
-
     SilicaListView {
         id: accountsView
 
         anchors.fill: parent
-        model: AccountModel {}
+        model: accountModel
         header: PageHeader {
             //: accounts list view
             //% "Accounts"
@@ -196,14 +127,6 @@ Page {
 
             }
 
-            onClicked: {
-                pageStack.push(settingsDialogComponent.createObject(root, {
-                                   "_isNewAccount": false,
-                                   "_providerName": accountModel.provider(model.accountId).name,
-                                   "_properties": { "accountId": model.accountId }
-                               }))
-            }
-
             ListView.onRemove: animateRemoval()
 
             AccountIcon {
@@ -228,6 +151,10 @@ Page {
                 text: model.accountDisplayName
                 color: highlighted ? Theme.secondaryHighlightColor : Theme.secondaryColor
             }
+
+            onClicked: {
+                pageStack.push(root._createSettingsPage(model.providerName, {"accountId": model.accountId}))
+            }
         }
 
         VerticalScrollDecorator {}
@@ -238,12 +165,8 @@ Page {
                 //% "Add Account";
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: {
-                    root._accountToCreate = ""
-                    var picker = pageStack.push(
-                                Qt.resolvedUrl("AccountProviderPickerDialog.qml"),
-                                {"acceptDestination": authDialogComponent,
-                                 "acceptDestinationAction": PageStackAction.Replace})
-                    picker.providerSelected.connect(root.selectedAccountToCreate)
+                    var picker = pageStack.push(Qt.resolvedUrl("AccountProviderPickerDialog.qml"))
+                    picker.providerSelected.connect(root._createAccount)
                 }
             }
         }
@@ -251,8 +174,8 @@ Page {
         ViewPlaceholder {
             enabled: accountsView.count == 0
 
-            //% "Pull down to add accounts"
-            text: qsTrId("components_accounts-he-pull_down_to_add_account")
+            //% "No accounts"
+            text: qsTrId("components_accounts-he-no_accounts")
         }
     }
 }

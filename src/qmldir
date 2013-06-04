@@ -2,8 +2,8 @@ plugin sailfishaccountsplugin
 AccountProviderPickerDialog 1.0 AccountProviderPickerDialog.qml
 AccountSettings 1.0 AccountSettings.qml
 AccountsPage 1.0 AccountsPage.qml
-AccountAuthenticator 1.0 AccountAuthenticator.qml
-SimpleAccountAuthenticator 1.0 SimpleAccountAuthenticator.qml
-OAuthAccountAuthenticator 1.0 OAuthAccountAuthenticator.qml
+AccountCreationDialog 1.0 AccountCreationDialog.qml
+SimpleAccountCreationDialog 1.0 SimpleAccountCreationDialog.qml
+OAuthAccountCreationDialog 1.0 OAuthAccountCreationDialog.qml
 OAuthSignOnButton 1.0 OAuthSignOnButton.qml
 ServiceAccountsListView 1.0 ServiceAccountsListView.qml
