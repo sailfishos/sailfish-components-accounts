@@ -32,7 +32,9 @@ AccountCreationDialog {
     }
 
     Component.onDestruction: {
-        jolla_signon_ui_service.inProcessParent = null // no longer servicing signon requests
+        if (typeof jolla_signon_ui_service !== "undefined") {
+            jolla_signon_ui_service.inProcessParent = null // no longer servicing signon requests
+        }
     }
 
     DialogHeader {
@@ -98,10 +100,12 @@ AccountCreationDialog {
             }
 
             // also ensure that we set up embedding / etc correctly:
-            params["Title"] = root.accountProvider.displayName
-            params["InProcessServiceName"] = jolla_signon_ui_service.inProcessServiceName
-            params["InProcessObjectPath"] = jolla_signon_ui_service.inProcessObjectPath
-            jolla_signon_ui_service.inProcessParent = webViewContainer
+            if (typeof jolla_signon_ui_service !== "undefined") {
+                params["Title"] = root.accountProvider.displayName
+                params["InProcessServiceName"] = jolla_signon_ui_service.inProcessServiceName
+                params["InProcessObjectPath"] = jolla_signon_ui_service.inProcessObjectPath
+                jolla_signon_ui_service.inProcessParent = webViewContainer
+            }
 
             // and trigger signon / account creation
             accountFactory.createOAuthAccount(root.accountProvider.name, _signonServiceName, params)
