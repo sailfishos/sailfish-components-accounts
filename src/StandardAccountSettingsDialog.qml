@@ -3,11 +3,8 @@ import Sailfish.Silica 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 
-Dialog {
+AccountSettingsDialog {
     id: root
-
-    property int accountId
-    property bool isNewAccount: false
 
     function _populateSettingsModel() {
         serviceModel.clear()
@@ -24,15 +21,9 @@ Dialog {
         }
     }
 
-    canAccept: contentColumn.visible
-
     onAccepted: {
         account.displayName = accountDisplayNameField.text
         account.sync()
-    }
-
-    IdentityManager {
-        id: identityManager
     }
 
     Account {
@@ -42,11 +33,6 @@ Dialog {
 
         onStatusChanged: {
             if (status === Account.Initialized) {
-                var provider = accountManager.provider(providerName)
-                if (provider) {
-                    accountName.text = provider.displayName
-                    accountIcon.source = provider.iconName
-                }
                 root._populateSettingsModel()
             } else if (status === Account.Synced) {
                 // success
@@ -107,12 +93,15 @@ Dialog {
                     id: accountIcon
                     x: theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
+                    source: root.accountProvider.iconName
                 }
                 Label {
-                    id: accountName
-                    anchors.left: accountIcon.right
-                    anchors.leftMargin: theme.paddingLarge
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors {
+                        left: accountIcon.right
+                        leftMargin: theme.paddingLarge
+                        verticalCenter: parent.verticalCenter
+                    }
+                    text: root.accountProvider.displayName
                 }
                 Switch {
                     id: switchButton
@@ -157,9 +146,11 @@ Dialog {
                             source: model.icon
                         }
                         Label {
-                            anchors.left: serviceIcon.right
-                            anchors.leftMargin: theme.paddingLarge
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors {
+                                left: serviceIcon.right
+                                leftMargin: theme.paddingLarge
+                                verticalCenter: parent.verticalCenter
+                            }
                             text: model.name
                         }
                         Switch {
