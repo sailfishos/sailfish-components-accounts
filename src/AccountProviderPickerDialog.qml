@@ -8,11 +8,13 @@ Dialog {
 
     signal providerSelected(string providerName)
 
+    canAccept: false
+
     AccountProviderModel {
         id: providerModel
     }
 
-    sourceComponent: SilicaListView {
+    SilicaListView {
         anchors.fill: parent
         model: providerModel
 
@@ -28,6 +30,7 @@ Dialog {
             height: Theme.itemSizeSmall
 
             onClicked: {
+                root.canAccept = true
                 providerSelected(model.providerName)
                 root.accept()
             }

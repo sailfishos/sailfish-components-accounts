@@ -6,7 +6,6 @@ AccountFactory::AccountFactory(QObject *parent)
     : QObject(parent)
     , m_busy(false)
     , m_created(false)
-    , m_settingName(false)
     , m_resettingState(false)
     , m_am(new Accounts::Manager(this))
     , m_newAccount(0)
@@ -38,6 +37,108 @@ AccountFactory::~AccountFactory()
     The account will be created with all services disabled.
 */
 void AccountFactory::createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params)
+{
+    initializeAccountCreation(providerName, serviceName);
+
+    QVariantMap adp = m_accountService->authData().parameters();
+    QStringList paramKeys = params.keys();
+    foreach (const QString &key, paramKeys) {
+        QVariant pv = params.value(key);
+        if (pv.type() == QVariant::List) {
+            adp.insert(key, pv.toStringList());
+        } else {
+            adp.insert(key, pv);
+        }
+    }
+    m_signonSessionParams = adp;
+
+    startAccountCreation();
+}
+
+/*
+    Creates an account (and associated credentials) with the provider
+    identified by the given \a providerName.  It will use the signon parameters
+    specified for the service identified by the given \a serviceName by
+    default, overridden or extended by the parameters specified by \a params.
+    It will also set \a displayName as the account display name, if specified.
+
+    If \a configuration is specified, it should be a set of key-value parameters
+    where each key is an account service name and each value is a QVariantMap of
+    the configuration values to be set for that service. If a service name is
+    empty, then its values will be set as the account's global configuration
+    values.
+
+    If an error occurs, the \l error() signal will be emitted.
+
+    If signon is successful, the account will be created and the identity used
+    during signon will be set as the credentials for all services offered by
+    the provider in that account.  The auth session will remain signed in until
+    \l signOut() method is invoked.
+
+    The account will be created with all services disabled.
+*/
+void AccountFactory::createAccount(const QString &providerName,
+                                   const QString &serviceName,
+                                   const QString &username,
+                                   const QString &password,
+                                   const QString displayName,
+                                   const QVariantMap &configuration)
+{
+    initializeAccountCreation(providerName, serviceName);
+
+    m_identInfo.setUserName(username);
+    m_identInfo.setSecret(password);
+
+    foreach (const QString &serviceName, configuration.keys()) {
+        QVariant v = configuration[serviceName];
+        if (v.type() != QVariant::Map) {
+            qWarning() << Q_FUNC_INFO << "Configuration for service" << serviceName << "is not a QVariantMap!";
+            continue;
+        }
+        setConfigurationValues(v.toMap(), serviceName);
+    }
+
+    if (!displayName.isEmpty() && m_newAccount)
+        m_newAccount->setDisplayName(displayName);
+
+    startAccountCreation();
+}
+
+void AccountFactory::setConfigurationValues(const QVariantMap &configurationValues, const QString &configurationServiceName)
+{
+    if (configurationValues.isEmpty())
+        return;
+
+    Accounts::Service service;
+    if (!configurationServiceName.isEmpty()) {
+        service = m_am->service(configurationServiceName);
+        if (service.isValid()) {
+            m_newAccount->selectService(service);
+        } else {
+            qWarning() << Q_FUNC_INFO << "Unable to find service" << configurationServiceName << ", not setting account configuration values";
+            return;
+        }
+    }
+    foreach (const QString &key, configurationValues.keys()) {
+        QVariant currValue = configurationValues.value(key);
+        if (currValue.type() == QVariant::Bool
+                || currValue.type() == QVariant::Int
+                || currValue.type() == QVariant::LongLong
+                || currValue.type() == QVariant::ULongLong
+                || currValue.type() == QVariant::String
+                || currValue.type() == QVariant::StringList) {
+            m_newAccount->setValue(key, currValue);
+        } else if (currValue.type() == QVariant::List) {
+            m_newAccount->setValue(key, currValue.toStringList());
+        } else {
+            qWarning() << Q_FUNC_INFO << "Unsupported configuration value type!  Must be int, quint64, bool, string or string list.";
+        }
+    }
+    if (service.isValid())
+        m_newAccount->selectService(Accounts::Service());
+}
+
+void AccountFactory::initializeAccountCreation(const QString &providerName, const QString &serviceName)
 {
     // we still have to create the account first, then the service account, then the identity
     // simply because the accounts framework doesn't allow us to access parameters from the
@@ -88,29 +189,21 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
         return;
     }
 
-    QVariantMap adp = m_accountService->authData().parameters();
-    QStringList paramKeys = params.keys();
-    foreach (const QString &key, paramKeys) {
-        QVariant pv = params.value(key);
-        if (pv.type() == QVariant::List) {
-            adp.insert(key, pv.toStringList());
-        } else {
-            adp.insert(key, pv);
-        }
-    }
-    m_signonSessionParams = adp;
-
     // now create the identity and attempt to store credentials.  Once that's complete, we'll sign in.
     Accounts::Provider prv = m_am->provider(providerName);
     QMap<QString, QStringList> methodMechs;
     methodMechs.insert(m_accountService->authData().method(), QStringList() << m_accountService->authData().mechanism());
     m_identInfo = SignOn::IdentityInfo(prv.displayName(), prv.displayName(), methodMechs);
+}
+
+void AccountFactory::startAccountCreation()
+{
     m_ident = SignOn::Identity::newIdentity(m_identInfo);
     if (!m_ident) {
         resetState(AccountFactory::CleanupArtifacts);
         //: Error emitted if an error occurred while creating an identity (signon credentials)
         //% "Unable to create credentials to sign in to service %1 from provider %2"
-        emit error(qtTrId("jollacomponents_internal-accountfactory-credentials_create_failed").arg(serviceName).arg(providerName));
+        emit error(qtTrId("jollacomponents_internal-accountfactory-credentials_create_failed").arg(m_srv.name()).arg(m_newAccount->providerName()));
         return;
     }
 
@@ -120,22 +213,9 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
     m_ident->storeCredentials(m_identInfo);
 }
 
-void AccountFactory::setAccountDisplayName(const QString &displayName)
-{
-    if (!m_busy && m_created && m_newAccount) {
-        m_settingName = true;
-        m_newAccount->setDisplayName(displayName);
-        m_newAccount->sync();
-    } else {
-        //: Error emitted if the function is called prior to creation succeeding
-        //% "Unable to set display name of account prior to creation"
-        emit error(qtTrId("jollacomponents_internal-accountfactory-displayname_invalid"));
-    }
-}
-
 void AccountFactory::signOut()
 {
-    if (!m_busy && !m_settingName) {
+    if (!m_busy) {
         resetState(AccountFactory::ResetOnly); // reset state, but don't remove the account/identity.
     } else {
         //: Error emitted if the function is called while busy
@@ -213,9 +293,6 @@ void AccountFactory::handleSynced()
         m_busy = false;
         m_created = true;
         emit success(m_newAccount->id(), m_ident->id(), m_responseData);
-    } else if (m_settingName) {
-        // successfully set the name of the account
-        m_settingName = false;
     }
 }
 
@@ -282,6 +359,5 @@ void AccountFactory::resetState(AccountFactory::ResetMode mode)
         m_srv = Accounts::Service();
         m_busy = false;
         m_created = false;
-        m_settingName = false;
     }
 }
