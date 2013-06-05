@@ -6,5 +6,4 @@ AccountsPage 1.0 AccountsPage.qml
 AccountCreationDialog 1.0 AccountCreationDialog.qml
 SimpleAccountCreationDialog 1.0 SimpleAccountCreationDialog.qml
 OAuthAccountCreationDialog 1.0 OAuthAccountCreationDialog.qml
-OAuthSignOnButton 1.0 OAuthSignOnButton.qml
 ServiceAccountsListView 1.0 ServiceAccountsListView.qml
