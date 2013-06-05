@@ -4,11 +4,8 @@ import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
 
-Dialog {
+AccountSettingsDialog {
     id: root
-
-    property int accountId
-    property bool isNewAccount: false
 
     function _populateSettingsModel() {
         serviceModel.clear()
@@ -25,15 +22,9 @@ Dialog {
         }
     }
 
-    canAccept: contentColumn.visible
-
     onAccepted: {
         account.displayName = accountDisplayNameField.text
         account.sync()
-    }
-
-    IdentityManager {
-        id: identityManager
     }
 
     Account {
@@ -43,11 +34,6 @@ Dialog {
 
         onStatusChanged: {
             if (status === Account.Initialized) {
-                var provider = accountManager.provider(providerName)
-                if (provider) {
-                    accountName.text = provider.displayName
-                    accountIcon.source = provider.iconName
-                }
                 root._populateSettingsModel()
             } else if (status === Account.Synced) {
                 // success
@@ -108,6 +94,7 @@ Dialog {
                     id: accountIcon
                     x: Theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
+                    source: root.accountProvider.iconName
                 }
                 Label {
                     id: accountName

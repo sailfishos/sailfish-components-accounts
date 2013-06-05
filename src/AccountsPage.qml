@@ -39,9 +39,8 @@ Page {
         }
         var props = {
             "accountProvider": provider,
-            "acceptDestination": _createSettingsPage(providerName, {}),
-            "acceptDestinationAction": PageStackAction.Replace,
-            "acceptDestinationProperties": {"isNewAccount": true}
+            "acceptDestination": _createSettingsPage(providerName, {"accountProvider": provider, "isNewAccount": true}),
+            "acceptDestinationAction": PageStackAction.Replace
         }
         pageStack.replace(_createAccountCreationPage(providerName, props))
     }
@@ -50,7 +49,7 @@ Page {
         var componentFileName = "/usr/share/accounts/ui/" + providerName + "-settings.qml"
         var comp = Qt.createComponent(componentFileName)
         if (comp.status !== Component.Ready) {
-            comp = Qt.createComponent(Qt.resolvedUrl("AccountSettings.qml"))
+            comp = Qt.createComponent(Qt.resolvedUrl("StandardAccountSettingsDialog.qml"))
         }
         if (root._accountSettings !== null) {
             root._accountSettings.destroy()
