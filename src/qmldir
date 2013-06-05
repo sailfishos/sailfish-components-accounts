@@ -7,3 +7,4 @@ AccountCreationDialog 1.0 AccountCreationDialog.qml
 SimpleAccountCreationDialog 1.0 SimpleAccountCreationDialog.qml
 OAuthAccountCreationDialog 1.0 OAuthAccountCreationDialog.qml
 ServiceAccountsListView 1.0 ServiceAccountsListView.qml
+AccountIcon 1.0 AccountIcon.qml
