@@ -3,12 +3,12 @@ import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
+import Sailfish.Accounts.private 1.0
 
-AccountAuthenticator {
+AccountCreationDialog {
     id: root
 
-    property string name: provider ? provider.displayName : ""
-    property string iconSource: provider ? provider.iconName : ""
+    property string iconSource: accountProvider.iconName
     property string description
 
     //: Username for account login action
@@ -19,59 +19,35 @@ AccountAuthenticator {
     property string username
     property string password
 
-    property Account account: Account {
-        identifier: root.accountId
-        providerName: root.accountId != 0 ? "" : (provider ? provider.name : "")
+    canAccept: username !== "" && password !== ""
 
-        onStatusChanged: {
-            if (status === Account.Initialized && !root.__isNewAccount) {
-                usernameField.text = account.displayName // we save the username in the display name.
-                identity.identifier = account.identityIdentifier(root.__defaultServiceName) // if zero, will create new identity.
-            } else if (status === Account.Synced) {
-                // success
-                root.accountId = account.identifier
-            } else if (status === Account.Error) {
-                // XXX display "error" dialog?
-                console.log("SimpleAccountAuthenticator account error:", errorMessage)
-                if (root.dialog.result !== DialogResult.Rejected) {
-                    // only reject if not already rejected
-                    root.dialog.reject()
-                }
-            }
-        }
+    onAccepted: {
+        accountFactory.beginCreation()
     }
-
-    property Identity identity: Identity {
-        identifier: root.accountId ? account.identityIdentifier(root.__defaultServiceName) : 0
-        identifierPending: root.accountId != 0
-
-        onStatusChanged: {
-            if (status === Identity.Initialized) {
-                usernameField.text = userName
-                passwordField.text = secret
-            } else if (status === Identity.Synced) {
-                account.displayName = usernameField.text
-                for (var i in provider.serviceNames) {
-                    account.enableWithService(provider.serviceNames[i])
-                    account.setIdentityIdentifier(identity.identifier, provider.serviceNames[i])
-                }
-                account.sync()
-            } else if (status === Identity.Error) {
-                // XXX display "error" dialog?
-                console.log("SimpleAccountAuthenticator identity error:", errorMessage)
-                if (root.dialog.result !== DialogResult.Rejected) {
-                    // only reject if not already rejected
-                    root.dialog.reject()
-                }
-            }
-        }
-    }
-
-    // implementation details.
-    property string __defaultServiceName: provider ? provider.serviceNames[0] : ""
-    property bool __isNewAccount: accountId == 0
 
     anchors.fill: parent
+
+    AccountModel {
+        id: accountModel
+    }
+
+    AccountFactory {
+        id: accountFactory
+
+        function beginCreation() {
+            var defaultServiceName = root.accountProvider.serviceNames[0]
+            createAccount(root.accountProvider.name, defaultServiceName, root.username, root.password, root.username)
+        }
+
+        onError: {
+            console.log("SimpleAccountCreationDialog error:", message)
+        }
+
+        onSuccess: {
+            // set the accountId for the settings page
+            root.acceptDestinationInstance.accountId = newAccountId
+        }
+    }
 
     SilicaFlickable {
         id: flickable
@@ -103,7 +79,7 @@ AccountAuthenticator {
                     anchors.left: icon.right
                     anchors.leftMargin: Theme.paddingLarge
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.name
+                    text: root.accountProvider.displayName
                 }
             }
 
