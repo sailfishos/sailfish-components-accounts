@@ -1,7 +1,7 @@
 Name:       sailfish-components-accounts
 
 Summary:    Sailfish Accounts UI Components
-Version:    0.0.1
+Version:    0.0.6
 Release:    1
 Group:      System/Libraries
 License:    TBD
