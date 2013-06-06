@@ -6,12 +6,6 @@ import org.nemomobile.signon 1.0
 Page {
     id: root
 
-    // When an account creation or settings dialog is created, we keep a reference to them here
-    // because they call Account::sync() which is asynchronous and we need to make sure the dialog
-    // is not deleted (and thus deleting their account child) before the operation is complete.
-    property Item _accountCreator
-    property Item _accountSettings
-
     function _deleteAccount(accountId) {
         var account = accountManager.account(accountId)
         if (account === null) {
@@ -31,59 +25,10 @@ Page {
         })
     }
 
-    function _createAccount(providerName) {
-        var provider = accountModel.provider(providerName)
-        if (!provider) {
-            throw new Error("Unable to obtain provider with name: " + providerName)
-        }
-        var settingsProperties = {
-            "accountProvider": provider,
-            "isNewAccount": true
-        }
-        var creationProperties = {
-            "accountProvider": provider,
-            "acceptDestination": _createSettingsPage(providerName, settingsProperties),
-            "acceptDestinationAction": PageStackAction.Replace,
-            "acceptDestinationProperties": settingsProperties   // allows sub-page to re-create settings with correct properties if necessary
-        }
-        pageStack.replace(_createAccountCreationPage(providerName, creationProperties))
-    }
+    AccountCreationManager {
+        id: accountCreationManager
 
-    function _createSettingsPage(providerName, properties) {
-        var componentFileName = "/usr/share/accounts/ui/" + providerName + "-settings.qml"
-        var comp = Qt.createComponent(componentFileName)
-        if (comp.status !== Component.Ready) {
-            comp = Qt.createComponent(Qt.resolvedUrl("StandardAccountSettingsDialog.qml"))
-        }
-        if (root._accountSettings !== null) {
-            root._accountSettings.destroy()
-        }
-        var obj = comp.status === Component.Ready
-                ? comp.createObject(root, properties)
-                : null
-        obj.rejected.connect(function() {
-            if (obj === root._accountSettings && obj.isNewAccount) {
-                root._deleteAccount(obj.accountId)
-            }
-        })
-        root._accountSettings = obj
-        return root._accountSettings
-    }
-
-    function _createAccountCreationPage(providerName, properties) {
-        var componentFileName = "/usr/share/accounts/ui/" + providerName + ".qml"
-        var comp = Qt.createComponent(componentFileName)
-        if (comp.status !== Component.Ready) {
-            throw new Error("Unable to load account creation page "
-                            + componentFileName + ": " + comp.errorString())
-        }
-        if (root._accountCreator !== null) {
-            root._accountCreator.destroy()
-        }
-        root._accountCreator = comp.status === Component.Ready
-                ? comp.createObject(root, properties)
-                : null
-        return root._accountCreator
+        onAccountDeletionRequested: _deleteAccount(accountId)
     }
 
     AccountModel {
@@ -160,7 +105,12 @@ Page {
             }
 
             onClicked: {
-                pageStack.push(root._createSettingsPage(model.providerName, {"accountId": model.accountId}))
+                var provider = accountModel.provider(providerName)
+                if (!provider) {
+                    throw new Error("Unable to obtain provider with name: " + providerName)
+                }
+                pageStack.push(accountCreationManager.createSettingsPage(model.providerName,
+                        {"accountProvider": provider, "accountId": model.accountId}))
             }
         }
 
@@ -171,10 +121,7 @@ Page {
                 //: Initiates adding a new account
                 //% "Add Account";
                 text: qsTrId("components_accounts-me-add_account")
-                onClicked: {
-                    var picker = pageStack.push(Qt.resolvedUrl("AccountProviderPickerDialog.qml"))
-                    picker.providerSelected.connect(root._createAccount)
-                }
+                onClicked: accountCreationManager.startAccountCreation()
             }
         }
 
