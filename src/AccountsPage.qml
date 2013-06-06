@@ -37,12 +37,17 @@ Page {
         if (!provider) {
             throw new Error("Unable to obtain provider with name: " + providerName)
         }
-        var props = {
+        var settingsProperties = {
             "accountProvider": provider,
-            "acceptDestination": _createSettingsPage(providerName, {"accountProvider": provider, "isNewAccount": true}),
-            "acceptDestinationAction": PageStackAction.Replace
+            "isNewAccount": true
         }
-        pageStack.replace(_createAccountCreationPage(providerName, props))
+        var creationProperties = {
+            "accountProvider": provider,
+            "acceptDestination": _createSettingsPage(providerName, settingsProperties),
+            "acceptDestinationAction": PageStackAction.Replace,
+            "acceptDestinationProperties": settingsProperties   // allows sub-page to re-create settings with correct properties if necessary
+        }
+        pageStack.replace(_createAccountCreationPage(providerName, creationProperties))
     }
 
     function _createSettingsPage(providerName, properties) {
