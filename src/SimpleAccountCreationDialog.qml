@@ -44,8 +44,7 @@ AccountCreationDialog {
         }
 
         onSuccess: {
-            // set the accountId for the settings page
-            root.acceptDestinationInstance.accountId = newAccountId
+            root.accountCreated(newAccountId)
         }
     }
 
