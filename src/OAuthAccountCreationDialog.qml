@@ -30,10 +30,6 @@ AccountCreationDialog {
         accountFactory.beginCreation()
     }
 
-    Component.onDestruction: {
-        jolla_signon_ui_service.inProcessParent = null // no longer servicing signon requests
-    }
-
     DialogHeader {
         id: pageHeader
         //: Title of page for signing into a user account
