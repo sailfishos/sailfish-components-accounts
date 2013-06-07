@@ -1,7 +1,7 @@
 Name:       sailfish-components-accounts
 
 Summary:    Sailfish Accounts UI Components
-Version:    0.0.6
+Version:    0.0.7
 Release:    1
 Group:      System/Libraries
 License:    TBD
@@ -13,6 +13,7 @@ BuildRequires:  pkgconfig(QtGui)
 BuildRequires:  pkgconfig(QtOpenGL)
 BuildRequires:  pkgconfig(libsignon-qt)
 BuildRequires:  pkgconfig(accounts-qt)
+BuildRequires:  pkgconfig(libsailfishkeyprovider)
 
 Requires:  sailfishsilica >= 0.8.33
 Requires:  nemo-qml-plugins-accounts >= 0.2.1
