@@ -5,34 +5,53 @@ import org.nemomobile.accounts 1.0
 Dialog {
     id: root
 
-    signal providerSelected(string providerName)
+    property int providerCount: view.count
 
-    canAccept: false
+    property int _selectionCount
+
+    signal providerSelected(int index, string providerName)
+    signal providerDeselected(int index, string providerName)
+
+    function _providerClicked(index, providerName) {
+        if (selectionModel.get(index).providerName === "") {
+            _selectionCount++
+            selectionModel.setProperty(index, "providerName", providerName)
+            providerSelected(index, providerName)
+        } else {
+            _selectionCount--
+            selectionModel.setProperty(index, "providerName", "")
+            providerDeselected(index, providerName)
+        }
+    }
+
+    canAccept: _selectionCount > 0
 
     AccountProviderModel {
         id: providerModel
     }
 
+    ListModel {
+        id: selectionModel
+    }
+
     SilicaListView {
+        id: view
         anchors.fill: parent
         model: providerModel
 
         header: DialogHeader {
-            //: accounts list view
-            //% "Add accounts"
-            acceptText: qsTrId("components_accounts-he-account_picker_title")
+            //: Number of selected accounts
+            //% "%n selected"
+            acceptText: qsTrId("components_accounts-he-selected_accounts", root._selectionCount)
             dialog: root
         }
 
-        delegate: BackgroundItem {
+        delegate: ListItem {
             width: ListView.view.width
-            height: theme.itemSizeSmall
 
-            onClicked: {
-                root.canAccept = true
-                providerSelected(model.providerName)
-                root.accept()
-            }
+            highlighted: down || (model.index < selectionModel.count && selectionModel.get(model.index).providerName !== "")
+
+            onClicked: root._providerClicked(model.index, model.providerName)
 
             AccountIcon {
                 id: icon
@@ -46,6 +65,12 @@ Dialog {
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.providerDisplayName
                 color: highlighted ? theme.highlightColor : theme.primaryColor
+            }
+        }
+
+        Component.onCompleted: {
+            for (var i=0; i<count; i++) {
+                selectionModel.append({"providerName": ""})
             }
         }
 
