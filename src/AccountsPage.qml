@@ -61,7 +61,7 @@ Page {
                 ContextMenu {
                     MenuItem {
                         //: Removes a user account
-                        //% "Remove";
+                        //% "Remove"
                         text: qsTrId("components_accounts-me-remove_account")
                         onClicked: removeAccount()
                     }
@@ -116,7 +116,7 @@ Page {
         PullDownMenu {
             MenuItem {
                 //: Initiates adding a new account
-                //% "Add Account";
+                //% "Add Account"
                 text: qsTrId("components_accounts-me-add_account")
                 onClicked: accountCreationManager.startAccountCreation()
             }

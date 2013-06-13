@@ -9,7 +9,7 @@ SilicaListView {
     signal serviceClicked(int accountId, string serviceName)
 
     spacing: Theme.paddingLarge
-    model: ServiceAccountModel {}
+    model: ServiceAccountModel { id: serviceAccountModel }
 
     header: PageHeader {
         //: service accounts list view
@@ -25,7 +25,7 @@ SilicaListView {
             id: icon
             x: Theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
-            source: model.serviceIcon
+            source: serviceAccountModel.provider(model.accountId).iconName
         }
         Label {
             id: accountName
