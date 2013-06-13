@@ -38,6 +38,9 @@ AccountSettingsDialog {
 
         onStatusChanged: {
             if (status === Account.Initialized) {
+                if (root.isNewAccount) {
+                    account.enabled = true
+                }
                 root._populateSettingsModel()
             } else if (status === Account.Synced) {
                 // success
@@ -87,10 +90,12 @@ AccountSettingsDialog {
                 acceptText: qsTrId("accounts-me-save")
             }
 
-            Item {
+            MouseArea {
                 id: accountHeadingItem
                 width: parent.width
                 height: Theme.itemSizeSmall
+
+                onClicked: switchButton.checked = !switchButton.checked
 
                 AccountIcon {
                     id: accountIcon
@@ -137,6 +142,9 @@ AccountSettingsDialog {
             Column {
                 width: parent.width
                 spacing: Theme.paddingMedium
+                opacity: account.enabled ? 1 : 0
+
+                Behavior on opacity { FadeAnimation {} }
 
                 Repeater {
                     model: serviceModel

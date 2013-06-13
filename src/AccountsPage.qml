@@ -94,9 +94,14 @@ Page {
                 color: highlighted ? Theme.highlightColor : Theme.primaryColor
             }
             Label {
-                anchors.left: icon.right
-                anchors.leftMargin: Theme.paddingLarge
-                anchors.top: accountName.bottom
+                anchors {
+                    left: icon.right
+                    leftMargin: Theme.paddingLarge
+                    top: accountName.bottom
+                    right: parent.right
+                    rightMargin: Theme.paddingLarge
+                }
+                truncationMode: TruncationMode.Fade
                 text: model.accountDisplayName
                 color: highlighted ? Theme.secondaryHighlightColor : Theme.secondaryColor
             }

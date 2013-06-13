@@ -7,6 +7,7 @@ function startAccountCreation() {
     var picker = pageStack.push(Qt.resolvedUrl("AccountProviderPickerDialog.qml"),
                              {"acceptDestinationAction": PageStackAction.Replace})
     if (picker === null) {
+        console.log("Cannot load AccountProviderPickerDialog!")
         return
     }
     initAccountCreationQueue(picker.providerCount)
@@ -35,6 +36,7 @@ function startAccountCreation() {
 
 function createAccountCreationPage(providerName) {
     if (providerName === "") {
+        console.log("No account provider name given!")
         return null
     }
     var provider = accountModel.provider(providerName)
