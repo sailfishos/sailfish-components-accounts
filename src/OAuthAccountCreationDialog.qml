@@ -13,8 +13,11 @@ AccountCreationDialog {
     property string _signonServiceName  // Which service should be signed onto by default
 
     // Extension plugins may also implement: function postSignIn(variant signInResponseData) {}
-    // If they implement this function, they _must_ call the postSignInFinished() function when finished.
-    // The implementation of postSignIn may (for example) set the user name appropriately.
+    // When OAuthAccountCreationDialog creates an account successfully, it will emit accountCreated()
+    // with the new account ID, then call postSignIn() with the OAuth response parameters.
+    // If an extension plugin implements postSignIn(), it _must_ call the postSignInFinished() function when finished.
+    // The implementation of postSignIn may (for example) set the account user name appropriately.
+
 
     //--------------------------------
 
@@ -29,12 +32,6 @@ AccountCreationDialog {
 
     Component.onCompleted: {
         accountFactory.beginCreation()
-    }
-
-    Component.onDestruction: {
-        if (typeof jolla_signon_ui_service !== "undefined") {
-            jolla_signon_ui_service.inProcessParent = null // no longer servicing signon requests
-        }
     }
 
     DialogHeader {
@@ -117,8 +114,7 @@ AccountCreationDialog {
         }
 
         onSuccess: {
-            // set the accountId for the settings page
-            root.acceptDestinationInstance.accountId = newAccountId
+            root.accountCreated(newAccountId)
             postSignIn(responseData)      // call the post-sign-in hook
         }
 

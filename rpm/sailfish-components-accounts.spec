@@ -1,7 +1,7 @@
 Name:       sailfish-components-accounts-qt5
 
 Summary:    Sailfish Accounts UI Components
-Version:    0.0.1
+Version:    0.0.7
 Release:    1
 Group:      System/Libraries
 License:    TBD
@@ -16,10 +16,15 @@ BuildRequires:  pkgconfig(libsignon-qt5)
 BuildRequires:  pkgconfig(accounts-qt5)
 BuildRequires:  qt5-qttools
 BuildRequires:  qt5-qttools-linguist
+BuildRequires:  pkgconfig(libsailfishkeyprovider)
 
 Requires:  sailfishsilica-qt5
 Requires:  nemo-qml-plugin-accounts-qt5
 Requires:  nemo-qml-plugin-signon-qt5
+
+Requires:  sailfishsilica >= 0.8.33
+Requires:  nemo-qml-plugins-accounts >= 0.2.1
+Requires:  nemo-qml-plugins-signon >= 0.2.1
 Requires:  jolla-signon-ui
 Requires:  libjollasignonuiservice
 
