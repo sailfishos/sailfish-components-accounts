@@ -3,6 +3,7 @@ import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
 import org.nemomobile.accounts 1.0
 import org.nemomobile.signon 1.0
+import "accountutil.js" as AccountUtil
 
 AccountSettingsDialog {
     id: root
@@ -11,14 +12,17 @@ AccountSettingsDialog {
         serviceModel.clear()
         for (var i in account.supportedServiceNames) {
             var service = accountManager.service(account.supportedServiceNames[i])
-            var serviceEnabled = false
-            for (var j in account.enabledServiceNames) {
-                if (account.enabledServiceNames[j] === service.name) {
-                    serviceEnabled = true
-                    break
-                }
+            var serviceEnabled = (account.enabledServiceNames.indexOf(service.name) >= 0)
+            if (isNewAccount && !serviceEnabled) {
+                // enable all services for new accounts
+                account.enableWithService(service.name)
+                serviceEnabled = true
             }
-            serviceModel.append({"name": service.name, "icon": service.iconName, "enabled": serviceEnabled})
+            serviceModel.append({"name": service.name,
+                                 "serviceType": service.serviceType,
+                                 "iconName": service.iconName,
+                                 "displayName": service.displayName,
+                                 "enabled": serviceEnabled})
         }
     }
 
@@ -58,15 +62,14 @@ AccountSettingsDialog {
 
     SilicaFlickable {
         anchors.fill: parent
-        contentWidth: width
-        contentHeight: contentColumn.height
+        contentHeight: contentColumn.height + Theme.paddingLarge
 
         VerticalScrollDecorator {}
 
         PullDownMenu {
             MenuItem {
                 //: Deletes the account
-                //% "Delete Account";
+                //% "Delete Account"
                 text: qsTrId("accounts-me-delete_account")
                 onClicked: {
                     account.remove()
@@ -77,7 +80,6 @@ AccountSettingsDialog {
         Column {
             id: contentColumn
             width: parent.width
-            spacing: Theme.paddingLarge
 
             DialogHeader {
                 //: Save the account settings
@@ -108,7 +110,6 @@ AccountSettingsDialog {
                     id: switchButton
                     anchors.right: parent.right
                     checked: account.enabled
-                    automaticCheck: false
 
                     onCheckedChanged: {
                         account.enabled = checked
@@ -130,48 +131,46 @@ AccountSettingsDialog {
                 placeholderText: qsTrId("components_accounts-ph-settings_account_name")
             }
 
+            Item {
+                width: 1
+                height: Theme.paddingSmall
+            }
+
             Column {
                 width: parent.width
+                spacing: Theme.paddingMedium
 
                 Repeater {
                     model: serviceModel
 
-                    Item {
+                    MouseArea {
                         width: contentColumn.width
-                        height: Theme.itemSizeSmall
+                        height: serviceIcon.height + serviceDescription.height
+
+                        onClicked: serviceSwitch.checked = !serviceSwitch.checked
 
                         AccountIcon {
                             id: serviceIcon
                             x: Theme.paddingLarge
-                            anchors.verticalCenter: parent.verticalCenter
-                            source: model.icon
+                            source: model.iconName
                         }
                         Label {
                             anchors {
                                 left: serviceIcon.right
                                 leftMargin: Theme.paddingLarge
-                                verticalCenter: parent.verticalCenter
+                                right: serviceSwitch.left
+                                verticalCenter: serviceIcon.verticalCenter
                             }
-                            text: model.name
+                            wrapMode: Text.WrapAnywhere
+                            text: AccountUtil.serviceName(model.serviceType, model.displayName)
                         }
                         Switch {
-                            property bool isInitialised: false
-                            anchors.right: parent.right
-                            checked: initialiseChecked()
-
-                            function initialiseChecked() {
-                                if (!isInitialised) {
-                                    isInitialised = true
-                                    if (root.isNewAccount) {
-                                        account.enableWithService(model.name)
-                                        return true
-                                    } else if (model.enabled) {
-                                        return true
-                                    }
-                                }
-
-                                return false
+                            id: serviceSwitch
+                            anchors {
+                                right: parent.right
+                                verticalCenter: serviceIcon.verticalCenter
                             }
+                            checked: model.enabled
 
                             onCheckedChanged: {
                                 if (checked) {
@@ -180,6 +179,19 @@ AccountSettingsDialog {
                                     account.disableWithService(model.name)
                                 }
                             }
+                        }
+                        Label {
+                            id: serviceDescription
+                            y: serviceIcon.height
+                            anchors {
+                                left: parent.left
+                                leftMargin: Theme.paddingLarge
+                                right: parent.right
+                                rightMargin: Theme.paddingLarge
+                            }
+                            wrapMode: Text.Wrap
+                            font.pixelSize: Theme.fontSizeExtraSmall
+                            text: AccountUtil.serviceDescription(model.serviceType, root.accountProvider.displayName)
                         }
                     }
                 }
