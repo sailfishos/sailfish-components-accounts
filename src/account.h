@@ -1,0 +1,166 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
+#ifndef SAILFISH_ACCOUNTS__ACCOUNT_H
+#define SAILFISH_ACCOUNTS__ACCOUNT_H
+
+#include <QtCore/QObject>
+#include <QtCore/QVariantMap>
+#include <QtCore/QStringList>
+#include <QtCore/QString>
+
+#include <QtGlobal>
+#ifdef QT_VERSION_5
+#include <QtQml>
+#include <QQmlParserStatus>
+#define QDeclarativeParserStatus QQmlParserStatus
+#else
+#include <qdeclarative.h>
+#include <QDeclarativeParserStatus>
+#endif
+
+//libaccounts-qt
+#include <Accounts/Account>
+#include <Accounts/Error>
+
+//libsignon-qt
+#include <SignOn/Identity>
+#include <SignOn/SessionData>
+#include <SignOn/AuthSession>
+
+class SignInParameters;
+class AccountPrivate;
+
+/*
+ * NOTE: if you construct one of these in C++ directly,
+ * you MUST call classBegin() and componentCompleted()
+ * directly after construction.
+ */
+
+class Account : public QObject, public QDeclarativeParserStatus
+{
+    Q_OBJECT
+    Q_INTERFACES(QDeclarativeParserStatus)
+
+    Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
+    Q_PROPERTY(int identifier READ identifier WRITE setIdentifier NOTIFY identifierChanged)
+    Q_PROPERTY(QString providerName READ providerName NOTIFY providerNameChanged)
+    Q_PROPERTY(QString displayName READ displayName WRITE setDisplayName NOTIFY displayNameChanged)
+
+    Q_PROPERTY(QStringList supportedServiceNames READ supportedServiceNames NOTIFY supportedServiceNamesChanged)
+
+    Q_PROPERTY(Status status READ status NOTIFY statusChanged)
+    Q_PROPERTY(ErrorType error READ error NOTIFY errorChanged)
+    Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
+
+    Q_ENUMS(Status)
+    Q_ENUMS(ErrorType)
+
+public:
+    enum Status {
+        Initialized = 0,
+        Initializing,
+        Synced,
+        SyncInProgress,
+        Modified,
+        SigningIn,
+        Error,
+        Invalid
+    };
+
+    enum ErrorType {
+        NoError                 = Accounts::Error::NoError,
+        UnknownError            = Accounts::Error::Unknown,
+        DatabaseError           = Accounts::Error::Database,
+        DeletedError            = Accounts::Error::Deleted,
+        DatabaseLockedError     = Accounts::Error::DatabaseLocked,
+        AccountNotFoundError    = Accounts::Error::AccountNotFound,
+        ConflictingProviderError,
+        InitializationFailedError
+    };
+
+public:
+    Account(QObject *parent = 0);
+    ~Account();
+
+    // QDeclarativeParserStatus
+    void classBegin();
+    void componentComplete();
+
+    // database sync
+    Q_INVOKABLE void sync();
+    Q_INVOKABLE void remove();
+
+    // invokable api.
+    Q_INVOKABLE QVariantMap configurationValues(const QString &serviceName) const;
+    Q_INVOKABLE void setConfigurationValues(const QString &serviceName, const QVariantMap &serviceValues);
+    Q_INVOKABLE void setConfigurationValue(const QString &serviceName, const QString &key, const QVariant &value);
+    Q_INVOKABLE void removeConfigurationValue(const QString &serviceName, const QString &key);
+    Q_INVOKABLE bool isEnabledWithService(const QString &serviceName);
+    Q_INVOKABLE void enableWithService(const QString &serviceName);
+    Q_INVOKABLE void disableWithService(const QString &serviceName);
+
+    // sign-in related invokable api.
+    Q_INVOKABLE SignInParameters *signInParameters(const QString &serviceName,
+                                                   const QString &username = QString(),
+                                                   const QString &password = QString());
+    Q_INVOKABLE bool hasSignInCredentials(const QString &applicationName,
+                                          const QString &credentialsName) const;
+    Q_INVOKABLE void createSignInCredentials(const QString &applicationName,
+                                             const QString &credentialsName,
+                                             const QString &symmetricKey,
+                                             SignInParameters *parameters);
+    Q_INVOKABLE void removeSignInCredentials(const QString &applicationName,
+                                             const QString &credentialsName);
+    Q_INVOKABLE void signIn(const QString &applicationName,
+                            const QString &credentialsName,
+                            const QString &symmetricKey,
+                            SignInParameters *parameters);
+    Q_INVOKABLE void signOut(const QString &applicationName,
+                             const QString &credentialsName);
+
+    // property accessors.
+    bool enabled() const;
+    void setEnabled(bool e);
+    int identifier() const;
+    void setIdentifier(int id);
+    QString displayName() const;
+    void setDisplayName(const QString &dn);
+    QString providerName() const;
+    QStringList supportedServiceNames() const;
+
+    Status status() const;
+    ErrorType error() const;
+    QString errorMessage() const;
+
+Q_SIGNALS:
+    void enabledChanged();
+    void identifierChanged();
+    void displayNameChanged();
+    void providerNameChanged();
+    void supportedServiceNamesChanged();
+    void statusChanged();
+    void errorChanged();
+    void errorMessageChanged();
+
+    void signInCredentialsCreated(const QVariantMap &data);
+    void signInResponse(const QVariantMap &data);
+    void signInError(const QString &message);
+
+private:
+    Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent);
+    Accounts::Account *account();
+    friend class AccountFactory;
+    friend class AccountManager;
+    friend class AccountModel;
+
+private:
+    AccountPrivate *d;
+    friend class AccountPrivate;
+};
+
+#endif

@@ -1,0 +1,70 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
+#include "servicetype.h"
+
+/*!
+    \qmltype ServiceType
+    \instantiates ServiceType
+    \inqmlmodule Sailfish.Accounts 1
+    \brief Reports information about a particular service type
+
+    This type provides information about a particular service type
+    of a service provided by a provider.
+*/
+
+ServiceType::ServiceType(const Accounts::ServiceType &serviceType, QObject *parent)
+    : QObject(parent), m_serviceType(serviceType)
+{
+}
+
+ServiceType::~ServiceType()
+{
+}
+
+/*!
+    \qmlproperty string Service::name
+    This property holds the name of the service
+*/
+
+QString ServiceType::name() const
+{
+    return m_serviceType.name();
+}
+
+/*!
+    \qmlproperty string Service::displayName
+    This property holds the display name of the service.
+    This display name can be displayed in lists or
+    dialogues in the UI of applications.
+*/
+
+QString ServiceType::displayName() const
+{
+    return m_serviceType.displayName();
+}
+
+/*!
+    \qmlproperty string Service::iconName
+    This property holds the name of the icon associated with the service
+*/
+
+QString ServiceType::iconName() const
+{
+    return m_serviceType.iconName();
+}
+
+/*!
+    \qmlproperty QStringList Service::tags
+    This property holds the tags which have been associated with the service.
+*/
+
+QStringList ServiceType::tags() const
+{
+    return m_serviceType.tags().toList();
+}
+
