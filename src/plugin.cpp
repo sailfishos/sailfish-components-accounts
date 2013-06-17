@@ -1,3 +1,10 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
 #include <QQmlExtensionPlugin>
 #include <QQmlEngine>
 #include <QtQml>
@@ -6,6 +13,20 @@
 #include <QGuiApplication>
 #include <QLocale>
 
+// impl detail
+#include "globalaccountmanager_p.h"
+
+// public types
+#include "account.h"
+#include "accountmanager.h"
+#include "accountmodel.h"
+#include "provider.h"
+#include "providermodel.h"
+#include "service.h"
+#include "servicetype.h"
+#include "signinparameters.h"
+
+// private types - these should be moved to com.jolla.settings.accounts import
 #include "encodedkeyprovider_p.h"
 #include "accountfactory_p.h"
 
@@ -39,6 +60,9 @@ public:
         Q_UNUSED(uri)
         Q_ASSERT(QLatin1String(uri) == QLatin1String("Sailfish.Accounts"));
 
+        // initialize the global account manager
+        globalAccountManager()->setParent(engine);
+
         AppTranslator *engineeringEnglish = new AppTranslator(engine);
         AppTranslator *translator = new AppTranslator(engine);
         engineeringEnglish->load("sailfish_components_accounts_qt5_eng_en", "/usr/share/translations");
@@ -49,6 +73,15 @@ public:
     {
         Q_UNUSED(uri)
         Q_ASSERT(QLatin1String(uri) == QLatin1String("Sailfish.Accounts"));
+        // public types.
+        qmlRegisterType<Account>("Sailfish.Accounts", 1, 0, "Account");
+        qmlRegisterType<AccountManager>("Sailfish.Accounts", 1, 0, "AccountManager");
+        qmlRegisterType<AccountModel>("Sailfish.Accounts", 1, 0, "AccountModel");
+        qmlRegisterType<Provider>("Sailfish.Accounts", 1, 0, "Provider");
+        qmlRegisterType<ProviderModel>("Sailfish.Accounts", 1, 0, "ProviderModel");
+        qmlRegisterType<Service>("Sailfish.Accounts", 1, 0, "Service");
+        qmlRegisterType<ServiceType>("Sailfish.Accounts", 1, 0, "ServiceType");
+        qmlRegisterType<SignInParameters>("Sailfish.Accounts", 1, 0, "SignInParameters");
         // private types.
         qmlRegisterType<EncodedKeyProvider>("Sailfish.Accounts.private", 1, 0, "EncodedKeyProvider");
         qmlRegisterType<AccountFactory>("Sailfish.Accounts.private", 1, 0, "AccountFactory");

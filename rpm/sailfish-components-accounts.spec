@@ -22,6 +22,7 @@ Requires:  nemo-qml-plugin-accounts-qt5
 Requires:  nemo-qml-plugin-signon-qt5
 Requires:  jolla-signon-ui
 Requires:  libjollasignonuiservice
+Requires:  qca-ossl
 
 %description
 Sailfish Accounts UI Components
@@ -58,17 +59,18 @@ rm -rf %{buildroot}
 
 %qmake5_install
 
-#
-# Jolla Components internal files
-#
 %files
 %defattr(-,root,root,-)
 %{_libdir}/qt5/qml/Sailfish/Accounts/*
 %{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
 
-#
-# Jolla Components internal translation files
-#
+%files tests
+%defattr(-,root,root,-)
+/opt/tests/Sailfish/Accounts/qt5/*
+%{_datadir}/accounts/providers/test-provider.provider
+%{_datadir}/accounts/services/test-service2.service
+%{_datadir}/accounts/service_types/test-service-type2.service-type
+
 %files ts-devel
 %defattr(-,root,root,-)
 %{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
