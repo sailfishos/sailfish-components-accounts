@@ -14,18 +14,39 @@ AccountCreationDialog {
     //: Username for account login action
     //% "Username"
     property string usernameLabel: qsTrId("components_accounts-la-username")
-    property string usernamePlaceholderText
+
+    //: Enter username for account login action
+    //% "Enter username"
+    property string usernamePlaceholderText: qsTrId("components_accounts-ph-username")
 
     property string username
     property string password
 
-    canAccept: username !== "" && password !== ""
-
-    onAccepted: {
-        accountFactory.beginCreation()
-    }
+    property Item _postCreationPage: postCreationDialogComponent.createObject(root)
 
     anchors.fill: parent
+    canAccept: username !== "" && password !== ""
+    acceptDestination: _postCreationPage
+    autoDirectToSettingsPage: false
+
+    Connections {
+        target: root._postCreationPage
+
+        onStatusChanged: {
+            // Start the account creation process when the next page becomes active, instead of
+            // starting it when this page is accepted, to avoid synchronous account creation
+            // processes interrupting the page transition animation.
+            if (status === PageStatus.Active) {
+                accountFactory.beginCreation()
+            }
+        }
+    }
+
+    Component {
+        id: postCreationDialogComponent
+
+        AccountPostCreationDialog { }
+    }
 
     AccountModel {
         id: accountModel
@@ -41,10 +62,13 @@ AccountCreationDialog {
 
         onError: {
             console.log("SimpleAccountCreationDialog error:", message)
+            var nextAccountCreationPage = (root.settingsPage !== null ? root.settingsPage.acceptDestination : null)
+            root._postCreationPage.accountCreationFailed(nextAccountCreationPage)
         }
 
         onSuccess: {
             root.accountCreated(newAccountId)
+            root._postCreationPage.accountCreationSucceeded(root.settingsPage)
         }
     }
 

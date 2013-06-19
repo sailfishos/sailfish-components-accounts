@@ -83,17 +83,13 @@ function createSettingsPage(providerName, properties) {
         console.log("Error: cannot find StandardAccountSettingsDialog.qml!")
         return null
     }
-    obj.statusChanged.connect(function(){
-        // If this is for a brand new account, once this settings page becomes visible, we load
-        // its destination (i.e. the account creation page for the next provider in the queue)
-        if (obj.isNewAccount && obj.status === PageStatus.Active) {
-            if (!obj.acceptDestination) {
-                obj.acceptDestination = _nextAccountCreationPage()
-                if (obj.acceptDestination === null)
-                    obj.acceptDestination = accountCreationManager.finalPageDestination
-            }
-        }
-    })
+    // If this is for a brand new account, the destination of the settings page is the account
+    // creation page for the next provider in the queue)
+    if (obj.isNewAccount && !obj.acceptDestination) {
+        obj.acceptDestination = _nextAccountCreationPage()
+        if (obj.acceptDestination === null)
+            obj.acceptDestination = accountCreationManager.finalPageDestination
+    }
     obj.rejected.connect(function() {
         if (obj.isNewAccount) {
             accountCreationManager.accountDeletionRequested(obj.accountId)
