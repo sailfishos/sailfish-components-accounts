@@ -13,7 +13,7 @@ PKGCONFIG += accounts-qt5 libsignon-qt5
 
 SOURCES += plugin.cpp encodedkeyprovider.cpp accountfactory.cpp
 HEADERS += encodedkeyprovider_p.h accountfactory_p.h
-OTHER_FILES += *.qml qmldir
+OTHER_FILES += *.qml *.js qmldir
 
 TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
 EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
