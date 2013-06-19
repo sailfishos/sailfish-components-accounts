@@ -52,15 +52,19 @@ function createAccountCreationPage(providerName) {
     var obj = comp.status === Component.Ready
             ? comp.createObject(accountCreationManager, {"accountProvider": provider})
             : null
+    if (obj === null) {
+        console.log("Error: cannot load account creation page for " + providerName)
+        return null
+    }
     obj.statusChanged.connect(function(){
-        // Once this page becomes visible, we load its destination (i.e. its settings page)
+        // Once this page becomes visible, we load its settings page
         if (obj.status === PageStatus.Active) {
             var settingsProperties = {
                 "accountProvider": obj.accountProvider,
                 "isNewAccount": true
             }
             // notify creation page that the settings page is ready
-            obj.settingsPageLoaded(_cachedSettingsPage(providerName, settingsProperties))
+            obj.settingsPage = _cachedSettingsPage(providerName, settingsProperties)
         }
     })
     return obj
@@ -75,6 +79,10 @@ function createSettingsPage(providerName, properties) {
     var obj = comp.status === Component.Ready
             ? comp.createObject(accountCreationManager, properties)
             : null
+    if (obj === null) {
+        console.log("Error: cannot find StandardAccountSettingsDialog.qml!")
+        return null
+    }
     obj.statusChanged.connect(function(){
         // If this is for a brand new account, once this settings page becomes visible, we load
         // its destination (i.e. the account creation page for the next provider in the queue)

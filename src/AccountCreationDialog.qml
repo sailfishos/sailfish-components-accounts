@@ -3,29 +3,35 @@ import Sailfish.Silica 1.0
 import org.nemomobile.accounts 1.0
 
 Dialog {
-    property Provider accountProvider
-    property bool autoDirectToSettingsPage: true
+    id: root
 
-    acceptDestinationAction: PageStackAction.Replace
+    property Provider accountProvider
+
+    // Once this dialog becomes active, this property is automatically set to the account's
+    // settings page. If autoDirectToSettingsPage=true, this settings page will also be
+    // automatically set as the acceptDestination.
+    property Item settingsPage
+
+    // If true, automatically sets acceptDestination to the settingsPage property when it becomes
+    // available.
+    property bool autoDirectToSettingsPage: true
 
     // This should be emitted when the account is successfully created.
     signal accountCreated(int newAccountId)
 
-    // Triggered when the settings page for this newly created account has been loaded. Use it to
-    // ensure the user can swipe forwards to the settings page when the creation page is accepted.
-    // This is done automatically if autoDirectToSettingsPage=true.
-    signal settingsPageLoaded(variant settingsPage)
+
+    acceptDestinationAction: PageStackAction.Replace
 
     onAccountCreated: {
-        // Set the settings page to load the settings for this account.
-        if (acceptDestinationInstance !== null
-                && acceptDestinationInstance.__sailfish_account_settings_dialog !== undefined) {
-            acceptDestinationInstance.accountId = newAccountId
+        // Set AccountSettingsDialog::accountId so that the settings page will load this new account
+        if (settingsPage !== null
+                && settingsPage.__sailfish_account_settings_dialog !== undefined) {
+            settingsPage.accountId = newAccountId
         }
     }
 
-    onSettingsPageLoaded: {
-        if (autoDirectToSettingsPage) {
+    onSettingsPageChanged: {
+        if (settingsPage !== null && autoDirectToSettingsPage) {
             acceptDestination = settingsPage
         }
     }
