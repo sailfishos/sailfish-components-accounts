@@ -3,19 +3,36 @@ import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
 
 Dialog {
-    function accountCreationSucceeded(nextPage) {
-        acceptDestination = nextPage
-        if (!busyIndicator.running || minimumBusyDuration.running) {
-            minimumBusyDuration.triggered.connect(_proceed)
+    id: root
+
+    // The settings page for the created account. It is automatically set as the acceptDestination
+    // of this dialog.
+    property Item settingsPage
+
+    property alias progressStatusText: statusLabel.text
+    property alias errorHeading: errorHeadingLabel.text
+    property alias errorDescription: errorDetailLabel.text
+
+    property int minimumBusyDuration: 2000
+
+    property bool _becameActive
+
+    function accountCreationSucceeded(newAccountId) {
+        // Set AccountSettingsDialog::accountId so that the settings page will load this new account
+        if (settingsPage !== null
+                && settingsPage.__sailfish_account_settings_dialog !== undefined) {
+            settingsPage.accountId = newAccountId
+        }
+        if (!_becameActive || minimumBusyDurationTimer.running) {
+            minimumBusyDurationTimer.triggered.connect(_proceed)
         } else {
             _proceed()
         }
     }
 
-    function accountCreationFailed(nextPage) {
-        acceptDestination = nextPage
-        if (!busyIndicator.running || minimumBusyDuration.running) {
-            minimumBusyDuration.triggered.connect(_showError)
+    function accountCreationFailed() {
+        if (!_becameActive || minimumBusyDurationTimer.running) {
+            minimumBusyDurationTimer.triggered.connect(_showError)
         } else {
             _showError()
         }
@@ -27,20 +44,28 @@ Dialog {
     }
 
     function _showError() {
-        canAccept = true
+        // if there is a page after the settingsPage, make that the new acceptDestination
+        if (settingsPage !== null) {
+            acceptDestination = settingsPage.acceptDestination
+            if (acceptDestination) {
+                canAccept = true
+                header.opacity = 1
+            }
+        }
+        backNavigation = true
         busyIndicator.running = false
-        header.opacity = 1
         errorInfo.opacity = 1
     }
 
+    acceptDestination: settingsPage
+    acceptDestinationAction: PageStackAction.Replace
     backNavigation: false
     canAccept: false
-    acceptDestinationAction: PageStackAction.Replace
 
     onStatusChanged: {
         if (status === PageStatus.Active) {
-            busyIndicator.running = true
-            minimumBusyDuration.start()
+            _becameActive = true
+            minimumBusyDurationTimer.start()
         }
     }
 
@@ -54,15 +79,32 @@ Dialog {
         Behavior on opacity { FadeAnimation {} }
     }
 
-    BusyIndicator {
-        id: busyIndicator
+    Column {
         anchors.centerIn: parent
-        size: BusyIndicatorSize.Large
+        spacing: Theme.paddingLarge
+
+        Label {
+            id: statusLabel
+            width: root.width - Theme.paddingLarge*2
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+
+            //: Notifies user that the account is currently being created.
+            //% "Creating account..."
+            text: qsTrId("components_accounts-la-creating_account")
+        }
+
+        BusyIndicator {
+            id: busyIndicator
+            anchors.horizontalCenter: parent.horizontalCenter
+            size: BusyIndicatorSize.Large
+            running: true
+        }
     }
 
     Timer {
-        id: minimumBusyDuration
-        interval: 2000
+        id: minimumBusyDurationTimer
+        interval: root.minimumBusyDuration
     }
 
     Column {
@@ -77,6 +119,7 @@ Dialog {
         Behavior on opacity { FadeAnimation {} }
 
         Label {
+            id: errorHeadingLabel
             width: parent.width
             wrapMode: Text.Wrap
             font.pixelSize: Theme.fontSizeHuge
@@ -88,6 +131,7 @@ Dialog {
         }
 
         Label {
+            id: errorDetailLabel
             width: parent.width
             wrapMode: Text.Wrap
             font.pixelSize: Theme.fontSizeExtraSmall
