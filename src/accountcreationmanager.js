@@ -23,6 +23,8 @@ function startAccountCreation() {
         for (var i=0; i<_accountCreationQueue.length; i++) {
             var data = _accountCreationQueue[i]
             if (data.providerName === "") {
+                // at this point we have only constructed the creationPage; other pages don't need
+                // to be cleaned up
                 if (data.creationPage !== undefined) {
                     data.creationPage.destroy()
                 }
@@ -57,14 +59,13 @@ function createAccountCreationPage(providerName) {
         return null
     }
     obj.statusChanged.connect(function(){
-        // Once this page becomes visible, we load its settings page
+        // Once this page becomes visible, we load its post-creation page and settings page
         if (obj.status === PageStatus.Active) {
             var settingsProperties = {
                 "accountProvider": obj.accountProvider,
                 "isNewAccount": true
             }
-            // notify creation page that the settings page is ready
-            obj.settingsPage = _cachedSettingsPage(providerName, settingsProperties)
+            obj.postCreationDialog = _cachedPostCreationDialog(providerName, settingsProperties)
         }
     })
     return obj
@@ -107,6 +108,9 @@ function clearAccountCreationQueue() {
         if (data.creationPage !== undefined) {
             data.creationPage.destroy()
         }
+        if (data.postCreationDialog !== undefined) {
+            data.postCreationDialog.destroy()
+        }
         if (data.settingsPage !== undefined) {
             data.settingsPage.destroy()
         }
@@ -139,6 +143,7 @@ function initAccountCreationQueue(initialLength) {
         var data = {
             "providerName": "",
             "creationPage": undefined,
+            "postCreationDialog": undefined,
             "settingsPage": undefined
         }
         _accountCreationQueue.push(data)
@@ -166,15 +171,22 @@ function _cachedCreationPage(index) {
     return page
 }
 
-function _cachedSettingsPage(providerName, props) {
+function _cachedPostCreationDialog(providerName, settingsProperties) {
     var page = null
     for (var i=0; i<_accountCreationQueue.length; i++) {
         var data = _accountCreationQueue[i]
         if (data.providerName === providerName) {
-            page = data.settingsPage
+            page = data.postCreationDialog
             if (page === undefined) {
-                page = createSettingsPage(data.providerName, props)
-                _accountCreationQueue[i].settingsPage = page
+                var comp = Qt.createComponent(Qt.resolvedUrl("AccountPostCreationDialog.qml"))
+                if (comp.status !== Component.Ready) {
+                    console.log("Error: cannot find AccountPostCreationDialog.qml!")
+                    return null
+                }
+                var settingsPage = createSettingsPage(providerName, settingsProperties)
+                _accountCreationQueue[i].settingsPage = settingsPage
+                page = comp.createObject(accountCreationManager, {"settingsPage": settingsPage})
+                _accountCreationQueue[i].postCreationDialog = page
             }
             break
         }
