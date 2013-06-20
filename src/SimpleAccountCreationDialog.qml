@@ -22,15 +22,11 @@ AccountCreationDialog {
     property string username
     property string password
 
-    property Item _postCreationPage: postCreationDialogComponent.createObject(root)
-
     anchors.fill: parent
     canAccept: username !== "" && password !== ""
-    acceptDestination: _postCreationPage
-    autoDirectToSettingsPage: false
 
     Connections {
-        target: root._postCreationPage
+        target: root.postCreationDialog
 
         onStatusChanged: {
             // Start the account creation process when the next page becomes active, instead of
@@ -40,12 +36,6 @@ AccountCreationDialog {
                 accountFactory.beginCreation()
             }
         }
-    }
-
-    Component {
-        id: postCreationDialogComponent
-
-        AccountPostCreationDialog { }
     }
 
     AccountModel {
@@ -62,13 +52,11 @@ AccountCreationDialog {
 
         onError: {
             console.log("SimpleAccountCreationDialog error:", message)
-            var nextAccountCreationPage = (root.settingsPage !== null ? root.settingsPage.acceptDestination : null)
-            root._postCreationPage.accountCreationFailed(nextAccountCreationPage)
+            root.accountCreationError()
         }
 
         onSuccess: {
             root.accountCreated(newAccountId)
-            root._postCreationPage.accountCreationSucceeded(root.settingsPage)
         }
     }
 

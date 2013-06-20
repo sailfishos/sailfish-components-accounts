@@ -20,7 +20,19 @@ AccountCreationDialog {
 
     //--------------------------------
 
-    property string __errorMessage
+    function _creationFailed() {
+        // if creation fails immediately we still have to wait for the page to become inactive first
+        if (postCreationDialog === null) {
+            postCreationDialogChanged.connect(_creationFailed)
+            return
+        }
+        postCreationDialog.minimumBusyDuration = 0
+        if (status === PageStatus.Active) {
+            canAccept = true
+            accept()
+        }
+        accountCreationError()
+    }
 
     anchors.fill: parent
     canAccept: false
@@ -42,36 +54,24 @@ AccountCreationDialog {
 
     Column {
         anchors.centerIn: parent
-        width: parent.width - theme.paddingLarge*2
-        spacing: theme.paddingMedium
+        spacing: Theme.paddingLarge
 
         Label {
-            id: activityLabel
+            id: statusLabel
+            width: root.width - Theme.paddingLarge*2
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
 
             //: Message displayed when waiting for authentication web page to be loaded
             //% "Loading web page..."
-            property string loadingString: qsTrId("components_accounts-la-oauth_loading_web_page")
-
-            //: Message displayed when storing credentials after web page signon has succeeded
-            //% "Storing credentials..."
-            property string storingString: qsTrId("components_accounts-la-storing_credentials")
-
-            //: Message displayed when error occurs during user authentication
-            //% "Error while loading:"
-            property string errorString: qsTrId("components_accounts-la-oauth_error")
-
-            property bool hasLoadedWebPage: false
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            font.family: theme.fontFamilyHeading
-            font.pixelSize: theme.fontSizeLarge
-            text: root.__errorMessage === "" ? (hasLoadedWebPage ? storingString : loadingString) : errorString
+            text: qsTrId("components_accounts-la-oauth_loading_web_page")
         }
-        Label {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            font.family: theme.fontFamilyHeading
-            text: root.__errorMessage
+
+        BusyIndicator {
+            id: busyIndicator
+            anchors.horizontalCenter: parent.horizontalCenter
+            size: BusyIndicatorSize.Large
+            running: true
         }
     }
 
@@ -108,8 +108,9 @@ AccountCreationDialog {
         }
 
         onError: {
-            root.__errorMessage = message
-            // the user must backstep now that an error has occurred.
+            console.log("OAuthAccountCreationDialog: error while creating",
+                        root.accountProvider.name, "account:", message)
+            _creationFailed()
         }
 
         onSuccess: {
@@ -125,18 +126,24 @@ AccountCreationDialog {
             repeat: false
             interval: 4000 // enough time for the web page to load
             running: false
-            onTriggered: activityLabel.hasLoadedWebPage = true // change the banner
+            onTriggered: {
+                //: Message displayed when storing credentials after web page signon has succeeded
+                //% "Storing credentials..."
+                statusLabel = qsTrId("components_accounts-la-storing_credentials")
+            }
         }
     }
 
     function postSignIn(data) {
-        // default implementation just calls finished function
+        // default implementation just accepts to the postCreationDialog and calls postSignInFinished()
+        if (status === PageStatus.Active) {
+            canAccept = true
+            accept()
+        }
         postSignInFinished()
     }
 
     function postSignInFinished() {
         accountFactory.signOut()
-        canAccept = true
-        accept()
     }
 }
