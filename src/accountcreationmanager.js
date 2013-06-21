@@ -180,7 +180,7 @@ function _cachedPostCreationDialog(providerName, settingsProperties) {
             if (page === undefined) {
                 var comp = Qt.createComponent(Qt.resolvedUrl("AccountPostCreationDialog.qml"))
                 if (comp.status !== Component.Ready) {
-                    console.log("Error: cannot find AccountPostCreationDialog.qml!")
+                    console.log("Error: cannot load AccountPostCreationDialog.qml!", comp.errorString())
                     return null
                 }
                 var settingsPage = createSettingsPage(providerName, settingsProperties)
