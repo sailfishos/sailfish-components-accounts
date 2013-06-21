@@ -10,3 +10,4 @@ ServiceAccountsListView 1.0 ServiceAccountsListView.qml
 AccountIcon 1.0 AccountIcon.qml
 AccountCreationManager 1.0 AccountCreationManager.qml
 AccountPostCreationDialog 1.0 AccountPostCreationDialog.qml
+AccountPostAuthenticationDialog 1.0 AccountPostAuthenticationDialog.qml
