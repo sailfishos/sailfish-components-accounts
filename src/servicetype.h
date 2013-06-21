@@ -15,7 +15,7 @@
 //libaccounts-qt
 #include <Accounts/ServiceType>
 
-class ServiceType : public QObject
+class Q_DECL_EXPORT ServiceType : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString name READ name CONSTANT)

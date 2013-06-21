@@ -24,7 +24,7 @@ class Account;
  * The Account Model is the model for created accounts
  */
 
-class AccountModel : public QAbstractListModel, public QQmlParserStatus
+class Q_DECL_EXPORT AccountModel : public QAbstractListModel, public QQmlParserStatus
 {
     Q_OBJECT
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
