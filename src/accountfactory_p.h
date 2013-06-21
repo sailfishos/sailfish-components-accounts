@@ -11,10 +11,7 @@
 #include <Accounts/Service>
 #include <Accounts/AuthData>
 
-#include <SignOn/Identity>
-#include <SignOn/AuthSession>
-#include <SignOn/SessionData>
-#include <SignOn/Error>
+class Account;
 
 class AccountFactory : public QObject
 {
@@ -26,26 +23,22 @@ public:
 
     Q_INVOKABLE void createAccount(const QString &providerName, const QString &serviceName,
                                    const QString &username, const QString &password,
-                                   const QString displayName = QString(),
-                                   const QVariantMap &configuration = QVariantMap());
-    Q_INVOKABLE void createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params);
+                                   const QString &displayName, const QVariantMap &configuration,
+                                   const QString &applicationName, const QString &symmetricKey,
+                                   const QString &credentialsName = QString());
+    Q_INVOKABLE void createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params,
+                                        const QString &applicationName, const QString &symmetricKey,
+                                        const QString &credentialsName);
 
-    Q_INVOKABLE void signOut();
     Q_INVOKABLE void cancel();
 
 Q_SIGNALS:
-    void startedSignon();
-    void finishedSignon();
     void error(const QString &message);
-    void success(int newAccountId, int newIdentityId, const QVariantMap &responseData);
+    void success(int newAccountId, const QVariantMap &responseData);
 
 private Q_SLOTS:
-    void handleCredentialsStored(quint32);
-    void handleCredentialsFailed(const SignOn::Error &err);
-    void handleResponse(const SignOn::SessionData &data);
-    void handleSynced();
-    void handleSignOnError(const SignOn::Error &err);
-    void handleAccountError();
+    void handleSignInCredentialsCreated(const QVariantMap &responseData);
+    void handleSignInFailed(const QString &message);
 
 private:
     enum ResetMode {
@@ -65,11 +58,16 @@ private:
     QVariantMap m_responseData;
     QVariantMap m_signonSessionParams;
     Accounts::Manager *m_am;
-    Accounts::Account *m_newAccount;
     Accounts::AccountService *m_accountService;
-    SignOn::IdentityInfo m_identInfo;
-    SignOn::Identity *m_ident;
-    SignOn::AuthSession *m_session;
+    Account *m_sailfishAccount;
+
+    QString m_method;
+    QString m_mechanism;
+    QString m_applicationName;
+    QString m_symmetricKey;
+    QString m_credentialsName;
+    QString m_username;
+    QString m_password;
 };
 
 #endif // ACCOUNTFACTORY_P_H
