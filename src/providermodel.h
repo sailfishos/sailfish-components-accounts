@@ -17,7 +17,7 @@
 #include <QString>
 
 class Provider;
-class ProviderModel : public QAbstractListModel
+class Q_DECL_EXPORT ProviderModel : public QAbstractListModel
 {
     Q_OBJECT
     class ProviderModelPrivate;

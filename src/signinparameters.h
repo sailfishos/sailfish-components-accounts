@@ -14,7 +14,7 @@
 #include <QStringList>
 #include <QVariant>
 
-class SignInParameters : public QObject
+class Q_DECL_EXPORT SignInParameters : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString method READ method CONSTANT)

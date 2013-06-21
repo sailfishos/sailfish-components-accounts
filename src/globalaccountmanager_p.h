@@ -10,6 +10,6 @@
 
 #include <Accounts/Manager>
 
-Accounts::Manager *globalAccountManager();
+Q_DECL_EXPORT Accounts::Manager *globalAccountManager();
 
 #endif
