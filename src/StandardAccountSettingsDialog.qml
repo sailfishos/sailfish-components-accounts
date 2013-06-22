@@ -1,8 +1,7 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
-import org.nemomobile.accounts 1.0
-import org.nemomobile.signon 1.0
+import Sailfish.Accounts 1.0
 import "accountutil.js" as AccountUtil
 
 AccountSettingsDialog {
@@ -12,11 +11,13 @@ AccountSettingsDialog {
         serviceModel.clear()
         for (var i in account.supportedServiceNames) {
             var service = accountManager.service(account.supportedServiceNames[i])
-            var serviceEnabled = (account.enabledServiceNames.indexOf(service.name) >= 0)
-            if (isNewAccount && !serviceEnabled) {
+            var serviceEnabled = false
+            if (isNewAccount) {
                 // enable all services for new accounts
                 account.enableWithService(service.name)
                 serviceEnabled = true
+            } else {
+                serviceEnabled = account.isEnabledWithService(service.name)
             }
             serviceModel.append({"name": service.name,
                                  "serviceType": service.serviceType,

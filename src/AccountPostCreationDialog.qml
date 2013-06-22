@@ -26,12 +26,14 @@ AccountPostAuthenticationDialog {
 
     onAuthenticationFinished: {
         if (success) {
+            canAccept = true
             accept()
         } else {
             // if there is a page after the settingsPage, make that the new acceptDestination
             if (settingsPage !== null && acceptDestination === settingsPage) {
                 acceptDestination = settingsPage.acceptDestination
             }
+            canAccept = (acceptDestination != null && acceptDestination != undefined)
         }
     }
 }

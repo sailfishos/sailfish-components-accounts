@@ -18,22 +18,19 @@ Dialog {
     property string errorDescription: qsTrId("components_accounts-la-account_creation_error")
 
     property alias progressStatusText: statusLabel.text
-
     property int minimumBusyDuration: 2000
-    property bool autoAcceptOnSuccess: true
 
-    property bool _becameActive
+    property bool becameTopPage
 
     signal authenticationFinished(bool success)
 
     function authenticationDone(success) {
-        if (!_becameActive || minimumBusyDurationTimer.running) {
+        if (minimumBusyDurationTimer.running) {
             minimumBusyDurationTimer.triggered.connect(function() {
                 authenticationDone(success)
             })
             return
         }
-        canAccept = true
         backNavigation = true
         if (success) {
             headingLabel.text = successHeading
@@ -44,20 +41,28 @@ Dialog {
             headingLabel.color = Theme.highlightColor
             descriptionLabel.text = errorDescription
         }
-        header.opacity = 1
         busyIndicator.running = false
         infoColumn.opacity = 1
-        authenticationFinished(success)
+        if (becameTopPage) {
+            authenticationFinished(success)
+        } else {
+            becameTopPageChanged.connect(function() {
+                authenticationFinished(success)
+            })
+        }
     }
 
     acceptDestinationAction: PageStackAction.Replace
     backNavigation: false
     canAccept: false
 
-    onStatusChanged: {
-        if (status === PageStatus.Active) {
-            _becameActive = true
-            minimumBusyDurationTimer.start()
+    Connections {
+        target: pageStack
+        onCurrentPageChanged: {
+            if (!root.becameTopPage && root === pageStack.currentPage) {
+                root.becameTopPage = true
+                minimumBusyDurationTimer.start()
+            }
         }
     }
 
@@ -66,9 +71,12 @@ Dialog {
         //: Skip the account creation process as there was an error.
         //% "Skip"
         title: qsTrId("components_accounts-he-skip")
-        opacity: 0
+        opacity: root.canAccept ? 1 : 0
 
-        Behavior on opacity { FadeAnimation {} }
+        Behavior on opacity {
+            enabled: root.minimumBusyDuration > 0
+            FadeAnimation {}
+        }
     }
 
     Column {
@@ -109,7 +117,10 @@ Dialog {
         spacing: Theme.paddingLarge
         opacity: 0
 
-        Behavior on opacity { FadeAnimation {} }
+        Behavior on opacity {
+            enabled: root.minimumBusyDuration > 0
+            FadeAnimation {}
+        }
 
         Label {
             id: headingLabel

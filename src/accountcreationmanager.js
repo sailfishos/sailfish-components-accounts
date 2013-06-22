@@ -41,7 +41,7 @@ function createAccountCreationPage(providerName) {
         console.log("No account provider name given!")
         return null
     }
-    var provider = accountModel.provider(providerName)
+    var provider = accountManager.provider(providerName)
     if (!provider) {
         throw new Error("Unable to obtain provider with name: " + providerName)
     }

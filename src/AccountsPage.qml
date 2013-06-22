@@ -1,8 +1,7 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
-import org.nemomobile.accounts 1.0
-import org.nemomobile.signon 1.0
+import Sailfish.Accounts 1.0
 
 Page {
     id: root
@@ -14,13 +13,6 @@ Page {
         }
         account.statusChanged.connect(function() {
             if (account.status === Account.Initialized) {
-                var identifiers = account.identityIdentifiers
-                for (var serviceName in identifiers) {
-                    var identity = identityManager.identity(identifiers[serviceName])
-                    if (identity) {
-                        identity.remove()
-                    }
-                }
                 account.remove()
             }
         })
@@ -32,23 +24,15 @@ Page {
         onAccountDeletionRequested: _deleteAccount(accountId)
     }
 
-    AccountModel {
-        id: accountModel
-    }
-
     AccountManager {
         id: accountManager
-    }
-
-    IdentityManager {
-        id: identityManager
     }
 
     SilicaListView {
         id: accountsView
 
         anchors.fill: parent
-        model: accountModel
+        model: AccountModel {}
         header: PageHeader {
             //: accounts list view
             //% "Accounts"
@@ -107,7 +91,7 @@ Page {
             }
 
             onClicked: {
-                var provider = accountModel.provider(providerName)
+                var provider = accountManager.provider(providerName)
                 if (!provider) {
                     throw new Error("Unable to obtain provider with name: " + providerName)
                 }

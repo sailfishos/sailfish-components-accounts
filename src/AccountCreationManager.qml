@@ -1,5 +1,6 @@
 import QtQuick 1.1
 import Sailfish.Silica 1.0
+import Sailfish.Accounts 1.0
 import "accountcreationmanager.js" as ManagerScript
 
 Item {
@@ -16,4 +17,9 @@ Item {
     }
 
     signal accountDeletionRequested(int accountId)
+
+    // used by accountcreationmanager.js
+    AccountManager {
+        id: accountManager
+    }
 }
