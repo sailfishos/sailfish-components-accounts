@@ -12,6 +12,7 @@
 #include <Accounts/Manager>
 
 //Qt
+#include <QQmlParserStatus>
 #include <QAbstractTableModel>
 #include <QMap>
 #include <QVariant>
@@ -23,13 +24,15 @@ class Account;
  * The Account Model is the model for created accounts
  */
 
-class AccountModel : public QAbstractListModel
+class AccountModel : public QAbstractListModel, public QQmlParserStatus
 {
     Q_OBJECT
+    Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
+    Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    Q_ENUMS(FilterType)
     class AccountModelPrivate;
 
 public:
-
     enum Roles {
         AccountIdRole = Qt::UserRole + 1,
         AccountDisplayNameRole,
@@ -39,12 +42,31 @@ public:
         AccountEnabledRole
     };
 
+    enum FilterType {
+        NoFilter,
+        ProviderFilter,
+        ServiceFilter,
+        ServiceTypeFilter
+    };
 
     AccountModel(QObject *parent = 0);
     virtual ~AccountModel();
 
+    FilterType filterType() const;
+    void setFilterType(FilterType filterType);
+
+    QString filter() const;
+    void setFilter(const QString &filter);
+
     int rowCount(const QModelIndex &index = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
+
+    void classBegin();
+    void componentComplete();
+
+signals:
+    void filterTypeChanged();
+    void filterChanged();
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 protected:
@@ -59,8 +81,10 @@ private slots:
 
 private:
     int getAccountIndex(Accounts::AccountId id) const;
+    int getFilteredAccountsIndex(Accounts::AccountId id) const;
     void addedAccount(Accounts::Account *account);
     void removedAccount(Accounts::Account *account);
+    void reload();
 
 private:
     AccountModelPrivate* d_ptr;
