@@ -20,18 +20,49 @@
 #include <Accounts/Provider>
 
 struct DisplayData {
-    DisplayData(Accounts::Account *acct) : account(acct) {}
+    DisplayData(Accounts::Account *acct)
+        : account(acct)
+    {
+        Accounts::ServiceList services = account->services();
+        foreach (const Accounts::Service &service, services) {
+            serviceNames.append(service.name());
+            serviceTypes.append(service.serviceType());
+        }
+    }
     ~DisplayData() { delete account; }
+
+    bool matchesFilter(AccountModel::FilterType filterType, const QString &filter) const {
+        switch (filterType) {
+        case AccountModel::NoFilter:
+            return true;
+        case AccountModel::ProviderFilter:
+            return filter == providerName;
+        case AccountModel::ServiceFilter:
+            return serviceNames.contains(filter);
+        case AccountModel::ServiceTypeFilter:
+            return serviceTypes.contains(filter);
+        }
+        return false;
+    }
+
     Accounts::Account *account;
     QString providerName;
     QString providerDisplayName;
     QString accountIcon;
+    QStringList serviceNames;
+    QStringList serviceTypes;
     Q_DISABLE_COPY(DisplayData);
 };
 
 class AccountModel::AccountModelPrivate
 {
 public:
+    AccountModelPrivate()
+        : componentComplete(false),
+          filterType(AccountModel::NoFilter)
+    {
+    }
+
     ~AccountModelPrivate()
     {
         qDeleteAll(accountsList);
@@ -40,6 +71,10 @@ public:
     QHash<int, QByteArray> headerData;
     Accounts::Manager *manager;
     QList<DisplayData *> accountsList;
+    QList<DisplayData *> filteredAccountsList;
+    AccountModel::FilterType filterType;
+    QString filter;
+    bool componentComplete;
 };
 
 
@@ -88,12 +123,62 @@ AccountModel::AccountModel(QObject* parent)
     foreach (Accounts::AccountId id, idList) {
         Accounts::Account *account = d->manager->account(id);
         addedAccount(account);
-        d->accountsList.append(new DisplayData(account));
+        DisplayData *data = new DisplayData(account);
+        d->accountsList.append(data);
+        d->filteredAccountsList.append(data);
     }
 }
 
 AccountModel::~AccountModel()
 {
+}
+
+AccountModel::FilterType AccountModel::filterType() const
+{
+    Q_D(const AccountModel);
+    return d->filterType;
+}
+
+void AccountModel::setFilterType(FilterType filterType)
+{
+    Q_D(AccountModel);
+    if (filterType != d->filterType) {
+        d->filterType = filterType;
+        if (d->componentComplete)
+            reload();
+        emit filterTypeChanged();
+    }
+}
+
+QString AccountModel::filter() const
+{
+    Q_D(const AccountModel);
+    return d->filter;
+}
+
+void AccountModel::setFilter(const QString &filter)
+{
+    Q_D(AccountModel);
+    if (filter != d->filter) {
+        d->filter = filter;
+        if (d->componentComplete)
+            reload();
+        emit filterChanged();
+    }
+}
+
+void AccountModel::reload()
+{
+    Q_D(AccountModel);
+    QList<DisplayData *> result;
+    for (int i=0; i<d->accountsList.count(); i++) {
+        if (d->accountsList[i]->matchesFilter(d->filterType, d->filter)) {
+            result.append(d->accountsList[i]);
+        }
+    }
+    beginResetModel();
+    d->filteredAccountsList = result;
+    endResetModel();
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -104,24 +189,20 @@ QHash<int, QByteArray> AccountModel::roleNames() const
 }
 #endif
 
-int AccountModel::rowCount(const QModelIndex &parent) const
+int AccountModel::rowCount(const QModelIndex &) const
 {
     Q_D(const AccountModel);
-    if (parent.isValid()) {
-        return 0;
-    }
-
-    return d->accountsList.length();
+    return d->filteredAccountsList.count();
 }
 
 QVariant AccountModel::data(const QModelIndex &index, int role) const
 {
     Q_D(const AccountModel);
-    if (!index.isValid() || index.row() >= d->accountsList.length()) {
+    if (!index.isValid() || index.row() >= d->filteredAccountsList.length()) {
         return QVariant();
     }
 
-    DisplayData *data = d->accountsList[index.row()];
+    DisplayData *data = d->filteredAccountsList[index.row()];
     Accounts::Account *account = data->account;
 
     if (role == AccountIdRole)
@@ -157,17 +238,28 @@ QVariant AccountModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
+void AccountModel::classBegin()
+{
+}
+
+void AccountModel::componentComplete()
+{
+    Q_D(AccountModel);
+    if (d->filterType != NoFilter && !d->filter.isEmpty()) {
+        reload();
+    }
+    d->componentComplete = true;
+}
+
 void AccountModel::accountCreated(Accounts::AccountId id)
 {
     Q_D(AccountModel);
-    QModelIndex index;
     Accounts::Account *account = d->manager->account(id);
-    addedAccount(account);
 
     if (account != 0) {
-        beginInsertRows(index, 0, 0);
+        addedAccount(account);
         d->accountsList.insert(0, new DisplayData(account));
-        endInsertRows();
+        reload();
     }
 }
 
@@ -176,29 +268,28 @@ void AccountModel::accountRemoved(Accounts::AccountId id)
     Q_D(AccountModel);
 
     int index = getAccountIndex(id);
-
     if (index < 0) {
-        qWarning() << Q_FUNC_INFO << "Account not present in the list:" << id;
         return;
     }
 
-    QModelIndex parent;
-    beginRemoveRows(parent, index, index);
-    DisplayData *data = d->accountsList.takeAt(index);
-    endRemoveRows();
+    int filteredIndex = getFilteredAccountsIndex(id);
+    if (filteredIndex >= 0) {
+        beginRemoveRows(QModelIndex(), filteredIndex, filteredIndex);
+        d->filteredAccountsList.removeAt(filteredIndex);
+        endRemoveRows();
+    }
 
+    DisplayData *data = d->accountsList.takeAt(index);
     removedAccount(data->account);
     delete data;
 }
 
 void AccountModel::accountUpdated(Accounts::AccountId id)
 {
-    int accountIndex = getAccountIndex(id);
+    int accountIndex = getFilteredAccountsIndex(id);
     if (accountIndex < 0) {
-        qWarning() << Q_FUNC_INFO << "Account not present in the list:" << id;
         return;
     }
-
     emit dataChanged(index(accountIndex, 0), index(accountIndex, 0));
 }
 
@@ -214,6 +305,18 @@ int AccountModel::getAccountIndex(Accounts::AccountId id) const
     Q_D(const AccountModel);
     for (int i = 0; i < d->accountsList.count(); ++i) {
         if (d->accountsList.at(i)->account->id() == id) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+int AccountModel::getFilteredAccountsIndex(Accounts::AccountId id) const
+{
+    Q_D(const AccountModel);
+    for (int i = 0; i < d->filteredAccountsList.count(); ++i) {
+        if (d->filteredAccountsList.at(i)->account->id() == id) {
             return i;
         }
     }
