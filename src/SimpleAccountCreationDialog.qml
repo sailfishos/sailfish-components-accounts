@@ -1,8 +1,6 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
-import org.nemomobile.accounts 1.0
-import org.nemomobile.signon 1.0
 import Sailfish.Accounts.private 1.0
 
 AccountCreationDialog {
@@ -38,16 +36,18 @@ AccountCreationDialog {
         }
     }
 
-    AccountModel {
-        id: accountModel
-    }
-
     AccountFactory {
         id: accountFactory
 
         function beginCreation() {
             var defaultServiceName = root.accountProvider.serviceNames[0]
-            createAccount(root.accountProvider.name, defaultServiceName, root.username, root.password, root.username)
+            createAccount(root.accountProvider.name, defaultServiceName,
+                          root.username, root.password,
+                          root.username,
+                          {},
+                          "Jolla",
+                          "temporary_symmetric_key",
+                          "Jolla")
         }
 
         onError: {

@@ -19,14 +19,7 @@ BuildRequires:  qt5-qttools-linguist
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
 BuildRequires:  pkgconfig(libcrypto)
 BuildRequires:  qca-devel
-
 Requires:  sailfishsilica-qt5
-Requires:  nemo-qml-plugin-accounts-qt5
-Requires:  nemo-qml-plugin-signon-qt5
-
-Requires:  sailfishsilica >= 0.8.33
-Requires:  nemo-qml-plugins-accounts >= 0.2.1
-Requires:  nemo-qml-plugins-signon >= 0.2.1
 Requires:  jolla-signon-ui
 Requires:  libjollasignonuiservice
 Requires:  qca-ossl

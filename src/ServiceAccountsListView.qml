@@ -1,15 +1,17 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
-import org.nemomobile.accounts 1.0
 
 SilicaListView {
     id: root
 
+    property alias filterType: accountModel.filterType
+    property alias filter: accountModel.filter
+
     signal serviceClicked(int accountId, string serviceName)
 
     spacing: Theme.paddingLarge
-    model: ServiceAccountModel { id: serviceAccountModel }
+    model: AccountModel { id: accountModel }
 
     header: PageHeader {
         //: service accounts list view
@@ -25,7 +27,7 @@ SilicaListView {
             id: icon
             x: Theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
-            source: serviceAccountModel.provider(model.accountId).iconName
+            source: accountManager.provider(model.accountId).iconName
         }
         Label {
             id: accountName
@@ -50,6 +52,8 @@ SilicaListView {
             onClicked: root.serviceClicked(model.accountId, model.serviceName)
         }
     }
+
+    AccountManager { id: accountManager }
 
     VerticalScrollDecorator {}
 }
