@@ -214,8 +214,8 @@ void AccountFactory::startAccountCreation()
 
     connect(m_sailfishAccount, SIGNAL(signInCredentialsCreated(QVariantMap)),
             this, SLOT(handleSignInCredentialsCreated(QVariantMap)));
-    connect(m_sailfishAccount, SIGNAL(signInFailed(QString)),
-            this, SLOT(handleSignInFailed(QString)));
+    connect(m_sailfishAccount, SIGNAL(signInError(QString)),
+            this, SLOT(handleSignInError(QString)));
 
     SignInParameters *params = new SignInParameters(m_method, m_mechanism, m_signonSessionParams, m_username, m_password, m_sailfishAccount);
     if (m_method.toLower().startsWith(QLatin1String("oauth"))) {
@@ -238,7 +238,7 @@ void AccountFactory::cancel()
     resetState(AccountFactory::CleanupArtifacts);
 }
 
-void AccountFactory::handleSignInFailed(const QString &message)
+void AccountFactory::handleSignInError(const QString &message)
 {
     QString providerName = m_sailfishAccount->account()->providerName();
     resetState(AccountFactory::CleanupArtifacts);

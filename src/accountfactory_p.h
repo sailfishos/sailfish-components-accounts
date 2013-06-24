@@ -38,7 +38,7 @@ Q_SIGNALS:
 
 private Q_SLOTS:
     void handleSignInCredentialsCreated(const QVariantMap &responseData);
-    void handleSignInFailed(const QString &message);
+    void handleSignInError(const QString &message);
 
 private:
     enum ResetMode {
