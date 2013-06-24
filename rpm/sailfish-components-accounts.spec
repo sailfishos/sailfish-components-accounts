@@ -1,7 +1,7 @@
 Name:       sailfish-components-accounts-qt5
 
 Summary:    Sailfish Accounts Components
-Version:    0.0.12
+Version:    0.0.13
 Release:    1
 Group:      System/Libraries
 License:    TBD
@@ -100,3 +100,8 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
 
+%post
+/sbin/ldconfig
+
+%postun
+/sbin/ldconfig
