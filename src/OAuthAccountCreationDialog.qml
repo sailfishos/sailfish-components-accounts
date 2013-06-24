@@ -1,8 +1,7 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.theme 1.0
-import org.nemomobile.accounts 1.0
-import org.nemomobile.signon 1.0
+import Sailfish.Accounts 1.0
 import Sailfish.Accounts.private 1.0
 
 AccountCreationDialog {
@@ -21,17 +20,17 @@ AccountCreationDialog {
 
     //--------------------------------
 
+    property bool _becameTopPage
+    property bool _errorOnBecomingTopPage
+
     function _creationFailed() {
         // if creation fails immediately we still have to wait for the page to become inactive first
-        if (postCreationDialog === null) {
-            postCreationDialogChanged.connect(_creationFailed)
+        if (!_becameTopPage) {
+            _errorOnBecomingTopPage = true
             return
         }
-        postCreationDialog.minimumBusyDuration = 0
-        if (status === PageStatus.Active) {
-            canAccept = true
-            accept()
-        }
+        canAccept = true
+        accept()
         accountCreationError()
     }
 
@@ -42,8 +41,10 @@ AccountCreationDialog {
         accountFactory.cancel()
     }
 
-    Component.onCompleted: {
-        accountFactory.beginCreation()
+    onStatusChanged: {
+        if (status === PageStatus.Active) {
+            accountFactory.beginCreation()
+        }
     }
 
     DialogHeader {
@@ -86,6 +87,26 @@ AccountCreationDialog {
         }
     }
 
+    Timer {
+        id: minimumBusyDurationTimer
+        interval: 2000
+        onTriggered: {
+            if (root._errorOnBecomingTopPage) {
+                _creationFailed()
+            }
+        }
+    }
+
+    Connections {
+        target: pageStack
+        onCurrentPageChanged: {
+            if (!root._becameTopPage && root === pageStack.currentPage) {
+                root._becameTopPage = true
+                minimumBusyDurationTimer.start()
+            }
+        }
+    }
+
     AccountFactory {
         id: accountFactory
 
@@ -105,7 +126,10 @@ AccountCreationDialog {
             }
 
             // and trigger signon / account creation
-            accountFactory.createOAuthAccount(root.accountProvider.name, _signonServiceName, params)
+            accountFactory.createOAuthAccount(root.accountProvider.name, _signonServiceName, params,
+                                              "Jolla",
+                                              "temporary_symmetric_key",
+                                              "Jolla")
         }
 
         onError: {
@@ -118,26 +142,11 @@ AccountCreationDialog {
             root.accountCreated(newAccountId)
             postSignIn(responseData)      // call the post-sign-in hook
         }
-
-        onStartedSignon: {
-            changeBannerTimer.running = true
-        }
-
-        property Timer changeBannerTimer: Timer {
-            repeat: false
-            interval: 4000 // enough time for the web page to load
-            running: false
-            onTriggered: {
-                //: Message displayed when storing credentials after web page signon has succeeded
-                //% "Storing credentials..."
-                statusLabel = qsTrId("components_accounts-la-storing_credentials")
-            }
-        }
     }
 
     function postSignIn(data) {
         // default implementation just accepts to the postCreationDialog and calls postSignInFinished()
-        if (status === PageStatus.Active) {
+        if (root === pageStack.currentPage) {
             canAccept = true
             accept()
         }
