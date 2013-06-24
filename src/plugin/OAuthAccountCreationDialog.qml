@@ -154,6 +154,5 @@ AccountCreationDialog {
     }
 
     function postSignInFinished() {
-        accountFactory.signOut()
     }
 }
