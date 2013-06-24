@@ -27,8 +27,7 @@ public:
                                    const QString &applicationName, const QString &symmetricKey,
                                    const QString &credentialsName = QString());
     Q_INVOKABLE void createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params,
-                                        const QString &applicationName, const QString &symmetricKey,
-                                        const QString &credentialsName);
+                                        const QString &applicationName, const QString &credentialsName = QString());
 
     Q_INVOKABLE void cancel();
 

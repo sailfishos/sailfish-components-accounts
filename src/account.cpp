@@ -46,25 +46,14 @@
         uber_social/segregated_credentials/twitter=8
         chatterbox/segregated_credentials/jabber=9
 
-    When the credentials are created, they are encrypted (using an application
-    specific encryption key) and then encoded in base64 before being stored to
-    the accounts&sso database.  Prior to the encryption process, the plain-text
-    credentials have the application name appended to them.
+    When the credentials are created, if they are a username/password, then
+    they are encrypted using a symmetricKey prior to storing to database.
+    Client applications who wish to retrieve the plaintext credentials must
+    pass in the correct symmetricKey.
 
-    When the application wishes to log in using the credentials, the
-    credentials are retrieved and decrypted using the application-specified
-    decryption key.  If that decrypted data is a string which ends in the name
-    of the application, then the provided application name and encryption key
-    are "correct", and the plain-text credentials are returned to the caller.
-
-    If the decoded data does not end in the application name, then the caller
-    is trying to use credentials created by a different application, and so
-    the call fails and empty data is returned to the caller.
-
-    --
-
-    This code depends on the ability to store tokens via the accounts&sso
-    framework.
+    If the credentials are OAuth1.0a or OAuth2 based, the OAuth tokens are
+    stored in a per-ClientId (or per-ConsumerKey) map.  Clients are therefore
+    unable to use or access tokens associated with a different application.
 */
 
 // encrypts the given plaintext string with the given key, encodes the result in base64.
@@ -73,14 +62,19 @@ static QString b64_encrypted_string(const QString &plaintext, const QString &key
     QByteArray ptBA = plaintext.toUtf8();
     QByteArray kBA = key.toUtf8();
 
-    QByteArray encryptedData = aes_encrypt_plaintext(ptBA, kBA);
-    if (encryptedData.size() == 0) {
-        qWarning() << Q_FUNC_INFO << "encryption failed";
-        return QString();
+    QByteArray encryptedData;
+    if (key.isEmpty()) {
+        // no key: don't encrypt.
+        encryptedData = ptBA;
+    } else {
+        encryptedData = aes_encrypt_plaintext(ptBA, kBA);
+        if (encryptedData.size() == 0) {
+            qWarning() << Q_FUNC_INFO << "encryption failed";
+            return QString();
+        }
     }
 
     QByteArray b64encryptedData = encryptedData.toBase64();
-
     return QString::fromLatin1(b64encryptedData);
 }
 
@@ -91,10 +85,16 @@ static QString decrypted_string_b64(const QString &ciphertext, const QString &ke
     QByteArray encryptedData = QByteArray::fromBase64(b64encryptedData);
     QByteArray kBA = key.toUtf8();
 
-    QByteArray decryptedData = aes_decrypt_ciphertext(encryptedData, kBA);
-    if (decryptedData.size() == 0) {
-        qWarning() << Q_FUNC_INFO << "decryption failed";
-        return QString();
+    QByteArray decryptedData;
+    if (key.isEmpty()) {
+        // no key: don't decrypt
+        decryptedData = encryptedData;
+    } else {
+        decryptedData = aes_decrypt_ciphertext(encryptedData, kBA);
+        if (decryptedData.size() == 0) {
+            qWarning() << Q_FUNC_INFO << "decryption failed";
+            return QString();
+        }
     }
 
     QString decryptedString = QString::fromUtf8(decryptedData);
@@ -379,22 +379,31 @@ void AccountPrivate::handleSynced()
 
         // and update our status.
         if (signInCredentials.creatingSignInCredentials) {
-            bool success = true;
-            QVariantMap responseData = plainTextResponseData(signInCredentials.method,
-                                                             signInCredentials.responseData,
-                                                             signInCredentials.symmetricKey,
-                                                             signInCredentials.applicationName,
-                                                             &success);
-            if (success) {
+            if (signInCredentials.storingEncryptedTokens) {
+                // "password" method - we must decrypt the (cached) encrypted response data.
+                bool success = true;
+                QVariantMap responseData = plainTextResponseData(signInCredentials.method,
+                                                                 signInCredentials.responseData,
+                                                                 signInCredentials.symmetricKey,
+                                                                 signInCredentials.applicationName,
+                                                                 &success);
+                if (success) {
+                    signInCredentials.cleanup();
+                    setStatus(Account::Synced);
+                    emit q->signInCredentialsCreated(responseData);
+                } else {
+                    signInCredentials.cleanup(true); // and remove identity
+                    //: Error emitted if unable to decrypt the stored encrypted credentials
+                    //% "Unable to decrypt stored credentials - aborting credentials creation"
+                    emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
+                    setStatus(Account::Synced);
+                }
+            } else {
+                // "oauth2" method - we just emit the cached response data.
+                QVariantMap responseData = signInCredentials.responseData;
                 signInCredentials.cleanup();
                 setStatus(Account::Synced);
                 emit q->signInCredentialsCreated(responseData);
-            } else {
-                signInCredentials.cleanup(true); // and remove identity
-                //: Error emitted if unable to decrypt the stored encrypted credentials
-                //% "Unable to decrypt stored credentials - aborting credentials creation"
-                emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
-                setStatus(Account::Synced);
             }
         } else {
             setStatus(Account::Synced);
@@ -432,68 +441,47 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
 void AccountPrivate::handleResponse(const SignOn::SessionData &data)
 {
     if (signInCredentials.creatingSignInCredentials) {
-        if (signInCredentials.storingEncryptedTokens) {
-            // first, cache the (encrypted) response data.
-            signInCredentials.responseData.clear();
-            QStringList keys = data.propertyNames();
-            foreach (const QString &key, keys) {
-                signInCredentials.responseData.insert(key, data.getProperty(key));
-            }
-
-            // then update the account with the credentials information.
-            QString credName = signInCredentials.credentialsName.isEmpty() ? QLatin1String("default") : signInCredentials.credentialsName;
-            QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
-            account->selectService(Accounts::Service());
-            account->setValue(configurationValueKey, signInCredentials.identity->id());
-
-            // and write the changes to the accounts database
-            connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountError()), Qt::UniqueConnection);
-            /* have already connected account->synced() to handleSynced() */
-            account->sync();
-        } else if (signInCredentials.method == QLatin1String("oauth2")) {
-            // we need to encrypt and then store the returned tokens
-            QVariantMap providedTokens;
-            foreach (const QString &key, data.propertyNames()) {
-                if (key.toLower() == QLatin1String("accesstoken") || key.toLower() == QLatin1String("tokensecret")) {
-                    QString encryptedValue = b64_encrypted_string(data.getProperty(key).toString(), signInCredentials.symmetricKey);
-                    if (encryptedValue.isNull()) {
-                        qWarning() << Q_FUNC_INFO << "error encrypting" << key << ":" << data.getProperty(key).toString()
-                                   << "with key" << signInCredentials.symmetricKey;
-                    } else {
-                        providedTokens.insert(key, encryptedValue);
-                    }
-                } else {
-                    // this value doesn't need encryption.
-                    providedTokens.insert(key, data.getProperty(key));
-                }
-            }
-
-            // the "ProvidedTokens" value will be stored into signond by signon-plugin-oauth2
-            QVariantMap storeSessionData = signInCredentials.sessionData;
-            storeSessionData.insert(QLatin1String("ProvidedTokens"), providedTokens);
-
-            // process() again to store the encrypted tokens.
-            signInCredentials.storingEncryptedTokens = true;
-            signInCredentials.session->process(storeSessionData, signInCredentials.mechanism);
-        } else {
-            qWarning() << Q_FUNC_INFO << "invalid state - response obtained for unknown method:"
-                       << signInCredentials.method << "with s.e.t:" << signInCredentials.storingEncryptedTokens;
+        // first, cache the response data, so that we can emit it after account->sync() finishes.
+        signInCredentials.responseData.clear();
+        QStringList keys = data.propertyNames();
+        foreach (const QString &key, keys) {
+            signInCredentials.responseData.insert(key, data.getProperty(key));
         }
+
+        // then update the account with the credentials information.
+        QString credName = signInCredentials.credentialsName.isEmpty() ? QLatin1String("default") : signInCredentials.credentialsName;
+        QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
+        account->selectService(Accounts::Service());
+        account->setValue(configurationValueKey, signInCredentials.identity->id());
+
+        // and write the changes to the accounts database
+        connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountError()), Qt::UniqueConnection);
+        /* have already connected account->synced() to handleSynced() */
+        account->sync();
     } else if (signInCredentials.signingInWithCredentials) {
-        // decrypt the (encrypted) response data, and emit
-        bool success = true;
-        QVariantMap responseData = plainTextResponseData(signInCredentials.method,
-                                                         signInCredentials.responseData,
-                                                         signInCredentials.symmetricKey,
-                                                         signInCredentials.applicationName,
-                                                         &success);
-        signInCredentials.cleanup();
-        if (success) {
+        // if it is "password" method, then the username/password are encrypted, and we need to decrypt.
+        // if it is "oauth" (oauth1.0a / oauth2) then we just emit the tokens immediately,
+        // as the security is provided by signond (and the fact that the client needs to know the clientid).
+        if (signInCredentials.method.startsWith(QLatin1String("oauth"))) {
+            QVariantMap responseData = signInCredentials.responseData;
+            signInCredentials.cleanup();
             emit q->signInResponse(responseData);
         } else {
-            //: Error emitted if unable to decrypt the stored encrypted credentials
-            //% "Unable to decrypt stored credentials - aborting credentials creation"
-            emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
+            // decrypt the (encrypted) response data, and emit
+            bool success = true;
+            QVariantMap responseData = plainTextResponseData(signInCredentials.method,
+                                                             signInCredentials.responseData,
+                                                             signInCredentials.symmetricKey,
+                                                             signInCredentials.applicationName,
+                                                             &success);
+            signInCredentials.cleanup();
+            if (success) {
+                emit q->signInResponse(responseData);
+            } else {
+                //: Error emitted if unable to decrypt the stored encrypted credentials
+                //% "Unable to decrypt stored credentials - aborting credentials creation"
+                emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
+            }
         }
     }
 }
@@ -571,30 +559,8 @@ QVariantMap AccountPrivate::plainTextResponseData(const QString &method, const Q
             }
         }
     } else if (method.toLower() == QLatin1String("oauth2")) {
-        // AccessToken and TokenSecret will be encrypted.
-        foreach (const QString &key, encryptedResponseData.keys()) {
-            if (key.toLower() == QLatin1String("accesstoken")) {
-                QString decryptedAccessToken = decrypted_string_b64(encryptedResponseData.value(key).toString(), symmetricKey);
-                if (decryptedAccessToken.endsWith(applicationName)) {
-                    decryptedAccessToken.chop(applicationName.length());
-                    retn.insert(key, decryptedAccessToken);
-                } else {
-                    // else, they supplied the wrong decryption key.
-                    *succeeded = false;
-                }
-            } else if (key.toLower() == QLatin1String("tokensecret")) {
-                QString decryptedTokenSecret = decrypted_string_b64(encryptedResponseData.value(key).toString(), symmetricKey);
-                if (decryptedTokenSecret.endsWith(applicationName)) {
-                    decryptedTokenSecret.chop(applicationName.length());
-                    retn.insert(key, decryptedTokenSecret);
-                } else {
-                    // else, they supplied the wrong decryption key.
-                    *succeeded = false;
-                }
-            } else {
-                retn.insert(key, encryptedResponseData.value(key)); // shouldn't require decrypting.
-            }
-        }
+        // encryption is handled by signond.  The response data should not be encrypted.
+        retn = encryptedResponseData;
     } else {
         qWarning() << Q_FUNC_INFO << "unknown method:" << method;
         retn = encryptedResponseData;
@@ -664,36 +630,70 @@ void AccountPrivate::setStatus(Account::Status newStatus)
     An Account can also be used to sign into a service.
 
     Each application must create signon credentials in the account,
-    and may sign into the account using those credentials.
+    and may sign into the account using those credentials.  If the
+    service uses OAuth1.0a or OAuth2 for authentication, the client
+    must pass a valid ConsumerKey or ClientId in the parameters to
+    the authentication request.
 
     The following example shows how per-application credentials can
-    be added to an existing account:
+    be added to an existing account for an OAuth2 service:
 
     \qml
         import Sailfish.Accounts 1.0
 
         Account {
             id: account
-            identifier: 12 // retrieved from AccountManager or AccountModel
+            identifier: 12 // example: Facebook account id retrieved from AccountManager or AccountModel
 
             onStatusChanged: {
                 if (status == Account.Initialized) {
                     var siParams = signInParameters("facebook-sharing")
                     siParams.setParameter("ClientId", "123456789abcdef")
                     if (!hasSignInCredentials("MyApp", "MyCredentials")) {
-                        createSignInCredentials("MyApp", "SharingCredentials", "MySecretKey", siParams)
+                        createSignInCredentials("MyApp", "SharingCredentials", siParams)
                     } else {
-                        signIn("MyApp", "SharingCredentials", "MySecretKey", siParams)
+                        signIn("MyApp", "SharingCredentials", siParams)
                     }
                 }
             }
 
             onSignInCredentialsCreated: {
-                for (var i in data) console.log(i+"="+data[i])
+                for (var i in data) console.log(i+"="+data[i]) // will contain AccessToken
             }
 
             onSignInResponse: {
-                for (var i in data) console.log(i+"="+data[i])
+                for (var i in data) console.log(i+"="+data[i]) // will contain AccessToken
+            }
+        }
+    \endqml
+
+    If the authentication method is password based, the client must pass in
+    a symmetric key which is used to encrypt and decrypt the credentials.
+
+    \qml
+        import Sailfish.Accounts 1.0
+
+        Account {
+            id: account
+            identifier: 13 // example: Jabber account id retrieved from AccountManager or AccountModel
+
+            onStatusChanged: {
+                if (status == Account.Initialized) {
+                    var siParams = signInParameters("jabber-im")
+                    if (!hasSignInCredentials("MyApp", "MyCredentials")) {
+                        createSignInCredentials("MyApp", "JabberCredentials", "MySecretKey", siParams)
+                    } else {
+                        signIn("MyApp", "JabberCredentials", "MySecretKey", siParams)
+                    }
+                }
+            }
+
+            onSignInCredentialsCreated: {
+                for (var i in data) console.log(i+"="+data[i]) // will contain Username + Password
+            }
+
+            onSignInResponse: {
+                for (var i in data) console.log(i+"="+data[i]) // will contain Username + Password
             }
         }
     \endqml
@@ -720,7 +720,7 @@ void AccountPrivate::setStatus(Account::Status newStatus)
                         console.log("Successfully created account")
                         var siParams = signInParameters("facebook-sharing")
                         siParams.setParameter("ClientId", "123456789abcdef")
-                        createSignInCredentials("MyApp", "SharingCredentials", "MySecretKey", siParams)
+                        createSignInCredentials("MyApp", "SharingCredentials", siParams)
                     }
                 }
 
@@ -743,7 +743,7 @@ Account::~Account()
 }
 
 
-// QDeclarativeParserStatus
+// QQmlParserStatus
 void Account::classBegin() { }
 void Account::componentComplete()
 {
@@ -1214,7 +1214,7 @@ bool Account::hasSignInCredentials(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::createSignInCredentials(const QString &applicationName, const QString &credentialsName, const QString &symmetricKey, SignInParameters *parameters)
+    \qmlmethod Account::createSignInCredentials(const QString &applicationName, const QString &credentialsName, SignInParameters *parameters, const QString &symmetricKey = QString())
 
     Creates sign-in credentials with this account for the application with
     the given \a applicationName named \a credentialsName (or named "default"
@@ -1226,13 +1226,15 @@ bool Account::hasSignInCredentials(const QString &applicationName,
     If the \a parameters specify the OAuth method of authentication, sign-in
     will occur as part of the creation of credentials (and the user will be
     prompted for authorization via a web-view).  The result of this process,
-    if successful, will include an AccessToken and this AccessToken will be
-    encrypted with the given \a symmetricKey and stored in the credentials.
+    if successful, will include an AccessToken.  The \a symmetricKey
+    parameter will be ignored for OAuth authentication.
 
     If the \a parameters specify a password-based method of authentication,
     sign-in will not occur but instead the username and password specified
     in the \a parameters will be encrypted with the given \a symmetricKey
-    and stored in the credentials.
+    and stored in the credentials.  If the \a symmetricKey parameter is
+    empty, the credentials will not be encrypted - which means that any
+    application will be able to use those credentials with the service.
 
     Once creation of credentials completes successfully the
     \c signInCredentialsCreated() signal will be emitted.  If creation of the
@@ -1246,8 +1248,8 @@ bool Account::hasSignInCredentials(const QString &applicationName,
 */
 void Account::createSignInCredentials(const QString &applicationName,
                                       const QString &credentialsName,
-                                      const QString &symmetricKey,
-                                      SignInParameters *parameters)
+                                      SignInParameters *parameters,
+                                      const QString &symmetricKey)
 {
     if (d->status != Account::Initialized && d->status != Account::Synced) {
         //: Error emitted if function called while account is in invalid state
@@ -1270,13 +1272,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         return;
     }
 
-    if (symmetricKey.isEmpty()) {
-        //: Error emitted if function called with invalid encryption key
-        //% "A valid symmetric encryption key must be specified"
-        emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_symkey"));
-        return;
-    }
-
+    // For non-oauth2 signon:
     // step one: check if the credentials already exist
     // step two: create identity
     // step three: append application name to username/password
@@ -1285,6 +1281,12 @@ void Account::createSignInCredentials(const QString &applicationName,
     // step six: store back into identity.
     // step seven: save identity id into account config settings for the application.
     // step eight: emit success including plain text credentials.
+
+    // For oauth2 signon:
+    // step one: check if the credentials already exist
+    // step two: create identity
+    // step three: perform signon
+    // step four: emit success including plain text tokens returned from signond
 
     if (hasSignInCredentials(applicationName, credentialsName)) {
         //: Error emitted if signon credentials already exist
@@ -1315,7 +1317,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.username = QString();
         d->signInCredentials.password = QString();
         d->signInCredentials.creatingSignInCredentials = true;
-        d->signInCredentials.storingEncryptedTokens = false; // at this stage we're just storing empty identity info.
+        d->signInCredentials.storingEncryptedTokens = false; // we never attempt to store encrypted tokens for OAuth2, signond handles that.
 
         connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)), d, SLOT(handleCredentialsFailed(SignOn::Error)));
         connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)), d, SLOT(handleCredentialsStored(quint32)));
@@ -1323,7 +1325,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->setStatus(Account::SigningIn);
         d->signInCredentials.identity->storeCredentials(d->signInCredentials.identityInfo);
     } else {
-        // password-based authentication.  just encrypt and store the credentials directly.
+        // password-based authentication.  encrypt and store the credentials directly.
         QString usernameWithAppName = parameters->username() + applicationName;
         QString encryptedUserName = b64_encrypted_string(usernameWithAppName, symmetricKey);
         if (encryptedUserName.isNull()) {
@@ -1424,16 +1426,23 @@ void Account::removeSignInCredentials(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::signIn(const QString &applicationName, const QString &credentialsName, const QString &symmetricKey, SignInParameters *parameters)
+    \qmlmethod Account::signIn(const QString &applicationName, const QString &credentialsName, SignInParameters *parameters, const QString &symmetricKey = QString())
 
     Signs the application with the given \a applicationName into the account
     using the per-application credentials identified by the given
-    \a credentialsName.  The credentials will be decrypted using the given
-    \a symmetricKey, which means that if the key given is incorrect,
-    sign-in will fail.
+    \a credentialsName.  The given \a parameters will be used during sign-in
+    (although any username or password specified in those parameters will be
+    ignored).
 
-    The given \a parameters will be used during sign-in (although any username
-    or password specified in those parameters will be ignored).
+    If the sign-in process uses a password authentication system, the
+    previously stored credentials (username and password) will be decrypted
+    using the given \a symmetricKey, which means that if the key given is
+    incorrect, sign-in will fail.
+
+    If the sign-in process uses an OAuth-based authentication system, the
+    \a symmetricKey argument will be ignored, and the tokens associated with
+    the ClientId or ConsumerKey specified in the \a parameters will be
+    read from the database.
 
     Emits \c signInResponseReceived() on success, or \c signInError() on
     failure.
@@ -1443,8 +1452,8 @@ void Account::removeSignInCredentials(const QString &applicationName,
 */
 void Account::signIn(const QString &applicationName,
                      const QString &credentialsName,
-                     const QString &symmetricKey,
-                     SignInParameters *parameters)
+                     SignInParameters *parameters,
+                     const QString &symmetricKey)
 {
     if (d->status != Account::Initialized && d->status != Account::Synced) {
         //: Error emitted if function called while account is in invalid state

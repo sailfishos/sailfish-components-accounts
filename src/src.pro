@@ -1,28 +1,17 @@
 TEMPLATE = lib
-TARGET  = sailfishaccountsplugin
+TARGET  = sailfishaccounts
 TARGET = $$qtLibraryTarget($$TARGET)
+TARGETPATH = $$[QT_INSTALL_LIBS]
 
-MODULENAME = Sailfish/Accounts
-TARGETPATH = $$[QT_INSTALL_QML]/$$MODULENAME
-
-equals(QT_MAJOR_VERSION, 5): QT += qml quick
-equals(QT_MAJOR_VERSION, 4): QT += declarative
-CONFIG += plugin
-
-CONFIG += link_pkgconfig
-PKGCONFIG += libsailfishkeyprovider
-equals(QT_MAJOR_VERSION, 4): PKGCONFIG += accounts-qt libsignon-qt
-equals(QT_MAJOR_VERSION, 5): PKGCONFIG += accounts-qt5 libsignon-qt5
-equals(QT_MAJOR_VERSION, 5): DEFINES *= QT_VERSION_5
+QT += qml
+CONFIG += qt hide_symbols create_pc create_prl no_install_prl link_pkgconfig
+PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5
 
 SOURCES += \
-    $$PWD/accountfactory.cpp \
-    $$PWD/encodedkeyprovider.cpp \
     $$PWD/account.cpp \
     $$PWD/accountmanager.cpp \
     $$PWD/accountmodel.cpp \
     $$PWD/globalaccountmanager_p.cpp \
-    $$PWD/plugin.cpp \
     $$PWD/provider.cpp \
     $$PWD/providermodel.cpp \
     $$PWD/service.cpp \
@@ -30,8 +19,6 @@ SOURCES += \
     $$PWD/signinparameters.cpp
 
 HEADERS += \
-    $$PWD/accountfactory_p.h \
-    $$PWD/encodedkeyprovider_p.h \
     $$PWD/account.h \
     $$PWD/accountmanager.h \
     $$PWD/accountmanager_p.h \
@@ -47,8 +34,6 @@ HEADERS += \
     $$PWD/service.h \
     $$PWD/servicetype.h \
     $$PWD/signinparameters.h
-
-OTHER_FILES += $$PWD/*.qml $$PWD/*.js qmldir
 
 # We can use either QCA or OpenSSL-EVP for AES encryption of credentials
 CONFIG(qca_encryption) {
@@ -68,38 +53,23 @@ CONFIG(osslevp_encryption) {
 }
 # if neither of these are specified, we fall back to xor encoding
 
-TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
-EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
+develheaders.path = /usr/include/libsailfishaccounts
+develheaders.files = \
+    $$PWD/account.h \
+    $$PWD/accountmanager.h \
+    $$PWD/provider.h \
+    $$PWD/service.h \
+    $$PWD/servicetype.h
 
-translations.commands += lupdate $$PWD -ts $$TS_FILE
-translations.depends = $$PWD/*.qml
-translations.CONFIG += no_check_exist no_link
-translations.output = $$TS_FILE
-translations.input = .
+target.path = $$[QT_INSTALL_LIBS]
+pkgconfig.files = $$PWD/pkgconfig/sailfishaccounts.pc
+pkgconfig.path = $$target.path/pkgconfig
 
-translations_install.files = $$TS_FILE
-translations_install.path = /usr/share/translations/source
-translations_install.CONFIG += no_check_exist
+QMAKE_PKGCONFIG_NAME = lib$$TARGET
+QMAKE_PKGCONFIG_DESCRIPTION = Application-segregated encrypted account credentials development files
+QMAKE_PKGCONFIG_LIBDIR = $$target.path
+QMAKE_PKGCONFIG_INCDIR = $$develheaders.path
+QMAKE_PKGCONFIG_DESTDIR = pkgconfig
+QMAKE_PKGCONFIG_REQUIRES = Qt5Qml Qt5Xml libsailfishkeyprovider accounts-qt5 libsignon-qt5
 
-
-# should add -markuntranslated "-" when proper translations are in place (or for testing)
-engineering_english.commands += lrelease -idbased $$TS_FILE -qm $$EE_QM
-engineering_english.CONFIG += no_check_exist no_link
-engineering_english.depends = translations
-engineering_english.input = $$TS_FILE
-engineering_english.output = $$EE_QM
-
-engineering_english_install.path = /usr/share/translations
-engineering_english_install.files = $$EE_QM
-engineering_english_install.CONFIG += no_check_exist
-
-import.files = qmldir
-import.path = $$TARGETPATH
-target.path = $$TARGETPATH
-
-components.files = $$PWD/*.qml $$PWD/*.js qmldir
-components.path = $$TARGETPATH
-QMAKE_EXTRA_TARGETS += translations engineering_english
-PRE_TARGETDEPS += translations engineering_english
-
-INSTALLS += target import components translations_install engineering_english_install
+INSTALLS += target develheaders pkgconfig

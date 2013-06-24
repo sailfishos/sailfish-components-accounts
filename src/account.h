@@ -14,14 +14,7 @@
 #include <QtCore/QString>
 
 #include <QtGlobal>
-#ifdef QT_VERSION_5
-#include <QtQml>
 #include <QQmlParserStatus>
-#define QDeclarativeParserStatus QQmlParserStatus
-#else
-#include <qdeclarative.h>
-#include <QDeclarativeParserStatus>
-#endif
 
 //libaccounts-qt
 #include <Accounts/Account>
@@ -41,10 +34,10 @@ class AccountPrivate;
  * directly after construction.
  */
 
-class Account : public QObject, public QDeclarativeParserStatus
+class Q_DECL_EXPORT Account : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
-    Q_INTERFACES(QDeclarativeParserStatus)
+    Q_INTERFACES(QQmlParserStatus)
 
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(int identifier READ identifier WRITE setIdentifier NOTIFY identifierChanged)
@@ -87,7 +80,7 @@ public:
     Account(QObject *parent = 0);
     ~Account();
 
-    // QDeclarativeParserStatus
+    // QQmlParserStatus
     void classBegin();
     void componentComplete();
 
@@ -112,14 +105,14 @@ public:
                                           const QString &credentialsName) const;
     Q_INVOKABLE void createSignInCredentials(const QString &applicationName,
                                              const QString &credentialsName,
-                                             const QString &symmetricKey,
-                                             SignInParameters *parameters);
+                                             SignInParameters *parameters,
+                                             const QString &symmetricKey = QString());
     Q_INVOKABLE void removeSignInCredentials(const QString &applicationName,
                                              const QString &credentialsName);
     Q_INVOKABLE void signIn(const QString &applicationName,
                             const QString &credentialsName,
-                            const QString &symmetricKey,
-                            SignInParameters *parameters);
+                            SignInParameters *parameters,
+                            const QString &symmetricKey = QString());
     Q_INVOKABLE void signOut(const QString &applicationName,
                              const QString &credentialsName);
 

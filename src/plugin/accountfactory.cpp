@@ -34,7 +34,7 @@ AccountFactory::~AccountFactory()
     The account will be created with all services disabled.
 */
 void AccountFactory::createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params,
-                                        const QString &applicationName, const QString &symmetricKey, const QString &credentialsName)
+                                        const QString &applicationName, const QString &credentialsName)
 {
     initializeAccountCreation(providerName, serviceName);
 
@@ -53,7 +53,6 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
     m_method = m_accountService->authData().method();
     m_mechanism = m_accountService->authData().mechanism();
     m_applicationName = applicationName;
-    m_symmetricKey = symmetricKey;
     m_credentialsName = credentialsName;
 
     startAccountCreation();
@@ -222,14 +221,13 @@ void AccountFactory::startAccountCreation()
         m_sailfishAccount->createSignInCredentials(
                                 m_applicationName,
                                 m_credentialsName,
-                                m_symmetricKey,
                                 params);
     } else {
         m_sailfishAccount->createSignInCredentials(
                                 m_applicationName,
                                 m_credentialsName,
-                                m_symmetricKey,
-                                params);
+                                params,
+                                m_symmetricKey);
     }
 }
 

@@ -11,14 +11,8 @@
 #include <QtCore/QObject>
 
 #include <QtGlobal>
-#if QT_VERSION_5
 #include <QtQml>
 #include <QQmlParserStatus>
-#define QDeclarativeParserStatus QQmlParserStatus
-#else
-#include <qdeclarative.h>
-#include <QDeclarativeParserStatus>
-#endif
 
 #include <QtCore/QStringList>
 #include <QtCore/QString>
@@ -29,10 +23,10 @@ class Provider;
 class Service;
 class Account;
 
-class AccountManager : public QObject, public QDeclarativeParserStatus
+class Q_DECL_EXPORT AccountManager : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
-    Q_INTERFACES(QDeclarativeParserStatus)
+    Q_INTERFACES(QQmlParserStatus)
 
     Q_PROPERTY(QStringList serviceTypeNames READ serviceTypeNames NOTIFY serviceTypeNamesChanged)
     Q_PROPERTY(QStringList providerNames READ providerNames NOTIFY providerNamesChanged)
