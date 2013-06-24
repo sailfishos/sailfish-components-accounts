@@ -43,13 +43,7 @@ Dialog {
         }
         busyIndicator.running = false
         infoColumn.opacity = 1
-        if (becameTopPage) {
-            authenticationFinished(success)
-        } else {
-            becameTopPageChanged.connect(function() {
-                authenticationFinished(success)
-            })
-        }
+        authenticationFinished(success)
     }
 
     acceptDestinationAction: PageStackAction.Replace
