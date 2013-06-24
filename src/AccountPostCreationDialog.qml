@@ -27,13 +27,30 @@ AccountPostAuthenticationDialog {
     onAuthenticationFinished: {
         if (success) {
             canAccept = true
-            accept()
         } else {
             // if there is a page after the settingsPage, make that the new acceptDestination
             if (settingsPage !== null && acceptDestination === settingsPage) {
                 acceptDestination = settingsPage.acceptDestination
             }
             canAccept = (acceptDestination != null && acceptDestination != undefined)
+        }
+        if (canAccept && _autoAccept) {
+            accept()
+        }
+    }
+
+    property bool _autoAccept
+
+    Connections {
+        target: pageStack
+        onBusyChanged: {
+            if (!pageStack.busy && pageStack.currentPage === root) {
+                if (root.canAccept) {
+                    root.accept()
+                } else {
+                    root._autoAccept = true
+                }
+            }
         }
     }
 }
