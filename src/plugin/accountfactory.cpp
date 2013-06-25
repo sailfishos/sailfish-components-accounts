@@ -1,4 +1,12 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
 #include "accountfactory_p.h"
+#include "jollaaccountprovider_p.h"
 
 #include "globalaccountmanager_p.h"
 #include "account.h"
@@ -11,10 +19,19 @@ AccountFactory::AccountFactory(QObject *parent)
     , m_busy(false)
     , m_created(false)
     , m_resettingState(false)
-    , m_am(globalAccountManager())
+    , m_jollaAccountProvider(new JollaAccountProvider(this))
+    , m_accountManager(globalAccountManager())
     , m_accountService(0)
     , m_sailfishAccount(0)
 {
+    connect(m_jollaAccountProvider, SIGNAL(registerUserAccountSucceeded(QVariantMap)),
+            this, SLOT(continueCreateJollaAccount(QVariantMap)));
+    connect(m_jollaAccountProvider, SIGNAL(registerUserAccountFailed(QString)),
+            this, SLOT(handleSignInError(QString)));
+    connect(m_jollaAccountProvider, SIGNAL(registerExistingAccountSucceeded(QVariantMap)),
+            this, SLOT(continueCreateJollaAccount(QVariantMap)));
+    connect(m_jollaAccountProvider, SIGNAL(registerExistingAccountFailed(QString)),
+            this, SLOT(handleSignInError(QString)));
 }
 
 AccountFactory::~AccountFactory()
@@ -114,6 +131,95 @@ void AccountFactory::createAccount(const QString &providerName,
     startAccountCreation();
 }
 
+/*!
+    Creates a Jolla account for a new user and stores the (encrypted) credentials into it
+*/
+void AccountFactory::createNewJollaAccount(const QString &username,
+                                           const QString &password,
+                                           const QString &email,
+                                           const QString &firstName,
+                                           const QString &lastName,
+                                           const QString &countryCode,
+                                           const QString &city,
+                                           const QString &street,
+                                           const QString &postCode,
+                                           const QString &applicationName, const QString &credentialsName)
+{
+    // first, initialize our state and set to busy
+    initializeAccountCreation(QLatin1String("jolla"), QLatin1String("jolla-store"));
+
+    m_signonSessionParams = m_accountService->authData().parameters();
+
+    m_serviceName = QLatin1String("jolla-store");
+    m_method = m_accountService->authData().method(); // it's an unorthodox oauth2 flow.
+    m_mechanism = m_accountService->authData().mechanism();
+    m_applicationName = applicationName;
+    m_credentialsName = credentialsName;
+    m_symmetricKey = QString();
+    m_username = QString();
+    m_password = QString();
+
+    m_jollaAccountParams.clear();
+    m_jollaAccountParams.insert("username", username);
+    m_jollaAccountParams.insert("password", password);
+    m_jollaAccountParams.insert("email", email);
+    m_jollaAccountParams.insert("lastName", lastName);
+    m_jollaAccountParams.insert("firstName", firstName);
+    m_jollaAccountParams.insert("countryCode", countryCode);
+    m_jollaAccountParams.insert("city", city);
+    m_jollaAccountParams.insert("street", street);
+    m_jollaAccountParams.insert("postCode", postCode);
+
+    // then, perform custom sign-in flow to get AccessToken and RefreshToken
+    m_jollaAccountProvider->registerUserAccount(username, password, email, firstName, lastName, countryCode, city, street, postCode);
+}
+
+/*!
+    Creates a Jolla account for an existing user and stores the (encrypted) credentials into it
+*/
+void AccountFactory::createExistingJollaAccount(const QString &username,
+                                                const QString &password,
+                                                const QString &applicationName, const QString &credentialsName)
+{
+    // first, initialize our state and set to busy
+    initializeAccountCreation(QLatin1String("jolla"), QLatin1String("jolla-store"));
+
+    m_signonSessionParams = m_accountService->authData().parameters();
+
+    m_serviceName = QLatin1String("jolla-store");
+    m_method = m_accountService->authData().method(); // it's an unorthodox oauth2 flow.
+    m_mechanism = m_accountService->authData().mechanism();
+    m_applicationName = applicationName;
+    m_credentialsName = credentialsName;
+    m_symmetricKey = QString();
+    m_username = QString();
+    m_password = QString();
+
+    // then, perform custom sign-in flow to get AccessToken and RefreshToken
+    m_jollaAccountProvider->registerExistingAccount(username, password);
+}
+
+void AccountFactory::continueCreateJollaAccount(const QVariantMap &responseData)
+{
+    if (responseData.contains(QLatin1String("AccessToken"))) {
+        QVariantMap providedTokens;
+        providedTokens.insert(QLatin1String("AccessToken"), responseData.value("AccessToken"));
+        providedTokens.insert(QLatin1String("RefreshToken"), responseData.value("RefreshToken"));
+        providedTokens.insert(QLatin1String("ExpiresIn"), responseData.value("ExpiresIn"));
+        if (providedTokens.value(QLatin1String("ExpiresIn")).toInt() == 0) {
+            providedTokens.insert(QLatin1String("ExpiresIn"), 999999); // XXX TODO: FIX THIS: temporary workaround.
+        }
+        m_signonSessionParams.insert(QLatin1String("ProvidedTokens"), providedTokens);
+        m_signonSessionParams.insert(QLatin1String("ClientId"), responseData.value("ClientId"));
+        m_signonSessionParams.insert(QLatin1String("ClientSecret"), responseData.value("ClientSecret"));
+        startAccountCreation();
+    } else {
+        //: Error emitted if the Jolla account registration returned invalid tokens
+        //% "Account creation failed: Jolla servers denied the account registration request"
+        emit error(qtTrId("jollacomponents_internal-accountfactory-jolla_denied"));
+    }
+}
+
 void AccountFactory::setConfigurationValues(const QVariantMap &configurationValues, const QString &configurationServiceName)
 {
     if (configurationValues.isEmpty() || !m_sailfishAccount || !m_sailfishAccount->account())
@@ -121,7 +227,7 @@ void AccountFactory::setConfigurationValues(const QVariantMap &configurationValu
 
     Accounts::Service service;
     if (!configurationServiceName.isEmpty()) {
-        service = m_am->service(configurationServiceName);
+        service = m_accountManager->service(configurationServiceName);
         if (service.isValid()) {
             m_sailfishAccount->account()->selectService(service);
         } else {
@@ -166,7 +272,7 @@ void AccountFactory::initializeAccountCreation(const QString &providerName, cons
     m_busy = true;            // we're busy creating an account until it succeeds or fails.
     m_created = false;        // haven't yet successfully created the account.
     m_resettingState = false; // and we're not in the middle of resetting our state.
-    m_srv = m_am->service(serviceName);
+    m_srv = m_accountManager->service(serviceName);
     if (!m_srv.isValid()) {
         //: Error emitted if the given serviceName isn't valid
         //% "Not a valid signon service: %1"
@@ -174,7 +280,7 @@ void AccountFactory::initializeAccountCreation(const QString &providerName, cons
         return;
     }
 
-    Accounts::Account *newAccount = m_am->createAccount(providerName);
+    Accounts::Account *newAccount = m_accountManager->createAccount(providerName);
     if (!newAccount) {
         //: Error emitted if an error occurred while creating an account for the given providerName
         //% "Could not create account with provider %1"
@@ -213,8 +319,10 @@ void AccountFactory::startAccountCreation()
     connect(m_sailfishAccount, SIGNAL(signInError(QString)),
             this, SLOT(handleSignInError(QString)));
 
-    SignInParameters *params = new SignInParameters(m_serviceName, m_method, m_mechanism, m_signonSessionParams, m_username, m_password, m_sailfishAccount);
-    if (m_method.toLower().startsWith(QLatin1String("oauth"))) {
+    SignInParameters *params = new SignInParameters(m_serviceName, m_method, m_mechanism,
+                                                    m_signonSessionParams, m_username, m_password,
+                                                    m_sailfishAccount);
+    if (m_method.toLower() == QLatin1String("oauth2")) {
         m_sailfishAccount->createSignInCredentials(
                                 m_applicationName,
                                 m_credentialsName,
@@ -285,6 +393,7 @@ void AccountFactory::resetState(AccountFactory::ResetMode mode)
         m_credentialsName = QString();
         m_username = QString();
         m_password = QString();
+        m_jollaAccountParams = QVariantMap();
         m_busy = false;
         m_created = false;
     }
