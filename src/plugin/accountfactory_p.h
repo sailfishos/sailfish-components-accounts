@@ -1,3 +1,10 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
 #ifndef ACCOUNTFACTORY_P_H
 #define ACCOUNTFACTORY_P_H
 
@@ -12,7 +19,7 @@
 #include <Accounts/AuthData>
 
 class Account;
-
+class JollaAccountProvider;
 class AccountFactory : public QObject
 {
     Q_OBJECT
@@ -28,6 +35,19 @@ public:
                                    const QString &credentialsName = QString());
     Q_INVOKABLE void createOAuthAccount(const QString &providerName, const QString &serviceName, const QVariantMap &params,
                                         const QString &applicationName, const QString &credentialsName = QString());
+    Q_INVOKABLE void createNewJollaAccount(const QString &username,
+                                           const QString &password,
+                                           const QString &email,
+                                           const QString &firstName,
+                                           const QString &lastName,
+                                           const QString &countryCode,
+                                           const QString &city,
+                                           const QString &street,
+                                           const QString &postCode,
+                                           const QString &applicationName, const QString &credentialsName);
+    Q_INVOKABLE void createExistingJollaAccount(const QString &username,
+                                                const QString &password,
+                                                const QString &applicationName, const QString &credentialsName);
 
     Q_INVOKABLE void cancel();
 
@@ -36,6 +56,7 @@ Q_SIGNALS:
     void success(int newAccountId, const QVariantMap &responseData);
 
 private Q_SLOTS:
+    void continueCreateJollaAccount(const QVariantMap &responseData);
     void handleSignInCredentialsCreated(const QVariantMap &responseData);
     void handleSignInError(const QString &message);
 
@@ -56,7 +77,8 @@ private:
     Accounts::Service m_srv;
     QVariantMap m_responseData;
     QVariantMap m_signonSessionParams;
-    Accounts::Manager *m_am;
+    JollaAccountProvider *m_jollaAccountProvider;
+    Accounts::Manager *m_accountManager;
     Accounts::AccountService *m_accountService;
     Account *m_sailfishAccount;
 
@@ -68,6 +90,7 @@ private:
     QString m_credentialsName;
     QString m_username;
     QString m_password;
+    QVariantMap m_jollaAccountParams;
 };
 
 #endif // ACCOUNTFACTORY_P_H

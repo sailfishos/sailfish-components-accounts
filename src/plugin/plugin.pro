@@ -13,11 +13,13 @@ LIBS += -L.. -lsailfishaccounts
 SOURCES += \
     $$PWD/accountfactory.cpp \
     $$PWD/encodedkeyprovider.cpp \
+    $$PWD/jollaaccountprovider.cpp \
     $$PWD/plugin.cpp
 
 HEADERS += \
     $$PWD/accountfactory_p.h \
-    $$PWD/encodedkeyprovider_p.h
+    $$PWD/encodedkeyprovider_p.h \
+    $$PWD/jollaaccountprovider_p.h
 
 OTHER_FILES += $$PWD/*.qml $$PWD/*.js $$PWD/qmldir
 
