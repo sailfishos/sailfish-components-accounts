@@ -27,6 +27,7 @@ class Account;
 class Q_DECL_EXPORT AccountModel : public QAbstractListModel, public QQmlParserStatus
 {
     Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
     Q_ENUMS(FilterType)
