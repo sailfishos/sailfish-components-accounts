@@ -248,6 +248,16 @@ void AccountFactory::handleSignInError(const QString &message)
 void AccountFactory::handleSignInCredentialsCreated(const QVariantMap &responseData)
 {
     int newAccountId = m_sailfishAccount->account()->id();
+
+    // now enable the account.
+    Accounts::ServiceList supportedServices = m_sailfishAccount->account()->services();
+    for (int i = 0; i < supportedServices.size(); ++i) {
+        m_sailfishAccount->account()->selectService(supportedServices.at(i));
+        m_sailfishAccount->account()->setEnabled(true);
+    }
+    m_sailfishAccount->account()->selectService(Accounts::Service());
+    m_sailfishAccount->account()->setEnabled(true);
+
     resetState(AccountFactory::ResetOnly);
     emit success(newAccountId, responseData);
 }
