@@ -58,8 +58,8 @@ class AccountModel::AccountModelPrivate
 {
 public:
     AccountModelPrivate()
-        : componentComplete(false),
-          filterType(AccountModel::NoFilter)
+        : filterType(AccountModel::NoFilter)
+        , componentComplete(false)
     {
     }
 

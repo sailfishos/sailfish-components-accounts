@@ -191,6 +191,7 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
     connect(account, SIGNAL(destroyed()), this, SLOT(invalidate()));
 
     // grab the supported service list: this is necessary for enablement etc.
+    supportedServiceNames.clear();
     Accounts::ServiceList supportedServices = account->services();
     for (int i = 0; i < supportedServices.size(); ++i) {
         const Accounts::Service &currService(supportedServices.at(i));
@@ -235,6 +236,7 @@ void AccountPrivate::asyncQueryInfo()
     }
 
     // supported service names
+    supportedServiceNames.clear();
     Accounts::ServiceList supportedServices = account->services();
     for (int i = 0; i < supportedServices.size(); ++i) {
         const Accounts::Service &currService(supportedServices.at(i));
