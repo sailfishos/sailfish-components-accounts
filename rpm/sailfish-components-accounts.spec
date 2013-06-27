@@ -90,6 +90,7 @@ rm -rf %{buildroot}
 /opt/tests/Sailfish/Accounts/qt5/*
 %{_datadir}/accounts/providers/test-provider.provider
 %{_datadir}/accounts/services/test-service2.service
+%{_datadir}/accounts/services/test-service-oauth.service
 %{_datadir}/accounts/service_types/test-service-type2.service-type
 
 %files devel

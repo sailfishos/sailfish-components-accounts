@@ -6,6 +6,7 @@
  */
 
 #include "signinparameters.h"
+#include <QtDebug>
 
 /*!
     \qmltype SignInParameters
@@ -104,8 +105,9 @@
     \endqml
 */
 
-SignInParameters::SignInParameters(const QString &method, const QString &mechanism, const QVariantMap &parameters, const QString &username, const QString &password, QObject *parent)
+SignInParameters::SignInParameters(const QString &serviceName, const QString &method, const QString &mechanism, const QVariantMap &parameters, const QString &username, const QString &password, QObject *parent)
     : QObject(parent)
+    , m_serviceName(serviceName)
     , m_method(method)
     , m_mechanism(mechanism)
     , m_parameters(parameters)
@@ -116,6 +118,38 @@ SignInParameters::SignInParameters(const QString &method, const QString &mechani
 
 SignInParameters::~SignInParameters()
 {
+}
+
+QVariant sanitiseValue(const QVariant &value)
+{
+    QVariant retn;
+    int valueType = value.type();
+    if (valueType == QVariant::List) {
+        retn = value.toStringList();
+    } else if (valueType == QVariant::Map) {
+        // TODO: sanitise each element in the map.
+        retn = value;
+    } else if (valueType == QVariant::Bool
+            || valueType == QVariant::Int
+            || valueType == QVariant::LongLong
+            || valueType == QVariant::ULongLong
+            || valueType == QVariant::String
+            || valueType == QVariant::StringList) {
+        // valid value.
+        retn = value;
+    }
+
+    return retn;
+}
+
+/*!
+    \qmlproperty string SignInParameters::serviceName
+    The name of the service for which these parameters are valid
+*/
+
+QString SignInParameters::serviceName() const
+{
+    return m_serviceName;
 }
 
 /*!
@@ -233,17 +267,10 @@ QString SignInParameters::password() const
 
 void SignInParameters::setParameter(const QString &parameterName, const QVariant &parameterValue)
 {
-    int parameterValueType = parameterValue.type();
-    QVariant value = parameterValue;
-    if (parameterValueType == QVariant::List) {
-        value = value.toStringList();
-    } else if (parameterValueType != QVariant::Bool
-            && parameterValueType != QVariant::Int
-            && parameterValueType != QVariant::LongLong
-            && parameterValueType != QVariant::ULongLong
-            && parameterValueType != QVariant::String
-            && parameterValueType != QVariant::StringList) {
-        return; // can't store parameter value of this type
+    QVariant value = sanitiseValue(parameterValue);
+    if (!value.isValid()) {
+        qWarning() << Q_FUNC_INFO << "Cannot store parameter:" << parameterName << "with value" << value;
+        return;
     }
 
     m_parameters.insert(parameterName, value);
@@ -296,4 +323,24 @@ void SignInParameters::removeParameter(const QString &parameterName)
         m_parameters.remove(parameterName);
         emit parametersChanged();
     }
+}
+
+/*!
+    \qmlmethod void SignInParameters::setParameters(const QVariantMap &params)
+
+    Removes all existing parameters, and then calls setParameter() for each
+    parameter in the specified \a params map.
+*/
+void SignInParameters::setParameters(const QVariantMap &params)
+{
+    m_parameters.clear();
+    foreach (const QString &parameterName, params.keys()) {
+        QVariant value = sanitiseValue(params.value(parameterName));
+        if (!value.isValid()) {
+            qWarning() << Q_FUNC_INFO << "Cannot store parameter:" << parameterName << "with value" << value;
+        } else {
+            m_parameters.insert(parameterName, value);
+        }
+    }
+    emit parametersChanged();
 }
