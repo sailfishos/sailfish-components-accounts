@@ -59,7 +59,8 @@ develheaders.files = \
     $$PWD/accountmanager.h \
     $$PWD/provider.h \
     $$PWD/service.h \
-    $$PWD/servicetype.h
+    $$PWD/servicetype.h \
+    $$PWD/signinparameters.h
 
 target.path = $$[QT_INSTALL_LIBS]
 pkgconfig.files = $$PWD/pkgconfig/sailfishaccounts.pc
