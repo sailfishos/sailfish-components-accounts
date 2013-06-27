@@ -184,11 +184,16 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
     account = acc;
 
     // connect up our signals.
-    connect(account, SIGNAL(enabledChanged(QString,bool)), this, SLOT(enabledHandler(QString,bool)));
-    connect(account, SIGNAL(displayNameChanged(QString)), this, SLOT(displayNameChangedHandler()));
-    connect(account, SIGNAL(synced()), this, SLOT(handleSynced()));
-    connect(account, SIGNAL(removed()), this, SLOT(invalidate()));
-    connect(account, SIGNAL(destroyed()), this, SLOT(invalidate()));
+    connect(account, SIGNAL(enabledChanged(QString,bool)),
+            this, SLOT(enabledHandler(QString,bool)), Qt::UniqueConnection);
+    connect(account, SIGNAL(displayNameChanged(QString)),
+            this, SLOT(displayNameChangedHandler()), Qt::UniqueConnection);
+    connect(account, SIGNAL(synced()),
+            this, SLOT(handleSynced()), Qt::UniqueConnection);
+    connect(account, SIGNAL(removed()),
+            this, SLOT(invalidate()), Qt::UniqueConnection);
+    connect(account, SIGNAL(destroyed()),
+            this, SLOT(invalidate()), Qt::UniqueConnection);
 
     // grab the supported service list: this is necessary for enablement etc.
     supportedServiceNames.clear();
@@ -434,12 +439,67 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
         return;
     }
 
-    connect(signInCredentials.session, SIGNAL(response(SignOn::SessionData)), this, SLOT(handleResponse(SignOn::SessionData)));
-    connect(signInCredentials.session, SIGNAL(error(SignOn::Error)), this, SLOT(handleSignOnError(SignOn::Error)));
+    connect(signInCredentials.session, SIGNAL(response(SignOn::SessionData)),
+            this, SLOT(handleResponse(SignOn::SessionData)), Qt::UniqueConnection);
+    connect(signInCredentials.session, SIGNAL(error(SignOn::Error)),
+            this, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
 
     signInCredentials.session->process(SignOn::SessionData(signInCredentials.sessionData), signInCredentials.mechanism);
 }
 
+void maybeSetCredentialsIdForProvider(Accounts::Account *account, int identityId, const QString &method, const QString &serviceName, const QString &symmetricKey)
+{
+    // if the method is oauth2, and if no credentialsId has been set
+    // for the services from that provider, we can set the given credentialsId
+    // as the credentials for all services from that provider (since
+    // oauth2 requires a ClientId / ConsumerKey so it's already per-application).
+
+    // if the method is password, and if no symmetricKey was specified,
+    // we can do the same (as the application is saying "no need to
+    // keep these credentials application-specific") but only for the
+    // specified service name (associated with the SignInParameters).
+
+    if (method.toLower().startsWith("oauth")) {
+        // set for each service from the provider (that the account supports)
+        // NOTE: this assumes that each service uses the oauth method.  TODO: fixme?  Requires Accounts::Service API to be improved.
+        Accounts::ServiceList supportedServices = account->services();
+        for (int i = 0; i < supportedServices.size(); ++i) {
+            const Accounts::Service &currService(supportedServices.at(i));
+            account->selectService(currService);
+            if (account->credentialsId() == 0) {
+                account->setCredentialsId(identityId);
+            }
+        }
+        // set the global account credentials to that id, if not already set.
+        account->selectService(Accounts::Service());
+        if (account->credentialsId() == 0) {
+            account->setCredentialsId(identityId);
+        }
+    } else if (method.toLower().startsWith("password") && symmetricKey.isEmpty()) {
+        // set for each service from the provider (that the account supports)
+        bool hasOtherServices = false;
+        Accounts::ServiceList supportedServices = account->services();
+        for (int i = 0; i < supportedServices.size(); ++i) {
+            const Accounts::Service &currService(supportedServices.at(i));
+            if (currService.name() == serviceName) {
+                account->selectService(currService);
+                if (account->credentialsId() == 0) {
+                    account->setCredentialsId(identityId);
+                }
+            } else {
+                hasOtherServices = true;
+            }
+        }
+
+        account->selectService(Accounts::Service());
+        if (!hasOtherServices) {
+            // set the global account credentials to that id, if not already set.
+            if (account->credentialsId() == 0) {
+                account->setCredentialsId(identityId);
+            }
+        }
+    }
+}
 void AccountPrivate::handleResponse(const SignOn::SessionData &data)
 {
     if (signInCredentials.creatingSignInCredentials) {
@@ -455,6 +515,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
+        maybeSetCredentialsIdForProvider(account, signInCredentials.identity->id(), signInCredentials.method, signInCredentials.serviceName, signInCredentials.symmetricKey);
 
         // and write the changes to the accounts database
         connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountError()), Qt::UniqueConnection);
@@ -464,10 +525,17 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         // if it is "password" method, then the username/password are encrypted, and we need to decrypt.
         // if it is "oauth" (oauth1.0a / oauth2) then we just emit the tokens immediately,
         // as the security is provided by signond (and the fact that the client needs to know the clientid).
+        signInCredentials.responseData.clear();
+        QStringList keys = data.propertyNames();
+        foreach (const QString &key, keys) {
+            signInCredentials.responseData.insert(key, data.getProperty(key));
+        }
+
         if (signInCredentials.method.startsWith(QLatin1String("oauth"))) {
             QVariantMap responseData = signInCredentials.responseData;
             signInCredentials.cleanup();
             emit q->signInResponse(responseData);
+            setStatus(Account::Synced);
         } else {
             // decrypt the (encrypted) response data, and emit
             bool success = true;
@@ -479,10 +547,12 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
             signInCredentials.cleanup();
             if (success) {
                 emit q->signInResponse(responseData);
+                setStatus(Account::Synced);
             } else {
                 //: Error emitted if unable to decrypt the stored encrypted credentials
                 //% "Unable to decrypt stored credentials - aborting credentials creation"
                 emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
+                setStatus(Account::Synced);
             }
         }
     }
@@ -539,6 +609,7 @@ QVariantMap AccountPrivate::plainTextResponseData(const QString &method, const Q
         foreach (const QString &key, encryptedResponseData.keys()) {
             if (key.toLower() == QLatin1String("password") || key.toLower() == QLatin1String("secret")) {
                 QString decryptedPassword = decrypted_string_b64(encryptedResponseData.value(key).toString(), symmetricKey);
+qWarning() << "DECRYPTED PASSWORD:" << decryptedPassword << ", and appname is:" << applicationName;
                 if (decryptedPassword.endsWith(applicationName)) {
                     decryptedPassword.chop(applicationName.length());
                     retn.insert(key, decryptedPassword);
@@ -548,6 +619,7 @@ QVariantMap AccountPrivate::plainTextResponseData(const QString &method, const Q
                 }
             } else if (key.toLower() == QLatin1String("username")) {
                 QString decryptedUsername = decrypted_string_b64(encryptedResponseData.value(key).toString(), symmetricKey);
+qWarning() << "DECRYPTED USERNAME:" << decryptedUsername << ", and appname is:" << applicationName;
                 if (decryptedUsername.endsWith(applicationName)) {
                     decryptedUsername.chop(applicationName.length());
                     retn.insert(key, decryptedUsername);
@@ -1171,6 +1243,7 @@ SignInParameters *Account::signInParameters(const QString &serviceName, const QS
 {
     // XXX TODO: patch accounts&sso so that Service provides accessors
     // for method/mechanism/parameters from <template>
+    QString validServiceName;
     QString method;
     QString mechanism;
     QVariantMap parameters;
@@ -1181,6 +1254,7 @@ SignInParameters *Account::signInParameters(const QString &serviceName, const QS
     if (srv.isValid()) {
         Accounts::AccountService as(d->account, srv);
         Accounts::AuthData authData(as.authData());
+        validServiceName = serviceName;
         method = authData.method();
         mechanism = authData.mechanism();
         parameters = authData.parameters();
@@ -1188,7 +1262,7 @@ SignInParameters *Account::signInParameters(const QString &serviceName, const QS
         qWarning() << Q_FUNC_INFO << "No such service:" << serviceName;
     }
 
-    return new SignInParameters(method, mechanism, parameters, username, password, this);
+    return new SignInParameters(validServiceName, method, mechanism, parameters, username, password, this);
 }
 
 /*!
@@ -1236,7 +1310,9 @@ bool Account::hasSignInCredentials(const QString &applicationName,
     in the \a parameters will be encrypted with the given \a symmetricKey
     and stored in the credentials.  If the \a symmetricKey parameter is
     empty, the credentials will not be encrypted - which means that any
-    application will be able to use those credentials with the service.
+    application will be able to use those credentials with the service,
+    and in fact the credentials will be set as the default credentials for
+    the account with that service.
 
     Once creation of credentials completes successfully the
     \c signInCredentialsCreated() signal will be emitted.  If creation of the
@@ -1256,36 +1332,46 @@ void Account::createSignInCredentials(const QString &applicationName,
     if (d->status != Account::Initialized && d->status != Account::Synced) {
         //: Error emitted if function called while account is in invalid state
         //% "Account status is not Initialized or Synced"
-        emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_status"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_status"));
         return;
     }
 
     if (parameters == NULL) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
-        emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_params"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_params"));
         return;
     }
 
     if (applicationName.isEmpty()) {
         //: Error emitted if function called with invalid application name
         //% "Invalid application name specified"
-        emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_appname"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_appname"));
+        return;
+    }
+
+    Accounts::Service service(d->manager->service(parameters->serviceName()));
+    if (!service.isValid()) {
+        //: Error emitted if function called with invalid service name
+        //% "Invalid service name specified via SignInParameters"
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_srvname"));
         return;
     }
 
     // For non-oauth2 signon:
-    // step one: check if the credentials already exist
+    // step one: check if credentials already exist, and if not:
     // step two: create identity
-    // step three: append application name to username/password
-    // step four: encrypt username/password
-    // step five: base64 encode the result
-    // step six: store back into identity.
-    // step seven: save identity id into account config settings for the application.
-    // step eight: emit success including plain text credentials.
+    // step three: check if symmetric key given, if not jump to step eight.
+    // step four: append application name to username/password
+    // step five: encrypt username/password
+    // step six: base64 encode the result
+    // step seven: store back into identity.
+    // step eight: save identity id into account config settings for the application.
+    // step nine: if no symmetric key given, set credentials as default for the service.
+    // step ten: emit success including plain text credentials.
 
     // For oauth2 signon:
-    // step one: check if the credentials already exist
+    // step one: check if the credentials already exist, if not
     // step two: create identity
     // step three: perform signon
     // step four: emit success including plain text tokens returned from signond
@@ -1293,25 +1379,41 @@ void Account::createSignInCredentials(const QString &applicationName,
     if (hasSignInCredentials(applicationName, credentialsName)) {
         //: Error emitted if signon credentials already exist
         //% "Named credentials already exist for this application"
-        emit signInError(qtTrId("sailfish_accounts-account-unpw_already_exist"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_already_exist"));
         return;
     }
 
     if (parameters->method().toLower().startsWith(QLatin1String("oauth"))) {
         // oauth-based authentication.  trigger sign-on process.
-        QMap<QString, QStringList> methodMechanisms;
-        methodMechanisms.insert(parameters->method(), QStringList(parameters->mechanism()));
-        d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, QString(), methodMechanisms);
-        d->signInCredentials.identity = SignOn::Identity::newIdentity(d->signInCredentials.identityInfo);
-        if (d->signInCredentials.identity == NULL) {
-            //: Error emitted if identity creation fails
-            //% "Failed to create credentials"
-            emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"));
-            return;
+        // Because application segregation is done in signond (via ClientId/ConsumerKey token separation)
+        // we can re-use existing default credentials if they exist.
+        bool needToCreateIdentity = true;
+        d->account->selectService(service);
+        quint32 defaultIdentityId = d->account->credentialsId();
+        if (defaultIdentityId != 0) {
+            SignOn::Identity *existingIdent = SignOn::Identity::existingIdentity(defaultIdentityId);
+            if (existingIdent) {
+                // we can re-use this identity.
+                needToCreateIdentity = false;
+                d->signInCredentials.identity = existingIdent;
+            } else {
+                // the default identity does not actually exist.
+                // reset it for the particular service
+                d->account->setCredentialsId(0);
+
+                // reset it for the global service
+                d->account->selectService(Accounts::Service());
+                if (d->account->credentialsId() == defaultIdentityId) {
+                    d->account->setCredentialsId(0);
+                }
+
+                // note: we don't sync the account yet - that happens later.
+            }
         }
 
         d->signInCredentials.applicationName = applicationName;
         d->signInCredentials.symmetricKey = symmetricKey;
+        d->signInCredentials.serviceName = parameters->serviceName();
         d->signInCredentials.method = parameters->method();
         d->signInCredentials.mechanism = parameters->mechanism();
         d->signInCredentials.sessionData = parameters->parameters();
@@ -1321,13 +1423,37 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.creatingSignInCredentials = true;
         d->signInCredentials.storingEncryptedTokens = false; // we never attempt to store encrypted tokens for OAuth2, signond handles that.
 
-        connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)), d, SLOT(handleCredentialsFailed(SignOn::Error)));
-        connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)), d, SLOT(handleCredentialsStored(quint32)));
+        if (needToCreateIdentity) {
+            // we need to create the credentials.
+            QMap<QString, QStringList> methodMechanisms;
+            methodMechanisms.insert(parameters->method(), QStringList(parameters->mechanism()));
+            d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, QString(), methodMechanisms);
+            d->signInCredentials.identity = SignOn::Identity::newIdentity(d->signInCredentials.identityInfo);
+            if (d->signInCredentials.identity == NULL) {
+                //: Error emitted if identity creation fails
+                //% "Failed to create credentials"
+                emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"));
+                return;
+            }
 
-        d->setStatus(Account::SigningIn);
-        d->signInCredentials.identity->storeCredentials(d->signInCredentials.identityInfo);
+            connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
+                    d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
+            connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)),
+                    d, SLOT(handleCredentialsStored(quint32)), Qt::UniqueConnection);
+
+            d->setStatus(Account::SigningIn);
+            d->signInCredentials.identity->storeCredentials(d->signInCredentials.identityInfo);
+        } else {
+            connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
+                    d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
+            d->setStatus(Account::SigningIn);
+            d->handleCredentialsStored(d->signInCredentials.identity->id()); // reusing previously stored identity.
+        }
     } else {
         // password-based authentication.  encrypt and store the credentials directly.
+        // note: we _always_ create new identity for this.  We don't try to re-use
+        // the default if it exists, just because someone can (out of band) set an encrypted
+        // identity as the account default credentials, causing problems.
         QString usernameWithAppName = parameters->username() + applicationName;
         QString encryptedUserName = b64_encrypted_string(usernameWithAppName, symmetricKey);
         if (encryptedUserName.isNull()) {
@@ -1360,6 +1486,7 @@ void Account::createSignInCredentials(const QString &applicationName,
 
         d->signInCredentials.applicationName = applicationName;
         d->signInCredentials.symmetricKey = symmetricKey;
+        d->signInCredentials.serviceName = parameters->serviceName();
         d->signInCredentials.method = parameters->method();
         d->signInCredentials.mechanism = parameters->mechanism();
         d->signInCredentials.sessionData = parameters->parameters();
@@ -1369,8 +1496,10 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.creatingSignInCredentials = true;
         d->signInCredentials.storingEncryptedTokens = true; // for password method, we store encrypted username/password immediately
 
-        connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)), d, SLOT(handleCredentialsFailed(SignOn::Error)));
-        connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)), d, SLOT(handleCredentialsStored(quint32)));
+        connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
+                d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
+        connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)),
+                d, SLOT(handleCredentialsStored(quint32)), Qt::UniqueConnection);
 
         d->setStatus(Account::SigningIn);
         d->signInCredentials.identity->storeCredentials(d->signInCredentials.identityInfo);
@@ -1407,22 +1536,59 @@ void Account::removeSignInCredentials(const QString &applicationName,
         return;
     }
 
+    // retrieve the identity (credentials) id specified
     QString credName = credentialsName.isEmpty() ? QLatin1String("default") : credentialsName;
     QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(applicationName, credName);
-    int identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
-
-    SignOn::Identity *removeIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId);
-    if (removeIdentity != NULL) {
-        removeIdentity->signOut();
-        removeIdentity->remove();
-    }
+    quint32 identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
 
     // remove the key from our local map.
     d->configurationValues.remove(configurationValueKey);
 
-    // and from the account
+    // remove the key from the account
     d->account->selectService(Accounts::Service());
     d->account->remove(configurationValueKey);
+
+    // now check to see if any other applications are using the credentials
+    // this is most likely for OAuth2 credentials, as they are segregated
+    // internally in signond via the ClientId parameter.
+    bool stillInUse = false;
+    QStringList configKeys = d->configurationValues.keys();
+    foreach (const QString &key, configKeys) {
+        if (key.contains(CREDENTIALS_GROUP)) {
+            quint32 keyval = d->configurationValues.value(key).toInt();
+            if (identityId != 0 && keyval == identityId) {
+                stillInUse = true;
+                break;
+            }
+        }
+    }
+
+    if (!stillInUse) {
+        // remove the identity from the database
+        SignOn::Identity *removeIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId);
+        if (removeIdentity != NULL) {
+            removeIdentity->signOut();
+            removeIdentity->remove();
+        }
+
+        // reset global service account default credentials if necessary
+        if (identityId != 0 && d->account->credentialsId() == identityId) {
+            d->account->setCredentialsId(0);
+        }
+
+        // reset specific service account default credentials if necessary
+        Accounts::ServiceList supportedServices = d->account->services();
+        for (int i = 0; i < supportedServices.size(); ++i) {
+            const Accounts::Service &currService(supportedServices.at(i));
+            d->account->selectService(currService);
+            if (identityId != 0 && d->account->credentialsId() == identityId) {
+                d->account->setCredentialsId(0);
+            }
+        }
+        d->account->selectService(Accounts::Service());
+    }
+
+    // update the account in the db.
     d->setStatus(Account::SyncInProgress);
     d->account->sync();
 }
@@ -1498,7 +1664,8 @@ void Account::signIn(const QString &applicationName,
     }
 
     d->signInCredentials.signingInWithCredentials = true;
-    
+
+    d->signInCredentials.serviceName = parameters->serviceName();
     d->signInCredentials.method = parameters->method();
     d->signInCredentials.mechanism = parameters->mechanism();
     d->signInCredentials.sessionData = parameters->parameters();
@@ -1516,8 +1683,11 @@ void Account::signIn(const QString &applicationName,
         return;
     }
 
-    connect(d->signInCredentials.session, SIGNAL(response(SignOn::SessionData)), this, SLOT(handleResponse(SignOn::SessionData)));
-    connect(d->signInCredentials.session, SIGNAL(error(SignOn::Error)), this, SLOT(handleSignOnError(SignOn::Error)));
+    connect(d->signInCredentials.session, SIGNAL(response(SignOn::SessionData)),
+            d, SLOT(handleResponse(SignOn::SessionData)), Qt::UniqueConnection);
+    connect(d->signInCredentials.session, SIGNAL(error(SignOn::Error)),
+            d, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
+
     d->setStatus(Account::SigningIn);
     d->signInCredentials.session->process(SignOn::SessionData(parameters->parameters()), parameters->mechanism());
 }
@@ -1525,11 +1695,11 @@ void Account::signIn(const QString &applicationName,
 /*!
     \qmlmethod Account::signOut(const QString &applicationName, const QString &credentialsName)
 
-    Signs the application out of the account where it had previously been
+    Signs the account out of the service where it had previously been
     signed in using the credentials named the given \a credentialsName
     (or named "default" if no \a credentialsName is given).
 
-    Client code should not need to call this method, as the account can
+    Client code should not call this method, as the account can
     remain signed in safely.  Signing out will clear the cache of any
     tokens or credentials stored for the named credentials.
 

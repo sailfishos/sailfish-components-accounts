@@ -33,6 +33,7 @@ struct SignInCredentials {
 
     QString applicationName;
     QString symmetricKey;
+    QString serviceName;
     QString method;
     QString mechanism;
     QVariantMap sessionData;

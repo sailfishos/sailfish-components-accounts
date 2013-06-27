@@ -10,10 +10,15 @@
 #include <QtTest>
 
 #include "account.h"
+#include "signinparameters.h"
+#include "globalaccountmanager_p.h"
 
 //libaccounts-qt
 #include <Accounts/Manager>
 #include <Accounts/Account>
+
+//libsignon-qt
+#include <SignOn/SessionData>
 
 // Will try to wait for the condition while allowing event processing
 #ifndef QTRY_VERIFY
@@ -47,9 +52,19 @@
     } while (0)
 #endif
 
+// copied from account.cpp -> if that changes you must update these
+#define CREDENTIALS_GROUP QLatin1String("segregated_credentials")
+#define BUILD_CREDENTIALS_CONFIGURATION_KEY(appName, credName) QString(QLatin1String("%1/%2/%3")).arg(appName).arg(CREDENTIALS_GROUP).arg(credName)
+
 class tst_Account : public QObject
 {
     Q_OBJECT
+
+public slots:
+    void init();
+    void cleanup();
+    void trackAccountAdded(Accounts::AccountId id);
+    void untrackAccountRemoved(Accounts::AccountId id);
 
 private slots:
     //properties
@@ -65,12 +80,50 @@ private slots:
     void configurationValues();
     void serviceConfigurationValues();
     void enableDisableWithService();
-
+    //signin-related
+    void credentialsFunctions();
     void loadSavedAccount();
 
     // expected usage
     void expectedUsage();
+
+private:
+    QList<Accounts::AccountId> m_cleanupList;
 };
+
+
+void tst_Account::init()
+{
+    Accounts::Manager *gam = globalAccountManager();
+    connect(gam, SIGNAL(accountCreated(Accounts::AccountId)),
+            this, SLOT(trackAccountAdded(Accounts::AccountId)), Qt::UniqueConnection);
+    connect(gam, SIGNAL(accountRemoved(Accounts::AccountId)),
+            this, SLOT(untrackAccountRemoved(Accounts::AccountId)), Qt::UniqueConnection);
+}
+
+void tst_Account::cleanup()
+{
+    foreach (Accounts::AccountId idToRemove, m_cleanupList) {
+        QScopedPointer<Account> doomed(new Account);
+        doomed->classBegin();
+        doomed->setIdentifier(idToRemove);
+        doomed->componentComplete();
+        QTRY_VERIFY(doomed->status() == Account::Initialized || doomed->status() == Account::Synced);
+        doomed->remove();
+        QTest::qWait(150); // wait for db sync to complete.
+    }
+    m_cleanupList.clear();
+}
+
+void tst_Account::trackAccountAdded(Accounts::AccountId id)
+{
+    m_cleanupList.append(id);
+}
+
+void tst_Account::untrackAccountRemoved(Accounts::AccountId id)
+{
+    m_cleanupList.removeAll(id);
+}
 
 void tst_Account::enabled()
 {
@@ -554,6 +607,197 @@ void tst_Account::error()
 void tst_Account::errorMessage()
 {
     // XXX TODO
+}
+
+void tst_Account::credentialsFunctions()
+{
+    quint32 nullCredentials = 0;
+
+    // Create account
+    Accounts::Manager manager;
+    QScopedPointer<Accounts::Account> newA(manager.createAccount("test-provider"));
+    QSignalSpy newASyncedSpy(newA.data(), SIGNAL(synced()));
+    QList<QVariant> spyArgs;
+    newA->setDisplayName("test");
+    newA->setEnabled(false);
+    newA->sync();
+    QTRY_VERIFY(newASyncedSpy.count() > 0);
+
+    QScopedPointer<Account> account(new Account);
+    account->classBegin();
+    account->setIdentifier(newA->id());
+    account->setDisplayName("test-display-name");
+    account->sync();
+    account->componentComplete();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    // set up our spies.
+    QSignalSpy siccSpy(account.data(), SIGNAL(signInCredentialsCreated(QVariantMap)));
+    QSignalSpy sirSpy(account.data(), SIGNAL(signInResponse(QVariantMap)));
+    QSignalSpy sieSpy(account.data(), SIGNAL(signInError(QString)));
+    int siccCount = siccSpy.count();
+    int sirCount = sirSpy.count();
+    int sieCount = sieSpy.count();
+
+/* XXX TODO: enable this test once the Store Provided Tokens functionality works!
+
+    // Create credentials (oauth2)
+    SignInParameters *sip = account->signInParameters("test-service-oauth");
+    QVariantMap params = sip->parameters();
+    params.insert("ClientId", "TestClientId");
+    // testing only: we set the tokens to store, so that the signond doesn't attempt to actually log into the test service.
+    QVariantMap providedTokens;
+    providedTokens.insert("AccessToken", "TestAccessToken");
+    providedTokens.insert("RefreshToken", "TestRefreshToken");
+    params.insert("ProvidedTokens", providedTokens);
+    sip->setParameters(params);
+    account->createSignInCredentials("test", "test", sip);
+    QCOMPARE(account->status(), Account::SigningIn);
+
+    // ensure success
+    QTRY_COMPARE(siccSpy.count(), siccCount+1);
+    siccCount = siccSpy.count();
+
+    // ensure returned tokens are the expected values
+    QVariantMap responseData = siccSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseData.value("AccessToken").toString(), QString(QLatin1String("TestAccessToken")));
+    QCOMPARE(responseData.value("RefreshToken").toString(), QString(QLatin1String("TestRefreshToken")));
+
+    // check that the identity id is valid - stored into the account configuration settings.
+    QString configKey = BUILD_CREDENTIALS_CONFIGURATION_KEY("test", "test");
+    quint32 firstOAuthIdentityId = account->configurationValues("").value(configKey).toInt();
+    QVERIFY(firstOAuthIdentityId != nullCredentials);
+
+    // Create new credentials (oauth2)
+    SignInParameters *sip2 = account->signInParameters("test-service-oauth");
+    QVariantMap paramsTwo = sip2->parameters();
+    paramsTwo.insert("ClientId", "TestClientIdTwo");
+    // testing only: we set the tokens to store, so that the signond doesn't attempt to actually log into the test service.
+    QVariantMap providedTokensTwo;
+    providedTokensTwo.insert("AccessToken", "TestAccessTokenTwo");
+    providedTokensTwo.insert("RefreshToken", "TestRefreshTokenTwo");
+    paramsTwo.insert("ProvidedTokens", providedTokens);
+    sip2->setParameters(paramsTwo);
+    account->createSignInCredentials("testTwo", "testTwo", sip2);
+    QCOMPARE(account->status(), Account::SigningIn);
+
+    // ensure success
+    QTRY_COMPARE(siccSpy.count(), siccCount+1);
+    siccCount = siccSpy.count();
+    QVariantMap responseDataTwo = siccSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseDataTwo.value("AccessToken").toString(), QString(QLatin1String("TestAccessTokenTwo")));
+    QCOMPARE(responseDataTwo.value("RefreshToken").toString(), QString(QLatin1String("TestRefreshTokenTwo")));
+
+    // should reuse the same identity id (as oauth is segregated in signond via ClientId)
+    QString configKeyTwo = BUILD_CREDENTIALS_CONFIGURATION_KEY("testTwo", "testTwo");
+    quint32 secondOAuthIdentityId = account->configurationValues("").value(configKeyTwo).toInt();
+    QCOMPARE(secondOAuthIdentityId, firstOAuthIdentityId);
+    QCOMPARE(newA->credentialsId(), firstOAuthIdentityId); // default set
+
+    // ensure that signing in with the first one, still returns the first tokens.
+    params.remove("ProvidedTokens"); // want signond to returned the cached ones.
+    sip->setParameters(params);
+    account->signIn("test", "test", sip);
+    QCOMPARE(account->status(), Account::SigningIn);
+    QTRY_COMPARE(sirSpy.count(), sirCount+1);
+    sirCount = sirSpy.count();
+    responseData = sirSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseData.value("AccessToken").toString(), QString(QLatin1String("TestAccessToken")));
+    QCOMPARE(responseData.value("RefreshToken").toString(), QString(QLatin1String("TestRefreshToken")));
+
+    // sign out + signin specifying NoUserInteraction should return empty map (sign out clears tokens)
+    account->signOut("test", "test"); // clears all tokens
+    params.insert("UiPolicy", SignOn::NoUserInteractionPolicy);
+    sip->setParameters(params);
+    account->signIn("test", "test", sip);
+    QCOMPARE(account->status(), Account::SigningIn);
+    QTRY_COMPARE(sirSpy.count(), sirCount+1);
+    sirCount = sirSpy.count();
+    responseData = sirSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseData.value("AccessToken").toString(), QString());
+    QCOMPARE(responseData.value("RefreshToken").toString(), QString());
+
+    // remove second oauth2 credentials -> should NOT result in the default being unset.
+    account->removeSignInCredentials("testTwo", "testTwo");
+    QCOMPARE(account->status(), Account::SyncInProgress);
+    QTRY_COMPARE(account->status(), Account::Synced);
+    firstOAuthIdentityId = account->configurationValues("").value(configKey).toInt();
+    secondOAuthIdentityId = account->configurationValues("").value(configKeyTwo).toInt();
+    QCOMPARE(secondOAuthIdentityId, nullCredentials); // removed
+    QVERIFY(firstOAuthIdentityId != nullCredentials); // not removed
+    QCOMPARE(newA->credentialsId(), firstOAuthIdentityId); // default still exists
+
+    // remove first oauth2 credentials -> should result in the default being unset, as no more usages.
+    account->removeSignInCredentials("test", "test");
+    QCOMPARE(account->status(), Account::SyncInProgress);
+    QTRY_COMPARE(account->status(), Account::Synced);
+    firstOAuthIdentityId = account->configurationValues("").value(configKey).toInt();
+    secondOAuthIdentityId = account->configurationValues("").value(configKeyTwo).toInt();
+    QCOMPARE(secondOAuthIdentityId, nullCredentials); // removed
+    QCOMPARE(firstOAuthIdentityId, nullCredentials); // removed
+    QCOMPARE(newA->credentialsId(), nullCredentials); // default removed
+
+Store Provided Tokens ^^ */
+
+    //--------------------------------------------------
+
+    // Create credentials (non-oauth2) with symmetric key
+    SignInParameters *sip3 = account->signInParameters("test-service2", "user", "pass");
+    account->createSignInCredentials("testThree", "testThree", sip3, "symmetricKey");
+    QCOMPARE(account->status(), Account::SigningIn);
+
+    // ensure success
+    QTRY_COMPARE(siccSpy.count(), siccCount+1);
+    siccCount = siccSpy.count();
+
+    // ensure returned username/pass matches expectation
+    QVariantMap responseDataThree = siccSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseDataThree.value("UserName").toString(), QString(QLatin1String("user")));
+    QCOMPARE(responseDataThree.value("Secret").toString(), QString(QLatin1String("pass")));
+
+    // ensure no "default" was set (as symmetric key was given)
+    Accounts::Service whichSrv = manager.service("test-service2");
+    newA->selectService(whichSrv);
+    QCOMPARE(newA->credentialsId(), nullCredentials);
+    newA->selectService(Accounts::Service());
+
+    // ensure that sign in succeeds if the correct symmetric key is given
+    account->signIn("testThree", "testThree", sip3, "SymmetricKey");
+    QTRY_COMPARE(sirSpy.count(), sirCount+1);
+    sirCount = sirSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced); // should transition to synced after either successful or failed sign in
+
+    // ensure that sign in fails if the wrong symmetric key is given
+    sieCount = sieSpy.count();
+    account->signIn("testThree", "testThree", sip3, "WrongSymmetricKey");
+    QTRY_COMPARE(sieSpy.count(), sieCount+1);
+    sieCount = sieSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced); // should transition to synced after either successful or failed sign in
+
+    // Create credentials (non-oauth2) without symmetric key
+    siccCount = siccSpy.count();
+    SignInParameters *sip4 = account->signInParameters("test-service2", "userFour", "passFour");
+    account->createSignInCredentials("testFour", "testFour", sip4);
+    QCOMPARE(account->status(), Account::SigningIn);
+
+    // ensure returned username/pass matches expectation
+    QTRY_COMPARE(siccSpy.count(), siccCount+1);
+    siccCount = siccSpy.count();
+    QVariantMap responseDataFour = siccSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseDataFour.value("UserName").toString(), QString(QLatin1String("userFour")));
+    QCOMPARE(responseDataFour.value("Secret").toString(), QString(QLatin1String("passFour")));
+
+    // ensure that it was set as default for the service
+    newA->selectService(whichSrv);
+    QVERIFY(newA->credentialsId() != nullCredentials);
+    newA->selectService(Accounts::Service());
+
+    // remove credentials
+    account->removeSignInCredentials("testFour", "testFour");
+    account->removeSignInCredentials("testThree", "testThree");
+
+    // remove account.
+    account->remove();
 }
 
 void tst_Account::loadSavedAccount()
