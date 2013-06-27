@@ -128,7 +128,6 @@ AccountCreationDialog {
             // and trigger signon / account creation
             accountFactory.createOAuthAccount(root.accountProvider.name, _signonServiceName, params,
                                               "Jolla",
-                                              "temporary_symmetric_key",
                                               "Jolla")
         }
 

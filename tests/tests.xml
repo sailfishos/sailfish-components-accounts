@@ -22,6 +22,9 @@
            <case manual="false" name="servicetype">
                <step>/opt/tests/Sailfish/Accounts/qt5/tst_servicetype</step>
            </case>
+           <case manual="false" name="signinparameters">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_signinparameters</step>
+           </case>
        </set>
    </suite>
 </testdefinition>

@@ -50,6 +50,7 @@ void AccountFactory::createOAuthAccount(const QString &providerName, const QStri
     }
     m_signonSessionParams = adp;
 
+    m_serviceName = serviceName;
     m_method = m_accountService->authData().method();
     m_mechanism = m_accountService->authData().mechanism();
     m_applicationName = applicationName;
@@ -97,9 +98,11 @@ void AccountFactory::createAccount(const QString &providerName,
         setConfigurationValues(v.toMap(), serviceName);
     }
 
-    if (!displayName.isEmpty() && m_sailfishAccount && m_sailfishAccount->account())
+    if (!displayName.isEmpty() && m_sailfishAccount && m_sailfishAccount->account()) {
         m_sailfishAccount->account()->setDisplayName(displayName);
+    }
 
+    m_serviceName = serviceName;
     m_method = m_accountService->authData().method();
     m_mechanism = m_accountService->authData().mechanism();
     m_applicationName = applicationName;
@@ -188,12 +191,6 @@ void AccountFactory::initializeAccountCreation(const QString &providerName, cons
         return;
     }
 
-    // now attempt to create credentials.
-    Accounts::Provider prv = m_am->provider(providerName);
-    QString method = m_accountService->authData().method();
-    QString mechanism = m_accountService->authData().mechanism();
-    QVariantMap sessionData = m_accountService->authData().parameters();
-
     m_sailfishAccount = new Account(false, newAccount, this); // false = don't query info.
     if (!m_sailfishAccount) {
         resetState(AccountFactory::CleanupArtifacts);
@@ -216,7 +213,7 @@ void AccountFactory::startAccountCreation()
     connect(m_sailfishAccount, SIGNAL(signInError(QString)),
             this, SLOT(handleSignInError(QString)));
 
-    SignInParameters *params = new SignInParameters(m_method, m_mechanism, m_signonSessionParams, m_username, m_password, m_sailfishAccount);
+    SignInParameters *params = new SignInParameters(m_serviceName, m_method, m_mechanism, m_signonSessionParams, m_username, m_password, m_sailfishAccount);
     if (m_method.toLower().startsWith(QLatin1String("oauth"))) {
         m_sailfishAccount->createSignInCredentials(
                                 m_applicationName,
@@ -280,6 +277,7 @@ void AccountFactory::resetState(AccountFactory::ResetMode mode)
         m_responseData = QVariantMap();
         m_signonSessionParams = QVariantMap();
         m_srv = Accounts::Service();
+        m_serviceName = QString();
         m_method = QString();
         m_mechanism = QString();
         m_applicationName = QString();

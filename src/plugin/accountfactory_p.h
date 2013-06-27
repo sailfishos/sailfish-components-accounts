@@ -60,6 +60,7 @@ private:
     Accounts::AccountService *m_accountService;
     Account *m_sailfishAccount;
 
+    QString m_serviceName;
     QString m_method;
     QString m_mechanism;
     QString m_applicationName;
