@@ -19,7 +19,7 @@ BuildRequires:  qt5-qttools-linguist
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
 BuildRequires:  pkgconfig(libcrypto)
 BuildRequires:  qca-devel
-Requires:  sailfishsilica-qt5
+Requires:  sailfishsilica-qt5 >= 0.8.67
 Requires:  jolla-signon-ui
 Requires:  libjollasignonuiservice
 Requires:  qca-ossl
