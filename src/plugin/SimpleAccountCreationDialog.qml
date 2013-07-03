@@ -46,7 +46,6 @@ AccountCreationDialog {
                           root.username,
                           {},
                           "Jolla",
-                          "temporary_symmetric_key",
                           "Jolla")
         }
 

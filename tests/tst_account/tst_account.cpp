@@ -19,6 +19,8 @@
 
 //libsignon-qt
 #include <SignOn/SessionData>
+#include <SignOn/Identity>
+#include <SignOn/AuthSession>
 
 // Will try to wait for the condition while allowing event processing
 #ifndef QTRY_VERIFY
@@ -789,8 +791,27 @@ Store Provided Tokens ^^ */
 
     // ensure that it was set as default for the service
     newA->selectService(whichSrv);
-    QVERIFY(newA->credentialsId() != nullCredentials);
+    quint32 specifiedCredentials = newA->credentialsId();
+    QVERIFY(specifiedCredentials != nullCredentials);
     newA->selectService(Accounts::Service());
+
+    // ensure that we can sign in via "normal" libsignon-qt Identity::process()
+    SignOn::Identity *normalIdentity = SignOn::Identity::existingIdentity(specifiedCredentials);
+    QVERIFY(normalIdentity);
+    SignOn::AuthSession *authSession = normalIdentity->createSession("password");
+    QSignalSpy sessionSpy(authSession, SIGNAL(response(SignOn::SessionData)));
+    authSession->process(QVariantMap(), "password");
+    QTRY_VERIFY(sessionSpy.count());
+    SignOn::SessionData authSessionResponse = sessionSpy.takeFirst().at(0).value<SignOn::SessionData>();
+    QVariantMap responseDataFive;
+    foreach (const QString &propName, authSessionResponse.propertyNames()) {
+        responseDataFive.insert(propName, authSessionResponse.getProperty(propName));
+    }
+    // should have the same response data as the previous (responseDataFour) sign in request.
+    QCOMPARE(responseDataFour.value("UserName").toString(), QString(QLatin1String("userFour")));
+    QCOMPARE(responseDataFour.value("Secret").toString(), QString(QLatin1String("passFour")));
+    normalIdentity->destroySession(authSession);
+    normalIdentity->deleteLater();
 
     // remove credentials
     account->removeSignInCredentials("testFour", "testFour");
