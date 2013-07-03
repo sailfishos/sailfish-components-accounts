@@ -59,10 +59,6 @@
 // encrypts the given plaintext string with the given key, encodes the result in base64.
 static QString b64_encrypted_string(const QString &plaintext, const QString &key)
 {
-    if (key.isEmpty()) {
-        return plaintext;
-    }
-
     QByteArray ptBA = plaintext.toUtf8();
     QByteArray kBA = key.toUtf8();
 
@@ -520,7 +516,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         account->sync();
     } else if (signInCredentials.signingInWithCredentials) {
         // if it is "password" method, then the username/password are encrypted, and we need to decrypt.
-        // if it is "oauth" (oauth1.0a / oauth2) then we just emit the tokens immediately,
+        // if it is "oauth2" (oauth1.0a / oauth2) then we just emit the tokens immediately,
         // as the security is provided by signond (and the fact that the client needs to know the clientid).
         signInCredentials.responseData.clear();
         QStringList keys = data.propertyNames();
@@ -528,7 +524,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
             signInCredentials.responseData.insert(key, data.getProperty(key));
         }
 
-        if (signInCredentials.method.toLower() == QLatin1String("oauth")) {
+        if (signInCredentials.method.toLower() == QLatin1String("oauth2")) {
             QVariantMap responseData = signInCredentials.responseData;
             signInCredentials.cleanup();
             emit q->signInResponse(responseData);
@@ -1382,7 +1378,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         return;
     }
 
-    if (parameters->method().toLower() == QLatin1String("oauth")) {
+    if (parameters->method().toLower() == QLatin1String("oauth2")) {
         // oauth-based authentication.  trigger sign-on process.
         // Because application segregation is done in signond (via ClientId/ConsumerKey token separation)
         // we can re-use existing default credentials if they exist.
@@ -1453,26 +1449,26 @@ void Account::createSignInCredentials(const QString &applicationName,
         // note: we _always_ create new identity for this.  We don't try to re-use
         // the default if it exists, just because someone can (out of band) set an encrypted
         // identity as the account default credentials, causing problems.
-        QString usernameWithAppName = parameters->username();
+        QString identityUsername = parameters->username();
         if (!symmetricKey.isEmpty()) {
-            // only append the application name if we're encrypting.
-            usernameWithAppName += applicationName;
+            // append the application name if we're encrypting.
+            identityUsername += applicationName;
+            identityUsername = b64_encrypted_string(identityUsername, symmetricKey);
         }
-        QString encryptedUserName = b64_encrypted_string(usernameWithAppName, symmetricKey);
-        if (encryptedUserName.isNull()) {
+        if (identityUsername.isNull()) {
             //: Error emitted if encrypting username fails
             //% "Error occurred while encrypting username"
             emit signInError(qtTrId("sailfish_accounts-account-uname_encryption_failed"));
             return;
         }
 
-        QString secretWithAppName = parameters->password();
+        QString identitySecret = parameters->password();
         if (!symmetricKey.isEmpty()) {
             // only append the application name if we're encrypting.
-            secretWithAppName += applicationName;
+            identitySecret += applicationName;
+            identitySecret = b64_encrypted_string(identitySecret, symmetricKey);
         }
-        QString encryptedSecret = b64_encrypted_string(secretWithAppName, symmetricKey);
-        if (encryptedSecret.isNull()) {
+        if (identitySecret.isNull()) {
             //: Error emitted if encrypting password fails
             //% "Error occurred while encrypting password"
             emit signInError(qtTrId("sailfish_accounts-account-pword_encryption_failed"));
@@ -1481,8 +1477,8 @@ void Account::createSignInCredentials(const QString &applicationName,
 
         QMap<QString, QStringList> methodMechanisms;
         methodMechanisms.insert(parameters->method(), QStringList(parameters->mechanism()));
-        d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, encryptedUserName, methodMechanisms);
-        d->signInCredentials.identityInfo.setSecret(encryptedSecret);
+        d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, identityUsername, methodMechanisms);
+        d->signInCredentials.identityInfo.setSecret(identitySecret);
         d->signInCredentials.identity = SignOn::Identity::newIdentity(d->signInCredentials.identityInfo);
         if (d->signInCredentials.identity == NULL) {
             //: Error emitted if identity creation fails
