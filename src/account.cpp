@@ -59,19 +59,17 @@
 // encrypts the given plaintext string with the given key, encodes the result in base64.
 static QString b64_encrypted_string(const QString &plaintext, const QString &key)
 {
+    if (key.isEmpty()) {
+        return plaintext;
+    }
+
     QByteArray ptBA = plaintext.toUtf8();
     QByteArray kBA = key.toUtf8();
 
-    QByteArray encryptedData;
-    if (key.isEmpty()) {
-        // no key: don't encrypt.
-        encryptedData = ptBA;
-    } else {
-        encryptedData = aes_encrypt_plaintext(ptBA, kBA);
-        if (encryptedData.size() == 0) {
-            qWarning() << Q_FUNC_INFO << "encryption failed";
-            return QString();
-        }
+    QByteArray encryptedData = aes_encrypt_plaintext(ptBA, kBA);
+    if (encryptedData.size() == 0) {
+        qWarning() << Q_FUNC_INFO << "encryption failed";
+        return QString();
     }
 
     QByteArray b64encryptedData = encryptedData.toBase64();
@@ -81,20 +79,18 @@ static QString b64_encrypted_string(const QString &plaintext, const QString &key
 // decodes the given ciphertext from base64 into encrypted data, and decrypts it.
 static QString decrypted_string_b64(const QString &ciphertext, const QString &key)
 {
+    if (key.isEmpty()) {
+        return ciphertext;
+    }
+
     QByteArray b64encryptedData = ciphertext.toLatin1();
     QByteArray encryptedData = QByteArray::fromBase64(b64encryptedData);
     QByteArray kBA = key.toUtf8();
 
-    QByteArray decryptedData;
-    if (key.isEmpty()) {
-        // no key: don't decrypt
-        decryptedData = encryptedData;
-    } else {
-        decryptedData = aes_decrypt_ciphertext(encryptedData, kBA);
-        if (decryptedData.size() == 0) {
-            qWarning() << Q_FUNC_INFO << "decryption failed";
-            return QString();
-        }
+    QByteArray decryptedData = aes_decrypt_ciphertext(encryptedData, kBA);
+    if (decryptedData.size() == 0) {
+        qWarning() << Q_FUNC_INFO << "decryption failed";
+        return QString();
     }
 
     QString decryptedString = QString::fromUtf8(decryptedData);
@@ -457,9 +453,10 @@ void maybeSetCredentialsIdForProvider(Accounts::Account *account, int identityId
     // if the method is password, and if no symmetricKey was specified,
     // we can do the same (as the application is saying "no need to
     // keep these credentials application-specific") but only for the
-    // specified service name (associated with the SignInParameters).
+    // specified service name (associated with the SignInParameters)
+    // and the global service (if currently not set).
 
-    if (method.toLower().startsWith("oauth")) {
+    if (method.toLower() == QLatin1String("oauth2")) {
         // set for each service from the provider (that the account supports)
         // NOTE: this assumes that each service uses the oauth method.  TODO: fixme?  Requires Accounts::Service API to be improved.
         Accounts::ServiceList supportedServices = account->services();
@@ -475,7 +472,7 @@ void maybeSetCredentialsIdForProvider(Accounts::Account *account, int identityId
         if (account->credentialsId() == 0) {
             account->setCredentialsId(identityId);
         }
-    } else if (method.toLower().startsWith("password") && symmetricKey.isEmpty()) {
+    } else if (method.toLower() == QLatin1String("password") && symmetricKey.isEmpty()) {
         // set for each service from the provider (that the account supports)
         bool hasOtherServices = false;
         Accounts::ServiceList supportedServices = account->services();
@@ -531,7 +528,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
             signInCredentials.responseData.insert(key, data.getProperty(key));
         }
 
-        if (signInCredentials.method.startsWith(QLatin1String("oauth"))) {
+        if (signInCredentials.method.toLower() == QLatin1String("oauth")) {
             QVariantMap responseData = signInCredentials.responseData;
             signInCredentials.cleanup();
             emit q->signInResponse(responseData);
@@ -609,8 +606,9 @@ QVariantMap AccountPrivate::plainTextResponseData(const QString &method, const Q
         foreach (const QString &key, encryptedResponseData.keys()) {
             if (key.toLower() == QLatin1String("password") || key.toLower() == QLatin1String("secret")) {
                 QString decryptedPassword = decrypted_string_b64(encryptedResponseData.value(key).toString(), symmetricKey);
-qWarning() << "DECRYPTED PASSWORD:" << decryptedPassword << ", and appname is:" << applicationName;
-                if (decryptedPassword.endsWith(applicationName)) {
+                if (symmetricKey.isEmpty()) {
+                    retn.insert(key, decryptedPassword);
+                } else if (decryptedPassword.endsWith(applicationName)) {
                     decryptedPassword.chop(applicationName.length());
                     retn.insert(key, decryptedPassword);
                 } else {
@@ -619,8 +617,9 @@ qWarning() << "DECRYPTED PASSWORD:" << decryptedPassword << ", and appname is:" 
                 }
             } else if (key.toLower() == QLatin1String("username")) {
                 QString decryptedUsername = decrypted_string_b64(encryptedResponseData.value(key).toString(), symmetricKey);
-qWarning() << "DECRYPTED USERNAME:" << decryptedUsername << ", and appname is:" << applicationName;
-                if (decryptedUsername.endsWith(applicationName)) {
+                if (symmetricKey.isEmpty()) {
+                    retn.insert(key, decryptedUsername);
+                } else if (decryptedUsername.endsWith(applicationName)) {
                     decryptedUsername.chop(applicationName.length());
                     retn.insert(key, decryptedUsername);
                 } else {
@@ -1383,7 +1382,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         return;
     }
 
-    if (parameters->method().toLower().startsWith(QLatin1String("oauth"))) {
+    if (parameters->method().toLower() == QLatin1String("oauth")) {
         // oauth-based authentication.  trigger sign-on process.
         // Because application segregation is done in signond (via ClientId/ConsumerKey token separation)
         // we can re-use existing default credentials if they exist.
@@ -1454,7 +1453,11 @@ void Account::createSignInCredentials(const QString &applicationName,
         // note: we _always_ create new identity for this.  We don't try to re-use
         // the default if it exists, just because someone can (out of band) set an encrypted
         // identity as the account default credentials, causing problems.
-        QString usernameWithAppName = parameters->username() + applicationName;
+        QString usernameWithAppName = parameters->username();
+        if (!symmetricKey.isEmpty()) {
+            // only append the application name if we're encrypting.
+            usernameWithAppName += applicationName;
+        }
         QString encryptedUserName = b64_encrypted_string(usernameWithAppName, symmetricKey);
         if (encryptedUserName.isNull()) {
             //: Error emitted if encrypting username fails
@@ -1463,7 +1466,11 @@ void Account::createSignInCredentials(const QString &applicationName,
             return;
         }
 
-        QString secretWithAppName = parameters->password() + applicationName;
+        QString secretWithAppName = parameters->password();
+        if (!symmetricKey.isEmpty()) {
+            // only append the application name if we're encrypting.
+            secretWithAppName += applicationName;
+        }
         QString encryptedSecret = b64_encrypted_string(secretWithAppName, symmetricKey);
         if (encryptedSecret.isNull()) {
             //: Error emitted if encrypting password fails
