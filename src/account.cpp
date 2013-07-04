@@ -141,6 +141,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     , enabledPendingInit(false)
     , displayNamePendingInit(false)
     , configurationValuesPendingInit(false)
+    , constructedWithAccountPtr(false)
     , status(Account::Initializing)
     , error(Account::NoError)
 {
@@ -153,6 +154,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
 
     // set up the account
     if (acc) {
+        constructedWithAccountPtr = true;
         setAccount(acc, queryInfo);
     }
 }
@@ -187,12 +189,37 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
     connect(account, SIGNAL(destroyed()),
             this, SLOT(invalidate()), Qt::UniqueConnection);
 
+    // grab the provider name: this is necessary for provenance
+    if (providerName != account->providerName()) {
+        providerName = account->providerName();
+        if (!constructedWithAccountPtr) {
+            // we need to emit the change, as it happened after construction
+            emit q->providerNameChanged();
+        }
+    }
+
     // grab the supported service list: this is necessary for enablement etc.
     supportedServiceNames.clear();
     Accounts::ServiceList supportedServices = account->services();
     for (int i = 0; i < supportedServices.size(); ++i) {
         const Accounts::Service &currService(supportedServices.at(i));
         supportedServiceNames.append(currService.name());
+    }
+
+    // grab the default service enabled status unless the user has set it or it's a new account
+    if (!enabledPendingInit && account->id() != 0) {
+        if (enabled != account->enabled()) {
+            enabled = account->enabled();
+            emit q->enabledChanged();
+        }
+    }
+
+    // similarly for the display name
+    if (!displayNamePendingInit && account->id() != 0) {
+        if (displayName != account->displayName()) {
+            displayName = account->displayName();
+            emit q->displayNameChanged();
+        }
     }
 
     if (queryInfo) {
@@ -565,18 +592,30 @@ void AccountPrivate::handleCredentialsFailed(const SignOn::Error &err)
 
 void AccountPrivate::handleSignOnError(const SignOn::Error &err)
 {
+    //: Error emitted if signon failed due to network connection failure
+    //% "Network connection failure"
+    QString networkConnectionFailure = qtTrId("sailfish_accounts-account-network_failed");
+
+    //: Error emitted if signon failed due to having no cached credentials, and NoUserInteractionPolicy specified
+    //% "No cached credentials exist"
+    QString noCachedCredentials = qtTrId("sailfish_accounts-account-no_cached_creds");
+
     if (signInCredentials.creatingSignInCredentials) {
         signInCredentials.cleanup(true);
-        QString errMess = err.message();
-        if (errMess == QLatin1String("userActionFinished error: 5")) {
-            //: Error emitted if signon failed due to network connection failure
-            //% "Network connection failure"
-            emit q->signInError(qtTrId("sailfish_accounts-account-network_failed"));
-        } else {
-            emit q->signInError(errMess);
-        }
-        setStatus(Account::Synced);
+    } else {
+        signInCredentials.signingInWithCredentials = false; // error occured.
     }
+
+    QString errMess = err.message();
+    if (errMess == QLatin1String("userActionFinished error: 5")) {
+        emit q->signInError(networkConnectionFailure);
+    } else if (errMess == QLatin1String("userActionFinished error: 10")) {
+        emit q->signInError(noCachedCredentials);
+    } else {
+        emit q->signInError(errMess);
+    }
+
+    setStatus(Account::Synced);
 }
 
 void AccountPrivate::handleAccountError()
@@ -974,7 +1013,7 @@ void Account::remove()
         if (key.contains(CREDENTIALS_GROUP)) {
             int identityId = d->account->valueAsInt(key, 0);
             if (identityId) {
-                SignOn::Identity *doomedIdentity = SignOn::Identity::existingIdentity(identityId);
+                SignOn::Identity *doomedIdentity = SignOn::Identity::existingIdentity(identityId, this);
                 if (doomedIdentity) {
                     doomedIdentity->signOut();
                     doomedIdentity->remove();
@@ -1007,6 +1046,11 @@ void Account::remove()
     Note: this does not return all configuration settings of all
     services; it only returns configuration settings which are
     globally applicable to all services for the account.
+
+    The configuration values are retrieved asynchronously after
+    account construction.  Clients should wait until the account
+    is in the \c Initialized or \c Synced state before they attempt
+    to access (or modify) the configuration values.
 */
 QVariantMap Account::configurationValues(const QString &serviceName) const
 {
@@ -1525,14 +1569,17 @@ void Account::createSignInCredentials(const QString &applicationName,
 void Account::removeSignInCredentials(const QString &applicationName,
                                       const QString &credentialsName)
 {
-    if (d->status != Account::Initialized && d->status != Account::Synced)
+    if (d->status != Account::Initialized && d->status != Account::Synced) {
         return;
+    }
 
-    if (applicationName.isEmpty())
+    if (applicationName.isEmpty()) {
         return;
+    }
 
-    if (!hasSignInCredentials(applicationName, credentialsName))
+    if (!hasSignInCredentials(applicationName, credentialsName)) {
         return;
+    }
 
     if (d->signInCredentials.creatingSignInCredentials
             || d->signInCredentials.signingInWithCredentials) {
@@ -1568,7 +1615,7 @@ void Account::removeSignInCredentials(const QString &applicationName,
 
     if (!stillInUse) {
         // remove the identity from the database
-        SignOn::Identity *removeIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId);
+        SignOn::Identity *removeIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId, this);
         if (removeIdentity != NULL) {
             removeIdentity->signOut();
             removeIdentity->remove();
@@ -1722,14 +1769,13 @@ void Account::signOut(const QString &applicationName,
     QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(applicationName, credName);
     int identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
 
-    SignOn::Identity *signInIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId);
+    SignOn::Identity *signInIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId, this);
     if (signInIdentity == NULL) {
         qWarning() << Q_FUNC_INFO << "credentials with id" << identityId << "could not be signed out";
         return;
     }
 
     signInIdentity->signOut();
-    signInIdentity->deleteLater();
 }
 
 
