@@ -117,6 +117,9 @@ void tst_AccountManager::accountIdentifiers()
     int newAccountId = a->id();
     QVERIFY(m->accountIdentifiers().contains(newAccountId));
 
+    // and via the per-provider accessor
+    QVERIFY(m->providerAccountIdentifiers("test-provider").contains(newAccountId));
+
     // remove the account.
     a->remove();
     a->sync();
@@ -124,6 +127,7 @@ void tst_AccountManager::accountIdentifiers()
     // ensure it's gone.
     QTRY_COMPARE(spy.count(), 2);
     QVERIFY(!m->accountIdentifiers().contains(newAccountId));
+    QVERIFY(!m->providerAccountIdentifiers("test-provider").contains(newAccountId));
 }
 
 // ---------------- Q_INVOKABLE api tests:
