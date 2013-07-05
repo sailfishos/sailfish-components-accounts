@@ -78,7 +78,7 @@ public:
     bool enabledPendingInit;
     bool displayNamePendingInit;
     bool configurationValuesPendingInit;
-    bool enabledServiceNamesPendingInit;
+    bool constructedWithAccountPtr;
 
     Account::Status status;
     Account::ErrorType error;

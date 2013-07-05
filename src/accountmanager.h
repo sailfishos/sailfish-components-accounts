@@ -38,6 +38,7 @@ public:
     ~AccountManager();
 
     // invokable api.
+    Q_INVOKABLE QList<int> providerAccountIdentifiers(const QString &providerName);
     Q_INVOKABLE bool createAccount(const QString &providerName);
 
     Q_INVOKABLE ServiceType *serviceType(const QString &serviceTypeName) const;

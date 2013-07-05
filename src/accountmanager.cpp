@@ -202,6 +202,30 @@ QList<int> AccountManager::accountIdentifiers() const
 }
 
 /*!
+    \qmlmethod QList<int> AccountManager::providerAccountIdentifiers(const QString &providerName)
+
+    Returns the list of ids of accounts provided by the provider with the
+    given \a providerName (or all providers, if the given \a providerName
+    is empty).
+*/
+QList<int> AccountManager::providerAccountIdentifiers(const QString &providerName)
+{
+    QList<int> returnList;
+    QList<quint32> accountIdList = d->manager->accountList();
+    foreach (quint32 id, accountIdList) {
+        Accounts::Account *acc = d->manager->account(id);
+        if (acc != NULL) {
+            if (providerName.isEmpty() || acc->providerName() == providerName) {
+                returnList.append(static_cast<int>(id));
+            }
+            acc->deleteLater();
+        }
+    }
+
+    return returnList;
+}
+
+/*!
     \qmlmethod bool AccountManager::createAccount(const QString &providerName)
 
     Creates a new, disabled Account with the provider identified by the given

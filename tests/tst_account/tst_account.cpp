@@ -10,6 +10,7 @@
 #include <QtTest>
 
 #include "account.h"
+#include "accountmanager.h"
 #include "signinparameters.h"
 #include "globalaccountmanager_p.h"
 
@@ -254,6 +255,10 @@ void tst_Account::providerName()
     newA->setEnabled(false);
     newA->sync();
     QTRY_VERIFY(newASyncedSpy.count() > 0);
+
+    QScopedPointer<AccountManager> sailfishAccountManager(new AccountManager);
+    QScopedPointer<Account> accountFromManager(sailfishAccountManager->account(newA->id()));
+    QVERIFY(accountFromManager->providerName() == QLatin1String("test-provider")); // immediately set, no need for async load.
 
     QScopedPointer<Account> account(new Account);
     account->classBegin();
@@ -621,7 +626,7 @@ void tst_Account::credentialsFunctions()
     QSignalSpy newASyncedSpy(newA.data(), SIGNAL(synced()));
     QList<QVariant> spyArgs;
     newA->setDisplayName("test");
-    newA->setEnabled(false);
+    newA->setEnabled(true);
     newA->sync();
     QTRY_VERIFY(newASyncedSpy.count() > 0);
 
@@ -641,24 +646,25 @@ void tst_Account::credentialsFunctions()
     int sirCount = sirSpy.count();
     int sieCount = sieSpy.count();
 
-/* XXX TODO: enable this test once the Store Provided Tokens functionality works!
-
     // Create credentials (oauth2)
     SignInParameters *sip = account->signInParameters("test-service-oauth");
     QVariantMap params = sip->parameters();
     params.insert("ClientId", "TestClientId");
     // testing only: we set the tokens to store, so that the signond doesn't attempt to actually log into the test service.
     QVariantMap providedTokens;
+    providedTokens.insert("ExpiresIn", 999999);
     providedTokens.insert("AccessToken", "TestAccessToken");
     providedTokens.insert("RefreshToken", "TestRefreshToken");
     params.insert("ProvidedTokens", providedTokens);
     sip->setParameters(params);
+    siccCount = siccSpy.count();
     account->createSignInCredentials("test", "test", sip);
     QCOMPARE(account->status(), Account::SigningIn);
 
     // ensure success
     QTRY_COMPARE(siccSpy.count(), siccCount+1);
     siccCount = siccSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced);
 
     // ensure returned tokens are the expected values
     QVariantMap responseData = siccSpy.takeFirst().at(0).toMap();
@@ -678,14 +684,16 @@ void tst_Account::credentialsFunctions()
     QVariantMap providedTokensTwo;
     providedTokensTwo.insert("AccessToken", "TestAccessTokenTwo");
     providedTokensTwo.insert("RefreshToken", "TestRefreshTokenTwo");
-    paramsTwo.insert("ProvidedTokens", providedTokens);
+    paramsTwo.insert("ProvidedTokens", providedTokensTwo);
     sip2->setParameters(paramsTwo);
+    siccCount = siccSpy.count();
     account->createSignInCredentials("testTwo", "testTwo", sip2);
     QCOMPARE(account->status(), Account::SigningIn);
 
     // ensure success
     QTRY_COMPARE(siccSpy.count(), siccCount+1);
     siccCount = siccSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced);
     QVariantMap responseDataTwo = siccSpy.takeFirst().at(0).toMap();
     QCOMPARE(responseDataTwo.value("AccessToken").toString(), QString(QLatin1String("TestAccessTokenTwo")));
     QCOMPARE(responseDataTwo.value("RefreshToken").toString(), QString(QLatin1String("TestRefreshTokenTwo")));
@@ -699,25 +707,27 @@ void tst_Account::credentialsFunctions()
     // ensure that signing in with the first one, still returns the first tokens.
     params.remove("ProvidedTokens"); // want signond to returned the cached ones.
     sip->setParameters(params);
+    sirCount = sirSpy.count();
     account->signIn("test", "test", sip);
     QCOMPARE(account->status(), Account::SigningIn);
     QTRY_COMPARE(sirSpy.count(), sirCount+1);
     sirCount = sirSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced);
     responseData = sirSpy.takeFirst().at(0).toMap();
     QCOMPARE(responseData.value("AccessToken").toString(), QString(QLatin1String("TestAccessToken")));
     QCOMPARE(responseData.value("RefreshToken").toString(), QString(QLatin1String("TestRefreshToken")));
 
-    // sign out + signin specifying NoUserInteraction should return empty map (sign out clears tokens)
+    // sign out + signin specifying NoUserInteraction should error (sign out clears tokens)
     account->signOut("test", "test"); // clears all tokens
+    QTest::qWait(2000); // takes some time to complete.  We don't get a signal from the account...
     params.insert("UiPolicy", SignOn::NoUserInteractionPolicy);
     sip->setParameters(params);
+    sieCount = sieSpy.count();
     account->signIn("test", "test", sip);
     QCOMPARE(account->status(), Account::SigningIn);
-    QTRY_COMPARE(sirSpy.count(), sirCount+1);
-    sirCount = sirSpy.count();
-    responseData = sirSpy.takeFirst().at(0).toMap();
-    QCOMPARE(responseData.value("AccessToken").toString(), QString());
-    QCOMPARE(responseData.value("RefreshToken").toString(), QString());
+    QTRY_COMPARE(sieSpy.count(), sieCount+1);
+    sieCount = sieSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced);
 
     // remove second oauth2 credentials -> should NOT result in the default being unset.
     account->removeSignInCredentials("testTwo", "testTwo");
@@ -739,18 +749,18 @@ void tst_Account::credentialsFunctions()
     QCOMPARE(firstOAuthIdentityId, nullCredentials); // removed
     QCOMPARE(newA->credentialsId(), nullCredentials); // default removed
 
-Store Provided Tokens ^^ */
-
     //--------------------------------------------------
 
     // Create credentials (non-oauth2) with symmetric key
     SignInParameters *sip3 = account->signInParameters("test-service2", "user", "pass");
+    siccCount = siccSpy.count();
     account->createSignInCredentials("testThree", "testThree", sip3, "symmetricKey");
     QCOMPARE(account->status(), Account::SigningIn);
 
     // ensure success
     QTRY_COMPARE(siccSpy.count(), siccCount+1);
     siccCount = siccSpy.count();
+    QTRY_COMPARE(account->status(), Account::Synced);
 
     // ensure returned username/pass matches expectation
     QVariantMap responseDataThree = siccSpy.takeFirst().at(0).toMap();
@@ -764,6 +774,7 @@ Store Provided Tokens ^^ */
     newA->selectService(Accounts::Service());
 
     // ensure that sign in succeeds if the correct symmetric key is given
+    sirCount = sirSpy.count();
     account->signIn("testThree", "testThree", sip3, "SymmetricKey");
     QTRY_COMPARE(sirSpy.count(), sirCount+1);
     sirCount = sirSpy.count();
