@@ -35,7 +35,7 @@ Dialog {
         if (success) {
             headingLabel.text = successHeading
             headingLabel.color = Theme.primaryColor
-            descriptionLabel.text = successHeading
+            descriptionLabel.text = successDescription
         } else {
             headingLabel.text = errorHeading
             headingLabel.color = Theme.highlightColor
