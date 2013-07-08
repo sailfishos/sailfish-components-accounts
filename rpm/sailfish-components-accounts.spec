@@ -69,20 +69,9 @@ rm -rf %{buildroot}
 %{_libdir}/libsailfishaccounts.so*
 %{_libdir}/qt5/qml/Sailfish/Accounts/qmldir
 %{_libdir}/qt5/qml/Sailfish/Accounts/libsailfishaccountsplugin.so
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountCreationDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountCreationManager.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountIcon.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountPostCreationDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountPostAuthenticationDialog.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountSettingsDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsPage.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/OAuthAccountCreationDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/ServiceAccountsListView.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/SimpleAccountCreationDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/StandardAccountSettingsDialog.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/accountcreationmanager.js
-%{_libdir}/qt5/qml/Sailfish/Accounts/accountutil.js
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
 %{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
 
 %files tests
