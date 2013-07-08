@@ -10,18 +10,13 @@ PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5
 INCLUDEPATH += ..
 LIBS += -L.. -lsailfishaccounts
 
-SOURCES += \
-    $$PWD/accountfactory.cpp \
-    $$PWD/encodedkeyprovider.cpp \
-    $$PWD/jollaaccountprovider.cpp \
-    $$PWD/plugin.cpp
+SOURCES += $$PWD/plugin.cpp
 
-HEADERS += \
-    $$PWD/accountfactory_p.h \
-    $$PWD/encodedkeyprovider_p.h \
-    $$PWD/jollaaccountprovider_p.h
-
-OTHER_FILES += $$PWD/*.qml $$PWD/*.js $$PWD/qmldir
+OTHER_FILES += \
+        $$PWD/qmldir \
+        $$PWD/AccountIcon.qml \
+        $$PWD/AccountProviderPickerDialog.qml \
+        $$PWD/AccountsListView.qml
 
 TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
 EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
@@ -47,7 +42,7 @@ engineering_english_install.path = /usr/share/translations
 engineering_english_install.files = $$EE_QM
 engineering_english_install.CONFIG += no_check_exist
 
-import.files = $$PWD/*.qml $$PWD/*.js $$PWD/qmldir
+import.files = $$PWD/qmldir $$PWD/AccountIcon.qml $$PWD/AccountProviderPickerDialog.qml $$PWD/AccountsListView.qml
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 

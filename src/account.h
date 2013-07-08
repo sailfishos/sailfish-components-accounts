@@ -144,12 +144,11 @@ Q_SIGNALS:
     void signInResponse(const QVariantMap &data);
     void signInError(const QString &message);
 
-private:
+// the following should be private, but are public to allow AccountFactory
+// (from jolla-settings-accounts) to use them during account creation.
+public:
     Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent);
     Accounts::Account *account();
-    friend class AccountFactory;
-    friend class AccountManager;
-    friend class AccountModel;
 
 private:
     AccountPrivate *d;

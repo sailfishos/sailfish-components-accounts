@@ -1,13 +1,4 @@
 plugin sailfishaccountsplugin
 AccountProviderPickerDialog 1.0 AccountProviderPickerDialog.qml
-AccountSettingsDialog 1.0 AccountSettingsDialog.qml
-StandardAccountSettingsDialog 1.0 StandardAccountSettingsDialog.qml
-AccountsPage 1.0 AccountsPage.qml
-AccountCreationDialog 1.0 AccountCreationDialog.qml
-SimpleAccountCreationDialog 1.0 SimpleAccountCreationDialog.qml
-OAuthAccountCreationDialog 1.0 OAuthAccountCreationDialog.qml
-ServiceAccountsListView 1.0 ServiceAccountsListView.qml
+AccountsListView 1.0 AccountsListView.qml
 AccountIcon 1.0 AccountIcon.qml
-AccountCreationManager 1.0 AccountCreationManager.qml
-AccountPostCreationDialog 1.0 AccountPostCreationDialog.qml
-AccountPostAuthenticationDialog 1.0 AccountPostAuthenticationDialog.qml
