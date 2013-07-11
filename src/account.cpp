@@ -536,6 +536,9 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
         maybeSetCredentialsIdForProvider(account, signInCredentials.identity->id(), signInCredentials.method, signInCredentials.serviceName, signInCredentials.symmetricKey);
+        if (account->displayName().isEmpty() && !signInCredentials.username.isEmpty()) {
+            account->setDisplayName(signInCredentials.username);
+        }
 
         // and write the changes to the accounts database
         connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountError()), Qt::UniqueConnection);
@@ -1457,7 +1460,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.mechanism = parameters->mechanism();
         d->signInCredentials.sessionData = parameters->parameters();
         d->signInCredentials.credentialsName = credentialsName;
-        d->signInCredentials.username = QString();
+        d->signInCredentials.username = parameters->username();
         d->signInCredentials.password = QString();
         d->signInCredentials.creatingSignInCredentials = true;
         d->signInCredentials.storingEncryptedTokens = false; // we never attempt to store encrypted tokens for OAuth2, signond handles that.
@@ -1466,7 +1469,7 @@ void Account::createSignInCredentials(const QString &applicationName,
             // we need to create the credentials.
             QMap<QString, QStringList> methodMechanisms;
             methodMechanisms.insert(parameters->method(), QStringList(parameters->mechanism()));
-            d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, QString(), methodMechanisms);
+            d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, parameters->username(), methodMechanisms);
             d->signInCredentials.identity = SignOn::Identity::newIdentity(d->signInCredentials.identityInfo);
             if (d->signInCredentials.identity == NULL) {
                 //: Error emitted if identity creation fails
