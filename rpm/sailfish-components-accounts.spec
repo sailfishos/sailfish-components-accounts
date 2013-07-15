@@ -14,15 +14,10 @@ BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(Qt5OpenGL)
 BuildRequires:  pkgconfig(libsignon-qt5)
 BuildRequires:  pkgconfig(accounts-qt5)
-BuildRequires:  qt5-qttools
-BuildRequires:  qt5-qttools-linguist
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
-BuildRequires:  pkgconfig(libcrypto)
-BuildRequires:  qca-devel
+BuildRequires:  qt5-qttools-linguist
+BuildRequires:  qt5-qttools
 Requires:  sailfishsilica-qt5 >= 0.8.67
-Requires:  jolla-signon-ui
-Requires:  libjollasignonuiservice
-Requires:  qca-ossl
 
 %description
 Sailfish Accounts UI Components
