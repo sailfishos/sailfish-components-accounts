@@ -7,8 +7,8 @@ QT += qml
 CONFIG += qt plugin hide_symbols link_pkgconfig Qt5Qml
 PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5
 
-INCLUDEPATH += ..
-LIBS += -L.. -lsailfishaccounts
+INCLUDEPATH += $$PWD/../lib
+LIBS += -L$$PWD/../lib -lsailfishaccounts
 
 SOURCES += $$PWD/plugin.cpp
 
