@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<service id="test-service-oauth">
+  <type>test-service-type2</type>
+  <provider>test-provider</provider>
+  <name>Test Service OAuth</name>
+  <icon>test</icon>
+  <tags>
+    <tag>testing</tag>
+  </tags>
+
+  <template>
+      <group name="auth">
+          <setting name="method">oauth2</setting>
+          <setting name="mechanism">user_agent</setting>
+          <group name="oauth2">
+              <group name="user_agent">
+                  <setting name="Scope" type="as">["one", "two"]</setting>
+                  <setting name="RedirectUri">urn:ietf:wg:oauth:2.0:oob</setting>
+                  <setting name="Host">localhost</setting>
+                  <setting name="AuthPath">/dialog/oauth</setting>
+              </group>
+          </group>
+      </group>
+  </template>
+</service>
