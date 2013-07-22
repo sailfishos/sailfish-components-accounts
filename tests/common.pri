@@ -1,5 +1,5 @@
-include($$PWD/../src/src.pro)
-SRCDIR = $$PWD/../src/
+include($$PWD/../src/lib/lib.pro)
+SRCDIR = $$PWD/../src/lib
 INCLUDEPATH += $$SRCDIR
 DEPENDPATH = $$INCLUDEPATH
 QT += testlib
