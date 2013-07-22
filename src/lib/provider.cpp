@@ -1,0 +1,88 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
+#include "provider.h"
+#include "globalaccountmanager_p.h"
+
+//libaccounts-qt
+#include <Accounts/Manager>
+
+/*!
+    \qmltype Provider
+    \instantiates Provider
+    \inqmlmodule Sailfish.Accounts 1
+    \brief Reports information about a given provider
+
+    Every account is specified for a particular provider.
+    Every provider can have one or more services associated
+    with it.  Each account may be enabled with zero or more
+    services from the provider.
+
+    This type is purely informational, and reports information
+    about the provider of the account.  The information is
+    specified in the \c{.provider} file installed by the
+    account provider plugin.
+*/
+
+Provider::Provider(const Accounts::Provider &provider, QObject *parent)
+    : QObject(parent), m_provider(provider)
+{
+    // first time fetch of service names.
+    Accounts::Manager *m = globalAccountManager();
+    Accounts::ServiceList services = m->serviceList();
+    foreach (const Accounts::Service &srv, services) {
+        if (srv.provider() == m_provider.name()) {
+            m_serviceNames.append(srv.name());
+        }
+    }
+}
+
+Provider::~Provider()
+{
+}
+
+/*!
+    \qmlproperty string Provider::name
+    The name of the provider.
+*/
+
+QString Provider::name() const
+{
+    return m_provider.name();
+}
+
+/*!
+    \qmlproperty string Provider::displayName
+    The display name of the provider.  This display name
+    can be displayed in lists or dialogues in the UI.
+*/
+
+QString Provider::displayName() const
+{
+    return m_provider.displayName();
+}
+
+/*!
+    \qmlproperty string Provider::iconName
+    The name of the icon associated with the provider.
+*/
+
+QString Provider::iconName() const
+{
+    return m_provider.iconName();
+}
+
+/*!
+    \qmlproperty QStringList Provider::serviceNames
+    The names of services provided by this provider.
+*/
+
+QStringList Provider::serviceNames() const
+{
+    return m_serviceNames;
+}
+

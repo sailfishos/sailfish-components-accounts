@@ -1,29 +1,23 @@
-Name:       sailfish-components-accounts
+Name:       sailfish-components-accounts-qt5
 
-Summary:    Sailfish Accounts UI Components
-Version:    0.0.7
+Summary:    Sailfish Accounts Components
+Version:    0.0.30
 Release:    1
 Group:      System/Libraries
 License:    TBD
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
-BuildRequires:  pkgconfig(QtCore) >= 4.8.0
-BuildRequires:  pkgconfig(QtDeclarative)
-BuildRequires:  pkgconfig(QtGui)
-BuildRequires:  pkgconfig(QtOpenGL)
-BuildRequires:  pkgconfig(libsignon-qt)
-BuildRequires:  pkgconfig(accounts-qt)
+BuildRequires:  pkgconfig(Qt5Core)
+BuildRequires:  pkgconfig(Qt5Qml)
+BuildRequires:  pkgconfig(Qt5Quick)
+BuildRequires:  pkgconfig(Qt5Gui)
+BuildRequires:  pkgconfig(Qt5OpenGL)
+BuildRequires:  pkgconfig(libsignon-qt5)
+BuildRequires:  pkgconfig(accounts-qt5)
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
-
-Requires:  sailfishsilica >= 0.8.33
-Requires:  nemo-qml-plugins-accounts >= 0.2.1
-Requires:  nemo-qml-plugins-signon >= 0.2.1
-Requires:  jolla-signon-ui
-Requires:  libbluez-qt
-Requires:  libjollasignonuiservice
-
-Obsoletes: sailfish-accounts <= 0.0.2
-Provides:  sailfish-accounts > 0.0.2
+BuildRequires:  qt5-qttools-linguist
+BuildRequires:  qt5-qttools
+Requires:  sailfishsilica-qt5 >= 0.8.67
 
 %description
 Sailfish Accounts UI Components
@@ -31,12 +25,20 @@ Sailfish Accounts UI Components
 %package tests
 Summary:    Unit tests for Sailfish Accounts UI Components
 Group:      System/Libraries
-BuildRequires:  pkgconfig(QtTest)
+BuildRequires:  pkgconfig(Qt5Test)
 Requires:   %{name} = %{version}-%{release}
-Requires:   qtest-qml
+Requires:   qt5-qtdeclarative-devel-tools
 
 %description tests
 This package contains QML unit tests for Sailfish Accounts UI Components
+
+%package devel
+Summary:    Development package for Sailfish Accounts
+Group:      System/Libraries
+Requires:   %{name} = %{version}-%{release}
+
+%description devel
+Development package which provides libsailfishaccounts (package config and headers)
 
 %package ts-devel
 Summary:   Translation source for sailfish-components-accounts
@@ -50,28 +52,43 @@ Translation source for sailfish-components-accounts
 %setup -q -n %{name}-%{version}
 
 %build
-
-%qmake
-
+%qmake5
 make %{?jobs:-j%jobs}
 
 %install
 rm -rf %{buildroot}
+%qmake5_install
 
-%qmake_install
-
-#
-# Jolla Components internal files
-#
 %files
 %defattr(-,root,root,-)
-%{_libdir}/qt4/imports/Sailfish/Accounts/*
-%{_datadir}/translations/sailfish_components_accounts_eng_en.qm
+%{_libdir}/libsailfishaccounts.so*
+%{_libdir}/qt5/qml/Sailfish/Accounts/qmldir
+%{_libdir}/qt5/qml/Sailfish/Accounts/libsailfishaccountsplugin.so
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountIcon.qml
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPicker.qml
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDialog.qml
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
+%{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
 
-#
-# Jolla Components internal translation files
-#
+%files tests
+%defattr(-,root,root,-)
+/opt/tests/Sailfish/Accounts/qt5/*
+%{_datadir}/accounts/providers/test-provider.provider
+%{_datadir}/accounts/services/test-service2.service
+%{_datadir}/accounts/services/test-service-oauth.service
+%{_datadir}/accounts/service_types/test-service-type2.service-type
+
+%files devel
+%defattr(-,root,root,-)
+%{_libdir}/pkgconfig/sailfishaccounts.pc
+%{_includedir}/libsailfishaccounts/*
+
 %files ts-devel
 %defattr(-,root,root,-)
-%{_datadir}/translations/source/sailfish_components_accounts.ts
+%{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
 
+%post
+/sbin/ldconfig
+
+%postun
+/sbin/ldconfig

@@ -1,7 +1,0 @@
-import QtQuick 1.1
-import Sailfish.Silica 1.0
-
-Image {
-    height: theme.iconSizeLarge
-    width: theme.iconSizeLarge
-}

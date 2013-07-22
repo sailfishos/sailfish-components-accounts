@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testdefinition version="1.0">
+   <suite name="accounts-tests" domain="mw">
+       <description>Accounts plugin automatic tests</description>
+       <set name="unit-tests" feature="Sailfish.Accounts">
+           <description>Accounts QML plugin automatic tests</description>
+           <case manual="false" name="account">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_account</step>
+           </case>
+           <case manual="false" name="accountmanager">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_accountmanager</step>
+           </case>
+           <case manual="false" name="accountmodel">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_accountmodel</step>
+           </case>
+           <case manual="false" name="provider">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_provider</step>
+           </case>
+           <case manual="false" name="service">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_service</step>
+           </case>
+           <case manual="false" name="servicetype">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_servicetype</step>
+           </case>
+           <case manual="false" name="signinparameters">
+               <step>/opt/tests/Sailfish/Accounts/qt5/tst_signinparameters</step>
+           </case>
+       </set>
+   </suite>
+</testdefinition>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE provider>
+<provider version="1.0" id="test-provider">
+    <name>Provider(test)</name>
+    <description>Test provider file to test accounts plugin</description>
+    <icon>test-icon</icon>
+    <sign-up-link>www.google.com</sign-up-link>
+</provider>

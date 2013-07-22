@@ -1,0 +1,324 @@
+/*
+ * Copyright (C) 2013 Jolla Ltd.
+ * Contact: Chris Adams <chris.adams@jollamobile.com>
+ *
+ * License: Proprietary
+ */
+
+#include "accountmanager.h"
+#include "accountmanager_p.h"
+
+#include "globalaccountmanager_p.h"
+
+#include "provider.h"
+#include "service.h"
+#include "servicetype.h"
+#include "account.h"
+
+#include <QtDebug>
+
+//libaccounts-qt
+#include <Accounts/Manager>
+
+AccountManagerPrivate::AccountManagerPrivate(AccountManager *parent)
+    : QObject(parent), q(parent), manager(globalAccountManager()), componentComplete(false), busy(false)
+{
+    Accounts::ServiceList allServices = manager->serviceList();
+    QSet<QString> serviceTypeNamesSet;
+    for (int i = 0; i < allServices.size(); ++i)
+        serviceTypeNamesSet.insert(allServices.at(i).serviceType());
+    serviceTypeNames = serviceTypeNamesSet.values();
+
+    manager->setTimeout(5000); // default 5 second timeout on database operations
+    connect(manager, SIGNAL(accountCreated(Accounts::AccountId)),
+            this, SLOT(updateEverything()));
+    connect(manager, SIGNAL(accountUpdated(Accounts::AccountId)),
+            this, SLOT(updateEverything()));
+    connect(manager, SIGNAL(accountRemoved(Accounts::AccountId)),
+            this, SLOT(updateEverything()));
+    connect(manager, SIGNAL(enabledEvent(Accounts::AccountId)),
+            this, SLOT(updateEverything()));
+    updateEverything();
+}
+
+AccountManagerPrivate::~AccountManagerPrivate()
+{
+}
+
+void AccountManagerPrivate::updateEverything()
+{
+    // store temp copies of all internal data, for change delta determination.
+    QStringList tmpProviderNames = providerNames;
+    QStringList tmpServiceNames = serviceNames;
+    QList<int> tmpAccountIdentifiers = accountIdentifiers;
+
+    // clear all internal data - except for serviceTypeNames which is static.
+    providerNames.clear();
+    serviceNames.clear();
+    accountIdentifiers.clear();
+
+    // reload all internal data
+    Accounts::AccountIdList filteredAccounts = manager->accountList();
+    for (int i = 0; i < filteredAccounts.size(); ++i) {
+        accountIdentifiers.append(filteredAccounts.at(i));
+    }
+
+    Accounts::ServiceList filteredServices = manager->serviceList();
+    for (int i = 0; i < filteredServices.size(); ++i) {
+        const Accounts::Service &service = filteredServices.at(i);
+        serviceNames.append(service.name());
+        if (!providerNames.contains(service.provider())) {
+            providerNames.append(service.provider());
+        }
+    }
+
+    // calculate change deltas and emit appropriately.
+    QSet<QString> oldPN = QSet<QString>::fromList(tmpProviderNames);
+    QSet<QString> newPN = QSet<QString>::fromList(providerNames);
+    if (!(oldPN == newPN)) {
+        emit q->providerNamesChanged();
+    }
+
+    QSet<QString> oldSN = QSet<QString>::fromList(tmpServiceNames);
+    QSet<QString> newSN = QSet<QString>::fromList(serviceNames);
+    if (!(oldSN == newSN)) {
+        emit q->serviceNamesChanged();
+    }
+
+    QSet<int> oldAI = QSet<int>::fromList(tmpAccountIdentifiers);
+    QSet<int> newAI = QSet<int>::fromList(accountIdentifiers);
+    if (!(oldAI == newAI)) {
+        emit q->accountIdentifiersChanged();
+    }
+}
+
+void AccountManagerPrivate::createAccountSynced()
+{
+    busy = false;
+    Accounts::Account *account = qobject_cast<Accounts::Account*>(sender());
+    if (!account) {
+        return;
+    }
+
+    disconnect(account, 0, this, 0);
+    emit q->accountCreated(account->id(), creatingAccounts.value(account));
+    creatingAccounts.remove(account);
+}
+
+void AccountManagerPrivate::createAccountError(const Accounts::Error &error)
+{
+    busy = false;
+    Accounts::Account *account = qobject_cast<Accounts::Account*>(sender());
+    if (!account) {
+        return;
+    }
+
+    disconnect(account, 0, this, 0);
+    emit q->accountCreationFailed(error.message(), creatingAccounts.value(account));
+    creatingAccounts.remove(account);
+}
+
+//----------------------------------------
+
+/*!
+    \qmltype AccountManager
+    \instantiates AccountManager
+    \inqmlmodule Sailfish.Accounts 1
+    \brief Provides access to providers, services and accounts.
+
+    The AccountManager type is intended for use by privileged applications
+    and account provider plugins.  The functionality it provides is
+    not useful for client applications who wish to use an account to
+    access a service (such clients should use the account model instead).
+
+    The AccountManager provides information about existing providers,
+    services, and accounts.  It also allows new accounts to be created.
+*/    
+
+AccountManager::AccountManager(QObject *parent)
+    : QObject(parent), d(new AccountManagerPrivate(this))
+{
+}
+
+AccountManager::~AccountManager()
+{
+}
+
+void AccountManager::classBegin()
+{
+    d->componentComplete = false;
+}
+
+void AccountManager::componentComplete()
+{
+    d->componentComplete = true;
+}
+
+/*!
+    \qmlproperty QStringList AccountManager::serviceTypeNames
+    Holds the service type names which may be used as filter values.
+
+    The values are derived from examination of the service type of
+    all services which exist in the system accounts database at
+    the point in time when the AccountManager instance was created.
+*/
+
+QStringList AccountManager::serviceTypeNames() const
+{
+    return d->serviceTypeNames;
+}
+
+/*!
+    \qmlproperty QStringList AccountManager::providerNames
+    Holds the names of all providers which exist in the system
+    accounts database, which match the service type filter.
+*/
+
+QStringList AccountManager::providerNames() const
+{
+    return d->providerNames;
+}
+
+/*!
+    \qmlproperty QStringList AccountManager::serviceNames
+    Holds the names of all services which exist in the system
+    accounts database, which match the service type filter.
+*/
+
+QStringList AccountManager::serviceNames() const
+{
+    return d->serviceNames;
+}
+
+/*!
+    \qmlproperty QList<int> AccountManager::accountIdentifiers
+    Holds the identifiers of all accounts which exist in the
+    system accounts database.
+*/
+
+QList<int> AccountManager::accountIdentifiers() const
+{
+    return d->accountIdentifiers;
+}
+
+/*!
+    \qmlmethod QList<int> AccountManager::providerAccountIdentifiers(const QString &providerName)
+
+    Returns the list of ids of accounts provided by the provider with the
+    given \a providerName (or all providers, if the given \a providerName
+    is empty).
+*/
+QList<int> AccountManager::providerAccountIdentifiers(const QString &providerName)
+{
+    QList<int> returnList;
+    QList<quint32> accountIdList = d->manager->accountList();
+    foreach (quint32 id, accountIdList) {
+        Accounts::Account *acc = d->manager->account(id);
+        if (acc != NULL) {
+            if (providerName.isEmpty() || acc->providerName() == providerName) {
+                returnList.append(static_cast<int>(id));
+            }
+            acc->deleteLater();
+        }
+    }
+
+    return returnList;
+}
+
+/*!
+    \qmlmethod bool AccountManager::createAccount(const QString &providerName)
+
+    Creates a new, disabled Account with the provider identified by the given
+    \a providerName and stores it to the database.  The operation is
+    asynchronous and on success, the \l accountCreated() signal will be
+    emitted.  On failure, the \l accountCreationFailed() signal will be
+    emitted.
+
+    Returns true if the account creation process is triggered, or false if
+    the manager is currently busy creating another account.
+*/
+bool AccountManager::createAccount(const QString &providerName)
+{
+    if (!d->busy) {
+        d->busy = true;
+        Accounts::Account *newAccount = d->manager->createAccount(providerName);
+        if (!newAccount) {
+            emit accountCreationFailed(qtTrId("sailfish_accounts-accountmanager-er_invalid_provider"), providerName);
+            return true; // succeeded trigger, but failed to create the account.
+        }
+
+        d->creatingAccounts.insert(newAccount, providerName);
+        connect(newAccount, SIGNAL(synced()), d, SLOT(createAccountSynced()));
+        connect(newAccount, SIGNAL(error(Accounts::Error)), d, SLOT(createAccountError(Accounts::Error)));
+        newAccount->setEnabled(false);
+        newAccount->sync();
+        return true;
+    }
+
+    return false;
+}
+
+/*!
+    \qmlmethod ServiceType* AccountManager::serviceType(const QString &serviceTypeName)
+    Returns the service type identified by the given \a serviceTypeName.
+    The AccountManager owns the returned instance and will delete it on destruction.
+*/
+ServiceType *AccountManager::serviceType(const QString &serviceTypeName) const
+{
+    AccountManager *parentPtr = const_cast<AccountManager*>(this);
+    Accounts::ServiceType st = d->manager->serviceType(serviceTypeName);
+    ServiceType *stw = new ServiceType(st, parentPtr);
+    return stw;
+}
+
+/*!
+    Returns the service identified by the given \a serviceName.
+    The AccountManager has ownership of the Service adapter, and will
+    delete it automatically on destruction.
+*/
+Service *AccountManager::service(const QString &serviceName) const
+{
+    AccountManager *parentPtr = const_cast<AccountManager*>(this);
+    Accounts::Service srv = d->manager->service(serviceName);
+    Service *newSI = new Service(srv, parentPtr);
+    return newSI;
+}
+
+/*!
+    \qmlmethod Provider* AccountManager::provider(const QString &providerName)
+    Returns the provider identified by the given \a providerName.
+    The AccountManager has ownership of the Provider adapter, and will
+    delete it automatically on destruction.
+*/
+Provider *AccountManager::provider(const QString &providerName) const
+{
+    AccountManager *parentPtr = const_cast<AccountManager*>(this);
+    Accounts::Provider prv = d->manager->provider(providerName);
+    Provider *newPI = new Provider(prv, parentPtr);
+    return newPI;
+}
+
+/*!
+    \qmlmethod Account* AccountManager::account(int accountId)
+
+    Returns the account identified by the given \a accountIdentifier.
+    The AccountManager has ownership of the Account adapter, and will
+    delete it automatically on destruction.
+
+    Returns null if no such account exists.
+*/    
+Account *AccountManager::account(int accountIdentifier) const
+{
+    Accounts::Account *existingAccount = d->manager->account(accountIdentifier);
+    if (!existingAccount) {
+        return NULL;
+    }
+
+    AccountManager *parentPtr = const_cast<AccountManager*>(this);
+    Account *newAcc = new Account(true, existingAccount, parentPtr);
+    newAcc->classBegin();
+    newAcc->setIdentifier(accountIdentifier);
+    newAcc->componentComplete();
+    return newAcc;
+}
+
