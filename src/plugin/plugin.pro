@@ -15,6 +15,7 @@ SOURCES += $$PWD/plugin.cpp
 OTHER_FILES += \
         $$PWD/qmldir \
         $$PWD/AccountIcon.qml \
+        $$PWD/AccountProviderPicker.qml \
         $$PWD/AccountProviderPickerDialog.qml \
         $$PWD/AccountsListView.qml
 
@@ -42,7 +43,7 @@ engineering_english_install.path = /usr/share/translations
 engineering_english_install.files = $$EE_QM
 engineering_english_install.CONFIG += no_check_exist
 
-import.files = $$PWD/qmldir $$PWD/AccountIcon.qml $$PWD/AccountProviderPickerDialog.qml $$PWD/AccountsListView.qml
+import.files = $$PWD/qmldir $$PWD/AccountIcon.qml $$PWD/AccountProviderPicker.qml $$PWD/AccountProviderPickerDialog.qml $$PWD/AccountsListView.qml
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 
