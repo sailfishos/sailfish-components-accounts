@@ -1,5 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS = src tests src/plugin
-src/plugin.depends = src
-
+SUBDIRS = src tests
 OTHER_FILES += rpm/*.spec

@@ -1,7 +1,7 @@
 Name:       sailfish-components-accounts-qt5
 
 Summary:    Sailfish Accounts Components
-Version:    0.0.25
+Version:    0.0.30
 Release:    1
 Group:      System/Libraries
 License:    TBD
@@ -65,6 +65,7 @@ rm -rf %{buildroot}
 %{_libdir}/qt5/qml/Sailfish/Accounts/qmldir
 %{_libdir}/qt5/qml/Sailfish/Accounts/libsailfishaccountsplugin.so
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountIcon.qml
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPicker.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDialog.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
 %{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
