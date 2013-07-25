@@ -1212,12 +1212,16 @@ bool Account::isEnabledWithService(const QString &serviceName)
     or the status of the account is either Invalid or SyncInProgress, the operation
     will silently fail.
 
-    Note: after enabling the account with a service, you must call \c sync() in
-    order to write the change to the database.
+    Note: After calling this, isEnabledWithService() will report the service as enabled, but
+    this change will not take effect in the database until sync() is called.
 */
 void Account::enableWithService(const QString &serviceName)
 {
     if (d->status == Account::Invalid || d->status == Account::SyncInProgress) {
+        return;
+    }
+
+    if (d->serviceEnabledChanges.value(serviceName)) {
         return;
     }
 
@@ -1251,12 +1255,17 @@ void Account::enableWithService(const QString &serviceName)
     or the status of the account is either Invalid or SyncInProgress, the operation
     will silently fail.
 
-    Note: this method will have no effect until sync() is called!
+    Note: After calling this, isEnabledWithService() will report the service as disabled, but
+    this change will not take effect in the database until sync() is called.
 */
 void Account::disableWithService(const QString &serviceName)
 {
     if (d->status == Account::Invalid || d->status == Account::SyncInProgress)
         return;
+
+    if (d->serviceEnabledChanges.contains(serviceName) && !d->serviceEnabledChanges[serviceName]) {
+        return;
+    }
 
     if (d->supportedServiceNames.contains(serviceName)) {
         Accounts::Service srv = d->manager->service(serviceName);
@@ -1806,6 +1815,9 @@ void Account::signOut(const QString &applicationName,
     The account should be enabled if the details specified for it are valid.
     An account may need valid credentials associated with it before it can be
     enabled.
+
+    Note: After changing this property, the changed will be reflected in the property value but
+    will not actually take effect in the database until sync() is called.
 */
 
 bool Account::enabled() const
