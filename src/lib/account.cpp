@@ -222,6 +222,9 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
         }
     }
 
+    // clear the list of service enabled state changes
+    serviceEnabledChanges.clear();
+
     if (queryInfo) {
         // first time read from db.  we should be in Initializing state to begin with.
         // QueuedConnection to ensure that clients have a chance to connect to state changed signals.
@@ -957,12 +960,11 @@ void Account::sync()
 
             // first, configuration values:
             QVariantMap setSrvValues = d->serviceConfigurationValues.value(srvn);
-            QStringList setSrvKeys = setSrvValues.keys();
             QStringList srvKeys = d->account->allKeys();
             QStringList doneSrvKeys;
             foreach (const QString &key, srvKeys) {
                 // overwrite existing keys
-                if (setSrvKeys.contains(key)) {
+                if (setSrvValues.contains(key)) {
                     doneSrvKeys.append(key);
                     const QVariant &currValue = setSrvValues.value(key);
                     if (currValue.isValid()) {
@@ -975,12 +977,18 @@ void Account::sync()
                     d->account->remove(key);
                 }
             }
-            foreach (const QString &key, setSrvKeys) {
+            foreach (const QString &key, setSrvValues.keys()) {
                 // add new keys
                 if (!doneSrvKeys.contains(key)) {
                     const QVariant &currValue = setSrvValues.value(key);
                     d->account->setValue(key, currValue);
                 }
+            }
+
+            // If the saved enabled state was stored in the config values and thus updated above
+            // then we need to overwrite it here with the updated enabled state.
+            if (d->serviceEnabledChanges.contains(srvn)) {
+                d->account->setEnabled(d->serviceEnabledChanges[srvn]);
             }
         }
     }
@@ -1175,8 +1183,14 @@ void Account::removeConfigurationValue(const QString &serviceName, const QString
 */
 bool Account::isEnabledWithService(const QString &serviceName)
 {
+    // Return the (non-saved) enabled state if it was changed but we haven't synced yet.
+    if (d->serviceEnabledChanges.contains(serviceName)) {
+        return d->serviceEnabledChanges[serviceName];
+    }
+
     bool retn = false;
 
+    // Return the saved enabled state.
     if (d->supportedServiceNames.contains(serviceName)) {
         Accounts::Service srv = d->manager->service(serviceName);
         if (srv.isValid()) {
@@ -1210,6 +1224,7 @@ void Account::enableWithService(const QString &serviceName)
     if (d->supportedServiceNames.contains(serviceName)) {
         Accounts::Service srv = d->manager->service(serviceName);
         if (srv.isValid()) {
+            d->serviceEnabledChanges[serviceName] = true;
             d->account->selectService(srv);
             if (!d->account->enabled()) {
                 d->account->setEnabled(true);
@@ -1246,6 +1261,7 @@ void Account::disableWithService(const QString &serviceName)
     if (d->supportedServiceNames.contains(serviceName)) {
         Accounts::Service srv = d->manager->service(serviceName);
         if (srv.isValid()) {
+            d->serviceEnabledChanges[serviceName] = false;
             d->account->selectService(srv);
             if (d->account->enabled()) {
                 d->account->setEnabled(false);
@@ -1803,8 +1819,11 @@ void Account::setEnabled(bool e)
 {
     if (d->status == Account::Invalid || d->status == Account::SyncInProgress)
         return;
+    if (e == d->enabled)
+        return;
 
     d->enabled = e;
+
     if (d->status == Account::Initializing) {
         d->enabledPendingInit = true;
     } else {

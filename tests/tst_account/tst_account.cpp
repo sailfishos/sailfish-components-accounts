@@ -324,6 +324,31 @@ void tst_Account::enableDisableWithService()
     // ensure that the account really has been disabled as we expect.
     QVERIFY(!a->enabledServices().contains(m.service(QLatin1String("test-service2"))));
 
+    // Modify the service enabled service on an existing account rather than a new one.
+    QScopedPointer<Account> existingAccount(new Account);
+    existingAccount->classBegin();
+    existingAccount->setIdentifier(newA->id());
+    existingAccount->componentComplete();
+    QTRY_COMPARE(existingAccount->status(), Account::Initialized);
+
+    existingAccount->enableWithService(QLatin1String("test-service2"));
+    QCOMPARE(existingAccount->status(), Account::Modified);
+    QCOMPARE(existingAccount->isEnabledWithService(QLatin1String("test-service2")), true);
+    existingAccount->sync();
+    QTRY_COMPARE(existingAccount->status(), Account::Synced);
+    QCOMPARE(existingAccount->isEnabledWithService(QLatin1String("test-service2")), true);
+    // verify the service really was enabled
+    QVERIFY(a->enabledServices().contains(m.service(QLatin1String("test-service2"))));
+
+    // turn off service and test again
+    existingAccount->disableWithService(QLatin1String("test-service2"));
+    QCOMPARE(existingAccount->status(), Account::Modified);
+    existingAccount->sync();
+    QTRY_COMPARE(existingAccount->status(), Account::Synced);
+    QCOMPARE(existingAccount->isEnabledWithService(QLatin1String("test-service2")), false);
+    // verify the service really was disabled
+    QVERIFY(!a->enabledServices().contains(m.service(QLatin1String("test-service2"))));
+
     // cleanup
     account->remove();
 }
