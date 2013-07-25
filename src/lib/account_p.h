@@ -73,7 +73,7 @@ public:
     QVariantMap configurationValues;
     QMap<QString, QVariantMap> serviceConfigurationValues;
     QStringList supportedServiceNames;
-    QStringList enabledServiceNames;
+    QMap<QString, bool> serviceEnabledChanges;
     bool identifierPendingInit;
     bool enabledPendingInit;
     bool displayNamePendingInit;
