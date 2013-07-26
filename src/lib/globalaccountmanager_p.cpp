@@ -6,14 +6,15 @@
  */
 
 #include "globalaccountmanager_p.h"
+#include <QThreadStorage>
 
-static Accounts::Manager *g_accountManager = NULL;
-
+QThreadStorage<Accounts::Manager *> g_accountManagers;
 Accounts::Manager *globalAccountManager()
 {
-    if (g_accountManager == NULL) {
-        g_accountManager = new Accounts::Manager;
+    if (!g_accountManagers.hasLocalData()) {
+        g_accountManagers.setLocalData(new Accounts::Manager);
     }
-    return g_accountManager;
+
+    return g_accountManagers.localData();
 }
 
