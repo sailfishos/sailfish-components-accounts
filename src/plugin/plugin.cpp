@@ -56,9 +56,6 @@ public:
         Q_UNUSED(uri)
         Q_ASSERT(QLatin1String(uri) == QLatin1String("Sailfish.Accounts"));
 
-        // initialize the global account manager
-        globalAccountManager()->setParent(engine);
-
         AppTranslator *engineeringEnglish = new AppTranslator(engine);
         AppTranslator *translator = new AppTranslator(engine);
         engineeringEnglish->load("sailfish_components_accounts_qt5_eng_en", "/usr/share/translations");
