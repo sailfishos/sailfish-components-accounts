@@ -8,6 +8,7 @@ Dialog {
     property int providerCount: view.count
 
     property int _selectionCount
+    property alias _viewHeader: view.header
 
     signal providerSelected(int index, string providerName)
     signal providerDeselected(int index, string providerName)
