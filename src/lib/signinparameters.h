@@ -14,6 +14,8 @@
 #include <QStringList>
 #include <QVariant>
 
+#include <SignOn/SessionData>
+
 class Account;
 class Q_DECL_EXPORT SignInParameters : public QObject
 {
@@ -24,6 +26,16 @@ class Q_DECL_EXPORT SignInParameters : public QObject
     Q_PROPERTY(QVariantMap parameters READ parameters NOTIFY parametersChanged)
     Q_PROPERTY(QString username READ username CONSTANT)
     Q_PROPERTY(QString password READ password CONSTANT)
+
+    Q_ENUMS(UiPolicy)
+
+public:
+    enum UiPolicy {
+        DefaultPolicy           = SignOn::DefaultPolicy,
+        RequestPasswordPolicy   = SignOn::RequestPasswordPolicy,
+        NoUserInteractionPolicy = SignOn::NoUserInteractionPolicy,
+        ValidationPolicy        = SignOn::ValidationPolicy
+    };
 
 public:
     ~SignInParameters();
