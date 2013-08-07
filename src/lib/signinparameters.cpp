@@ -263,6 +263,28 @@ QString SignInParameters::password() const
     Generally speaking most of these parameters should be provided by the
     service automatically.  Some, like the \c ClientId or \c ConsumerKey
     parameters MUST be provided by applications performing sign-in.
+
+    Additionally, the "UiPolicy" parameter is applicable for all services,
+    and valid values are defined by the \c UiPolicy enumeration, which
+    are as follows:
+    
+    \list
+    \li DefaultPolicy - UI may be shown to the user if no cached credentials exist
+    \li RequestPasswordPolicy - UI will be shown to the user even if cached credentials exist
+    \li NoUserInteractionPolicy - UI will not be shown to the user even if no cached credentials exist.  The sign in operation will fail unless cached credentials exist.
+    \li ValidationPolicy - UI will only be shown to the user if validation (eg, CAPTCHA) is requested by the service
+    \endlist
+    
+    In general, the \c DefaultPolicy should suffice for most use-cases, except
+    for sync use-cases (where \c NoUserInteractionPolicy) should generally be
+    defined.  For example:
+
+    \qml
+    var params = account.signInParameters("facebook-sync")
+    params.setParameter("ClientId", "123456789abcdef")
+    params.setParameter("UiPolicy", SignInParameters.NoUserInteractionPolicy)
+    // application can now sign in to Facebook with these parameters
+    \endqml
 */
 
 void SignInParameters::setParameter(const QString &parameterName, const QVariant &parameterValue)
