@@ -30,6 +30,9 @@
 #define CREDENTIALS_GROUP QLatin1String("segregated_credentials")
 #define BUILD_CREDENTIALS_CONFIGURATION_KEY(appName, credName) QString(QLatin1String("%1/%2/%3")).arg(appName).arg(CREDENTIALS_GROUP).arg(credName)
 
+// Copied from libaccounts-qt account.h
+#define ACCOUNTS_KEY_CREDENTIALS_ID QLatin1String("CredentialsId")
+
 /*
     High-level description:
 
@@ -941,7 +944,11 @@ void Account::sync()
             }
         } else {
             // remove removed keys
-            d->account->remove(key);
+            // The CredentialsId key may have been added by Accounts::Account internally due to a
+            // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
+            if (key != ACCOUNTS_KEY_CREDENTIALS_ID) {
+                d->account->remove(key);
+            }
         }
     }
     foreach (const QString &key, setKeys) {
@@ -974,7 +981,11 @@ void Account::sync()
                     }
                 } else {
                     // remove removed keys
-                    d->account->remove(key);
+                    // The CredentialsId key may have been added by Accounts::Account internally due to a
+                    // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
+                    if (key != ACCOUNTS_KEY_CREDENTIALS_ID) {
+                        d->account->remove(key);
+                    }
                 }
             }
             foreach (const QString &key, setSrvValues.keys()) {
