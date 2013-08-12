@@ -23,6 +23,7 @@
 
 struct SignInCredentials {
     bool creatingSignInCredentials;
+    bool updatingSignInCredentials;
     bool signingInWithCredentials;
     bool storingEncryptedTokens;
 
@@ -100,6 +101,7 @@ public Q_SLOTS:
 
     // for credentials creation / sign-in
     void handleCredentialsStored(quint32);
+    void handleCredentialsInfo(const SignOn::IdentityInfo &info);
     void handleCredentialsFailed(const SignOn::Error &err);
     void handleResponse(const SignOn::SessionData &data);
     void handleSignOnError(const SignOn::Error &err);

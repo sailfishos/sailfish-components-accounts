@@ -107,6 +107,10 @@ public:
                                              const QString &credentialsName,
                                              SignInParameters *parameters,
                                              const QString &symmetricKey = QString());
+    Q_INVOKABLE void updateSignInCredentials(const QString &applicationName,
+                                             const QString &credentialsName,
+                                             SignInParameters *parameters,
+                                             const QString &symmetricKey = QString());
     Q_INVOKABLE void removeSignInCredentials(const QString &applicationName,
                                              const QString &credentialsName);
     Q_INVOKABLE void signIn(const QString &applicationName,
@@ -141,6 +145,7 @@ Q_SIGNALS:
     void errorMessageChanged();
 
     void signInCredentialsCreated(const QVariantMap &data);
+    void signInCredentialsUpdated(const QVariantMap &data);
     void signInResponse(const QVariantMap &data);
     void signInError(const QString &message);
 

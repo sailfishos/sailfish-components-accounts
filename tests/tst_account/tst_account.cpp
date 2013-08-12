@@ -665,9 +665,11 @@ void tst_Account::credentialsFunctions()
 
     // set up our spies.
     QSignalSpy siccSpy(account.data(), SIGNAL(signInCredentialsCreated(QVariantMap)));
+    QSignalSpy sicuSpy(account.data(), SIGNAL(signInCredentialsUpdated(QVariantMap)));
     QSignalSpy sirSpy(account.data(), SIGNAL(signInResponse(QVariantMap)));
     QSignalSpy sieSpy(account.data(), SIGNAL(signInError(QString)));
     int siccCount = siccSpy.count();
+    int sicuCount = sicuSpy.count();
     int sirCount = sirSpy.count();
     int sieCount = sieSpy.count();
 
@@ -839,15 +841,41 @@ void tst_Account::credentialsFunctions()
     authSession->process(QVariantMap(), "password");
     QTRY_VERIFY(sessionSpy.count());
     SignOn::SessionData authSessionResponse = sessionSpy.takeFirst().at(0).value<SignOn::SessionData>();
-    QVariantMap responseDataFive;
+    QVariantMap responseDataFourOOB;
     foreach (const QString &propName, authSessionResponse.propertyNames()) {
-        responseDataFive.insert(propName, authSessionResponse.getProperty(propName));
+        responseDataFourOOB.insert(propName, authSessionResponse.getProperty(propName));
     }
     // should have the same response data as the previous (responseDataFour) sign in request.
-    QCOMPARE(responseDataFour.value("UserName").toString(), QString(QLatin1String("userFour")));
-    QCOMPARE(responseDataFour.value("Secret").toString(), QString(QLatin1String("passFour")));
+    QCOMPARE(responseDataFourOOB.value("UserName").toString(), QString(QLatin1String("userFour")));
+    QCOMPARE(responseDataFourOOB.value("Secret").toString(), QString(QLatin1String("passFour")));
     normalIdentity->destroySession(authSession);
     normalIdentity->deleteLater();
+
+    // update the credentials
+    SignInParameters *sip5 = account->signInParameters("test-service2", "userFive", "passFive");
+    account->updateSignInCredentials("testFour", "testFour", sip5); // updating the old (testFour) credentials.
+    QCOMPARE(account->status(), Account::SigningIn);
+
+    // ensure returned username/pass matches expectation
+    QTRY_COMPARE(sicuSpy.count(), sicuCount+1);
+    sicuCount = sicuSpy.count();
+    QVariantMap responseDataFive = sicuSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseDataFive.value("UserName").toString(), QString(QLatin1String("userFive")));
+    QCOMPARE(responseDataFive.value("Secret").toString(), QString(QLatin1String("passFive")));
+
+    // test the error conditions of updateSignInCredentials()
+    sieCount = sieSpy.count();
+    account->updateSignInCredentials("testFour", "textFour", NULL); // error, no valid params given
+    QTRY_COMPARE(sieSpy.count(), sieCount+1);
+    sieCount = sieSpy.count();
+    SignInParameters *noUserSip = account->signInParameters("test-service2", "", "passSix");
+    account->updateSignInCredentials("testFour", "textFour", noUserSip); // error, no valid user given
+    QTRY_COMPARE(sieSpy.count(), sieCount+1);
+    sieCount = sieSpy.count();
+    SignInParameters *validSip = account->signInParameters("test-service2", "userSix", "passSix");
+    account->updateSignInCredentials("testSix", "testSix", validSip); // error, those creds don't exist
+    QTRY_COMPARE(sieSpy.count(), sieCount+1);
+    sieCount = sieSpy.count();
 
     // remove credentials
     account->removeSignInCredentials("testFour", "testFour");
