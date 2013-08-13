@@ -1,0 +1,44 @@
+include(compat.qdocconf)
+include(macros.qdocconf)
+include(qt-cpp-ignore.qdocconf)
+include(qt-defines.qdocconf)
+
+indexes         = ../../doc/src/qt.index
+
+language        = Cpp
+
+sourceencoding  = UTF-8
+outputencoding  = UTF-8
+naturallanguage = en_US
+
+project         = Sailfish Accounts
+description     = Sailfish Accounts Library Reference Documentation
+versionsym      =
+version         = 1.0
+url             = 
+
+sources.fileextensions = "*.cpp *.qdoc *.mm *.qml"
+headers.fileextensions  = "*.ch *.h *.h++ *.hh *.hpp *.hxx"
+examples.fileextensions = "*.cpp *.h *.js *.xq *.svg *.xml *.ui *.qhp *.qhcp *.qml"
+examples.imageextensions = "*.png *.jpeg *.jpg *.gif *.mng"
+
+sourcedirs = ../../src/lib ../../doc/src
+imagedirs = images
+outputdir = ../../doc/html
+tagfile = ../../doc/html/sailfishaccounts.tags
+base = file:../../doc/html
+
+outputprefixes = QML
+outputprefixes.QML = qml-sailfishaccounts-
+
+qhp.projects = SailfishAccounts
+
+qhp.SailfishAccounts.file               = sailfishaccounts.qhp
+qhp.SailfishAccounts.namespace          = Sailfish.Accounts.100
+qhp.SailfishAccounts.virtualFolder      = sailfishaccounts
+qhp.SailfishAccounts.indexTitle         = Sailfish Accounts Reference Documentation
+qhp.SailfishAccounts.indexRoot          =
+
+qhp.SailfishAccounts.filterAttributes   = sailfishaccounts 1.0.0
+qhp.SailfishAccounts.customFilters.SailfishAccounts.name = Sailfish Accounts 1.0.0
+qhp.SailfishAccounts.customFilters.SailfishAccounts.filterAttributes = sailfishaccounts 1.0.0

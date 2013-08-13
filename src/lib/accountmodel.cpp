@@ -81,18 +81,19 @@ public:
 /*!
     \qmltype AccountModel
     \instantiates AccountModel
+    \inherits QAbstractListModel
     \inqmlmodule Sailfish.Accounts 1
     \brief Provides a model of existing accounts
 
     The AccountModel can be used to provide account data to a view.
-    For each account in the database, it exposes:
+    For each account in the database, it exposes the following roles:
     \list
-    \li accountId
-    \li accountDisplayName
-    \li accountIcon
-    \li providerName
-    \li providerDisplayName
-    \li accountEnabled
+    \li \c accountId
+    \li \c accountDisplayName
+    \li \c accountIcon
+    \li \c providerName
+    \li \c providerDisplayName
+    \li \c accountEnabled
     \endlist
 */
 

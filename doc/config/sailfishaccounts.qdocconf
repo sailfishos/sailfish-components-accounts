@@ -1,0 +1,2 @@
+include(sailfishaccounts-project.qdocconf)
+include(qt-html-templates.qdocconf)

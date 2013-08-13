@@ -14,7 +14,8 @@
     \brief Reports information about a particular service type
 
     This type provides information about a particular service type
-    of a service provided by a provider.
+    of a service provided by a provider.  For example, "IM" type
+    services provide instant messaging capabilities.
 */
 
 ServiceType::ServiceType(const Accounts::ServiceType &serviceType, QObject *parent)
@@ -27,8 +28,8 @@ ServiceType::~ServiceType()
 }
 
 /*!
-    \qmlproperty string Service::name
-    This property holds the name of the service
+    \qmlproperty string ServiceType::name
+    This property holds the name of the service type
 */
 
 QString ServiceType::name() const
@@ -37,8 +38,8 @@ QString ServiceType::name() const
 }
 
 /*!
-    \qmlproperty string Service::displayName
-    This property holds the display name of the service.
+    \qmlproperty string ServiceType::displayName
+    This property holds the display name of the service type.
     This display name can be displayed in lists or
     dialogues in the UI of applications.
 */
@@ -49,8 +50,8 @@ QString ServiceType::displayName() const
 }
 
 /*!
-    \qmlproperty string Service::iconName
-    This property holds the name of the icon associated with the service
+    \qmlproperty string ServiceType::iconName
+    This property holds the name of the icon associated with the service type, if it exists
 */
 
 QString ServiceType::iconName() const
@@ -59,8 +60,8 @@ QString ServiceType::iconName() const
 }
 
 /*!
-    \qmlproperty QStringList Service::tags
-    This property holds the tags which have been associated with the service.
+    \qmlproperty QStringList ServiceType::tags
+    This property holds the tags which have been associated with the service type.
 */
 
 QStringList ServiceType::tags() const
