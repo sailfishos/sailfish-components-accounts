@@ -1,0 +1,81 @@
+/****************************************************************************************
+**
+** Copyright (C) 2013 Jolla Ltd.
+** Contact: Chris Adams <chris.adams@jollamobile.com>
+** All rights reserved.
+**
+** This file is part of Sailfish Accounts component package.
+**
+** You may use this file under the terms of BSD license as follows:
+**
+** Redistribution and use in source and binary forms, with or without
+** modification, are permitted provided that the following conditions are met:
+**     * Redistributions of source code must retain the above copyright
+**       notice, this list of conditions and the following disclaimer.
+**     * Redistributions in binary form must reproduce the above copyright
+**       notice, this list of conditions and the following disclaimer in the
+**       documentation and/or other materials provided with the distribution.
+**     * Neither the name of the Jolla Ltd nor the
+**       names of its contributors may be used to endorse or promote products
+**       derived from this software without specific prior written permission.
+**
+** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+** ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+** WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+** DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+** ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+** (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+** LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+** ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+** SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**
+****************************************************************************************/
+
+/*!
+\contentspage {Sailfish Accounts Contents}
+\page index.html
+
+\title Accessing online accounts with Sailfish Accounts
+
+The Sailfish SDK includes Sailfish Accounts, a QML module for accessing accounts and
+performing single-sign-on with accounts which the user adds via the system settings
+application.
+
+The Sailfish Accounts module is built on top of the Accounts&SSO framework described
+in detail at \l{https://docs.accounts-sso.googlecode.com/git/libaccounts-qt/html/index.html}.
+It provides some functionality which is not provided by the underlying library and also
+provides a more QML friendly API.
+
+\section1 Using Sailfish Accounts
+
+To use Sailfish Accounts, you must import the module as follows:
+\qml
+import Sailfish.Accounts 1.0
+\endqml
+
+This will allow your application to use the types provided by Sailfish Accounts, including:
+\list
+\li \l{Account}
+\li \l{SignInParameters}
+\li \l{AccountModel}
+\li \l{Service}
+\li \l{ServiceType}
+\li \l{Provider}
+\li \l{ProviderModel}
+\li \l{AccountManager}
+\endlist
+
+Please see the documentation of each of the types above for in-depth information on
+how to create application-specific credentials associated with an account and sign
+in to the online service using those credentials.
+
+The Sailfish Accounts module also provides some UI elements which allow accounts
+to be selected for further use:
+\list
+\li \l{AccountProviderPicker}
+\li \l{AccountProviderPickerDialog}
+\li \l{AccountsListView}
+\endlist
+
+*/

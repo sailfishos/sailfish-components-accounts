@@ -41,6 +41,24 @@ static QString retrieveDescription(const Accounts::Provider &provider)
     }
 }
 
+
+/*!
+    \qmltype ProviderModel
+    \instantiates ProviderModel
+    \inherits QAbstractListModel
+    \inqmlmodule Sailfish.Accounts 1
+    \brief Provides a model of existing account providers
+
+    The ProviderModel can be used to provide account provider data to a view.
+    For each account provider in the database, it exposes the following roles:
+    \list
+    \li \c providerName
+    \li \c providerDisplayName
+    \li \c providerDescription
+    \li \c providerIcon
+    \endlist
+*/
+
 ProviderModel::ProviderModel(QObject* parent)
     : QAbstractListModel(parent)
     , d_ptr(new ProviderModelPrivate)

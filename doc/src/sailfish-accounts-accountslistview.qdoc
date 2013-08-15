@@ -1,0 +1,96 @@
+/****************************************************************************************
+**
+** Copyright (C) 2013 Jolla Ltd.
+** Contact: Chris Adams <chris.adams@jollamobile.com>
+** All rights reserved.
+**
+** This file is part of Sailfish Accounts component package.
+**
+** You may use this file under the terms of BSD license as follows:
+**
+** Redistribution and use in source and binary forms, with or without
+** modification, are permitted provided that the following conditions are met:
+**     * Redistributions of source code must retain the above copyright
+**       notice, this list of conditions and the following disclaimer.
+**     * Redistributions in binary form must reproduce the above copyright
+**       notice, this list of conditions and the following disclaimer in the
+**       documentation and/or other materials provided with the distribution.
+**     * Neither the name of the Jolla Ltd nor the
+**       names of its contributors may be used to endorse or promote products
+**       derived from this software without specific prior written permission.
+**
+** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+** ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+** WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+** DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+** ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+** (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+** LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+** ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+** SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**
+****************************************************************************************/
+
+/*!
+    \qmltype AccountsListView
+    \inherits ListView
+    \ingroup sailfish-accounts
+
+    \brief A list of selectable accounts
+
+    The AccountsListView type provides a UI element which allows selection
+    of an account for use.
+*/
+
+/*!
+    \qmlproperty AccountModel::FilterType AccountsListView::filterType
+
+    Enables filtering of the accounts presented by the model according to
+    the value of the property of the account associated with the
+    given filter type.
+
+    Valid filter types are:
+    \list
+    \li \c{AccountModel.NoFilter}
+    \li \c{AccountModel.ProviderFilter}
+    \li \c{AccountModel.ServiceFilter}
+    \li \c{AccountModel.ServiceTypeFilter}
+    \endlist
+
+    \sa filter
+*/
+
+/*!
+    \qmlproperty string AccountsListView::filter
+
+    If the filter value is set, the model will only
+    present those accounts whose property associated
+    with the \c filterType matches the given filter
+    value.
+
+    For example, if \c filterType is set to
+    \c{AccountModel.ProviderFilter} and \c filter is
+    set to \c{"facebook"} then only accounts provided
+    by the \c{"facebook"} provider will be presented
+    in the model.
+
+    \sa filterType
+*/
+
+/*!
+    \qmlproperty bool AccountsListView::allowAccountDeletion
+
+    If this property is set to true, users may delete an account
+    by selecting the "Remove Account" option in the long-press
+    context menu for an account.
+*/
+
+/*!
+    \qmlsignal AccountsListView::accountClicked(int accountId, string providerName)
+
+    This signal is emitted by the list view when the user
+    clicks an account.  The \a accountId is the id of the
+    account clicked by the user, and the \a providerName
+    is the name of the provider which provides that account.
+*/

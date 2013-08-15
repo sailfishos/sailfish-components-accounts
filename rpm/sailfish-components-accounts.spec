@@ -48,16 +48,31 @@ Group:     System/Libraries
 %description ts-devel
 Translation source for sailfish-components-accounts
 
+%package doc
+Summary: Documentation for %{name}
+Group: Documentation
+BuildRequires: qt5-qttools-qthelp-devel
+BuildRequires: qt5-tools
+BuildRequires: qt5-plugin-platform-minimal
+BuildRequires: qt5-plugin-sqldriver-sqlite
+
+%description doc
+%{summary}.
+
+
 %prep
 %setup -q -n %{name}-%{version}
 
 %build
 %qmake5
 make %{?jobs:-j%jobs}
+make docs
 
 %install
 rm -rf %{buildroot}
 %qmake5_install
+mkdir -p %{buildroot}/%{_docdir}/%{name}
+cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 
 %files
 %defattr(-,root,root,-)
@@ -87,6 +102,10 @@ rm -rf %{buildroot}
 %files ts-devel
 %defattr(-,root,root,-)
 %{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
+
+%files doc
+%defattr(-,root,root,-)
+%{_docdir}/%{name}
 
 %post
 /sbin/ldconfig
