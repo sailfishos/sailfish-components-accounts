@@ -8,6 +8,9 @@ SilicaListView {
     signal providerSelected(int index, string providerName)
     signal providerDeselected(int index, string providerName)
 
+    property AccountManager _accountManager: AccountManager {}
+    property bool _hasExistingJollaAccount
+
     function _providerClicked(index, providerName) {
         if (selectionModel.get(index).providerName === "") {
             selectionModel.setProperty(index, "providerName", providerName)
@@ -32,6 +35,9 @@ SilicaListView {
         width: ListView.view.width
         highlighted: down || (model.index < selectionModel.count && selectionModel.get(model.index).providerName !== "")
 
+        // don't offer the chance to create multiple jolla accounts through the UI
+        visible: model.providerName !== "jolla" || !root._hasExistingJollaAccount
+
         onClicked: {
             root._providerClicked(model.index, model.providerName)
         }
@@ -51,10 +57,23 @@ SilicaListView {
         }
     }
 
+    Connections {
+        target: root._accountManager
+        onAccountCreated: {
+            if (!root._hasExistingJollaAccount) {
+                var account = _accountManager.account(accountId)
+                if (account && account.providerName === "jolla") {
+                    root._hasExistingJollaAccount = true
+                }
+            }
+        }
+    }
+
     Component.onCompleted: {
         for (var i=0; i<count; i++) {
             selectionModel.append({"providerName": ""})
         }
+        root._hasExistingJollaAccount = (_accountManager.providerAccountIdentifiers("jolla").length > 0)
     }
 
     VerticalScrollDecorator {}
