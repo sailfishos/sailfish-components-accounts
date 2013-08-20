@@ -9,6 +9,7 @@ Dialog {
 
     property int _selectionCount
     property alias _viewHeader: view.header
+    property alias _accountManager: view._accountManager
 
     signal providerSelected(int index, string providerName)
     signal providerDeselected(int index, string providerName)
