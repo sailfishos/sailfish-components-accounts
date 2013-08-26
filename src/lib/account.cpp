@@ -427,10 +427,10 @@ void AccountPrivate::handleSynced()
                     emit q->signInCredentialsCreated(responseData);
                 } else {
                     signInCredentials.cleanup(true); // and remove identity
+                    setStatus(Account::Synced);
                     //: Error emitted if unable to decrypt the stored encrypted credentials
                     //% "Unable to decrypt stored credentials - aborting credentials creation"
                     emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
-                    setStatus(Account::Synced);
                 }
             } else {
                 // "oauth2" method - we just emit the cached response data.
@@ -449,20 +449,20 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
 {
     if (signInCredentials.identity->id() != id) {
         signInCredentials.cleanup(true);
+        setStatus(Account::Synced);
         //: Error emitted if an error occurred while storing credentials
         //% "Unable to store credentials - invalid id"
         emit q->signInError(qtTrId("sailfish_accounts-account-identity_id_failed"));
-        setStatus(Account::Synced);
         return;
     }
 
     signInCredentials.session = signInCredentials.identity->createSession(signInCredentials.method);
     if (!signInCredentials.session) {
         signInCredentials.cleanup(true);
+        setStatus(Account::Synced);
         //: Error emitted if an error occurred while creating a signon session
         //% "Unable to create signon session"
         emit q->signInError(qtTrId("sailfish_accounts-account-session_create_failed"));
-        setStatus(Account::Synced);
         return;
     }
 
@@ -586,12 +586,12 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         if (signInCredentials.method.toLower() == QLatin1String("oauth2")) {
             QVariantMap responseData = signInCredentials.responseData;
             signInCredentials.cleanup();
+            setStatus(Account::Synced);
             if (emitUpdated) {
                 emit q->signInCredentialsUpdated(responseData);
             } else {
                 emit q->signInResponse(responseData);
             }
-            setStatus(Account::Synced);
         } else {
             // decrypt the (encrypted) response data, and emit
             bool success = true;
@@ -602,17 +602,17 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
                                                              &success);
             signInCredentials.cleanup();
             if (success) {
+                setStatus(Account::Synced);
                 if (emitUpdated) {
                     emit q->signInCredentialsUpdated(responseData);
                 } else {
                     emit q->signInResponse(responseData);
                 }
-                setStatus(Account::Synced);
             } else {
+                setStatus(Account::Synced);
                 //: Error emitted if unable to decrypt the stored encrypted credentials
                 //% "Unable to decrypt stored credentials - aborting credentials creation"
                 emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
-                setStatus(Account::Synced);
             }
         }
     }
@@ -623,10 +623,10 @@ void AccountPrivate::handleCredentialsFailed(const SignOn::Error &err)
     if (signInCredentials.creatingSignInCredentials || signInCredentials.updatingSignInCredentials) {
         QString providerName = account->providerName();
         signInCredentials.cleanup(signInCredentials.creatingSignInCredentials); // delete identity if creating.
+        setStatus(Account::Synced);
         //: Error emitted if account credentials save failed at the database level
         //% "Unable to save credentials for %1 account in database: %2"
         emit q->signInError(qtTrId("sailfish_accounts-account-credentials_database_failed").arg(providerName).arg(err.message()));
-        setStatus(Account::Synced);
     }
 }
 
@@ -647,6 +647,7 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
     }
 
     QString errMess = err.message();
+    setStatus(Account::Synced);
     if (errMess == QLatin1String("userActionFinished error: 5")) {
         emit q->signInError(networkConnectionFailure);
     } else if (errMess == QLatin1String("userActionFinished error: 10")) {
@@ -654,8 +655,6 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
     } else {
         emit q->signInError(errMess);
     }
-
-    setStatus(Account::Synced);
 }
 
 void AccountPrivate::handleAccountError()
@@ -663,10 +662,10 @@ void AccountPrivate::handleAccountError()
     if (signInCredentials.creatingSignInCredentials) {
         QString providerName = account->providerName();
         signInCredentials.cleanup(true);
+        setStatus(Account::Synced);
         //: Error emitted if account creation failed at the database level
         //% "Unable to save %1 account in database"
         emit q->signInError(qtTrId("sailfish_accounts-account-account_database_failed").arg(providerName));
-        setStatus(Account::Synced);
     } else {
         qWarning() << Q_FUNC_INFO << "sync failed or other error occurred"; // XXX TODO: properly manage this (eg, emit error)
     }
@@ -1426,9 +1425,8 @@ bool Account::hasSignInCredentials(const QString &applicationName,
     Once creation of credentials completes successfully the
     \c signInCredentialsCreated() signal will be emitted.  If creation of the
     credentials encounters an error then the \c signInError() signal will
-    be emitted.
-
-    Finally, the account will then transition to the \c Synced state.
+    be emitted.  The account will transition to the \c Synced state just prior
+    to emission of the success or error signals.
 
     Calling this function will have no effect if the account is not
     initially in either the \c Initialized or \c Synced state.
@@ -1646,7 +1644,9 @@ void Account::createSignInCredentials(const QString &applicationName,
     username and password before being stored.
 
     On success the \l signInCredentialsUpdated() signal will be emitted.
-    On failure the \l signInError() signal will be emitted.
+    On failure the \l signInError() signal will be emitted.  The account
+    will transition to the \c Synced state just prior to the success or
+    error signals being emitted.
 */
 void Account::updateSignInCredentials(const QString &applicationName,
                                       const QString &credentialsName,
