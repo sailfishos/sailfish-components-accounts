@@ -2084,7 +2084,8 @@ void Account::setIdentifier(int id)
     if (d->status == Account::Initializing) {
         d->identifierPendingInit = true;
         d->identifier = id;
-    } else if (id != d->identifier && d->status == Account::Invalid) {
+    } else if (id != d->identifier
+               && (d->status != Account::SigningIn && d->status != Account::SyncInProgress)) {
         // the client is setting the account identifier after initialization.
         d->deleteLater();
         d = new AccountPrivate(this, 0);
