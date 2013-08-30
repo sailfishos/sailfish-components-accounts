@@ -5,23 +5,17 @@ import Sailfish.Accounts 1.0
 SilicaListView {
     id: root
 
+    //-------------- api
+
     property alias filterType: accountModel.filterType
     property alias filter: accountModel.filter
-    property bool allowAccountDeletion
 
     signal accountClicked(int accountId, string providerName)
 
-    function _deleteAccount(accountId) {
-        var account = accountManager.account(accountId)
-        if (account === null) {
-            return
-        }
-        account.statusChanged.connect(function() {
-            if (account.status === Account.Initialized) {
-                account.remove()
-            }
-        })
-    }
+    //-------------- impl
+
+    property bool _allowAccountDeletion
+    signal _accountRemoveRequested(int accountId)
 
     model: AccountModel { id: accountModel }
     header: PageHeader {
@@ -32,7 +26,7 @@ SilicaListView {
 
     delegate: ListItem {
         contentHeight: Theme.itemSizeMedium
-        menu: root.allowAccountDeletion ? menuComponent : null
+        menu: root._allowAccountDeletion ? menuComponent : null
 
         Component {
             id: menuComponent
@@ -51,7 +45,7 @@ SilicaListView {
             //: Deleting this account in 5 seconds
             //% "Removing account"
             remorseAction(qsTrId("component_accounts-la-remove_account"),
-                          function() { root._deleteAccount(model.accountId) })
+                          function() { root._accountRemoveRequested(model.accountId) })
 
         }
 
@@ -93,6 +87,5 @@ SilicaListView {
     }
 
     AccountManager { id: accountManager }
-
     VerticalScrollDecorator {}
 }
