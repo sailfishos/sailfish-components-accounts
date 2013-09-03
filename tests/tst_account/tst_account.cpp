@@ -667,7 +667,7 @@ void tst_Account::credentialsFunctions()
     QSignalSpy siccSpy(account.data(), SIGNAL(signInCredentialsCreated(QVariantMap)));
     QSignalSpy sicuSpy(account.data(), SIGNAL(signInCredentialsUpdated(QVariantMap)));
     QSignalSpy sirSpy(account.data(), SIGNAL(signInResponse(QVariantMap)));
-    QSignalSpy sieSpy(account.data(), SIGNAL(signInError(QString)));
+    QSignalSpy sieSpy(account.data(), SIGNAL(signInError(QString, int)));
     int siccCount = siccSpy.count();
     int sicuCount = sicuSpy.count();
     int sirCount = sirSpy.count();

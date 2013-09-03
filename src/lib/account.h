@@ -72,8 +72,14 @@ public:
         DeletedError            = Accounts::Error::Deleted,
         DatabaseLockedError     = Accounts::Error::DatabaseLocked,
         AccountNotFoundError    = Accounts::Error::AccountNotFound,
-        ConflictingProviderError,
-        InitializationFailedError
+        InitializationFailedError,
+        SignInUnknownError,
+        SignInInvalidStatusError,
+        SignInInvalidCredentialsError,
+        SignInCredentialsExpiredError,
+        SignInNetworkError,
+        SignInMissingDataError,
+        SignInPermissionDeniedError
     };
 
 public:
@@ -147,7 +153,7 @@ Q_SIGNALS:
     void signInCredentialsCreated(const QVariantMap &data);
     void signInCredentialsUpdated(const QVariantMap &data);
     void signInResponse(const QVariantMap &data);
-    void signInError(const QString &message);
+    void signInError(const QString &message, int errorType);
 
 // the following should be private, but are public to allow AccountFactory
 // (from jolla-settings-accounts) to use them during account creation.

@@ -96,6 +96,31 @@ static QString decrypted_string_b64(const QString &ciphertext, const QString &ke
     return decryptedString;
 }
 
+Account::ErrorType signOnErrorToErrorType(int signOnError)
+{
+    Account::ErrorType errType = Account::SignInUnknownError;
+    switch (signOnError) {
+        case SignOn::AuthSession::UserInteractionError:
+            // Credentials have expired / need updating, and the UiPolicy was NoUserInteractionPolicy
+            errType = Account::SignInCredentialsExpiredError;
+            break;
+        case SignOn::AuthSession::PermissionDeniedError:
+            errType = Account::SignInPermissionDeniedError;
+            break;
+        case SignOn::AuthSession::MissingDataError:
+            errType = Account::SignInMissingDataError;
+            break;
+        case SignOn::AuthSession::NoConnectionError:
+        case SignOn::AuthSession::NetworkError:
+        case SignOn::AuthSession::SslError:
+            errType = Account::SignInNetworkError;
+            break;
+        default:
+            break;
+    }
+
+    return errType;
+}
 
 
 void SignInCredentials::cleanup(bool removeIdentity)
@@ -430,7 +455,7 @@ void AccountPrivate::handleSynced()
                     setStatus(Account::Synced);
                     //: Error emitted if unable to decrypt the stored encrypted credentials
                     //% "Unable to decrypt stored credentials - aborting credentials creation"
-                    emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
+                    emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"), Account::SignInPermissionDeniedError);
                 }
             } else {
                 // "oauth2" method - we just emit the cached response data.
@@ -452,7 +477,7 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
         setStatus(Account::Synced);
         //: Error emitted if an error occurred while storing credentials
         //% "Unable to store credentials - invalid id"
-        emit q->signInError(qtTrId("sailfish_accounts-account-identity_id_failed"));
+        emit q->signInError(qtTrId("sailfish_accounts-account-identity_id_failed"), Account::SignInInvalidCredentialsError);
         return;
     }
 
@@ -462,7 +487,7 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
         setStatus(Account::Synced);
         //: Error emitted if an error occurred while creating a signon session
         //% "Unable to create signon session"
-        emit q->signInError(qtTrId("sailfish_accounts-account-session_create_failed"));
+        emit q->signInError(qtTrId("sailfish_accounts-account-session_create_failed"), Account::SignInUnknownError);
         return;
     }
 
@@ -612,7 +637,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
                 setStatus(Account::Synced);
                 //: Error emitted if unable to decrypt the stored encrypted credentials
                 //% "Unable to decrypt stored credentials - aborting credentials creation"
-                emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"));
+                emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"), Account::SignInPermissionDeniedError);
             }
         }
     }
@@ -621,12 +646,13 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
 void AccountPrivate::handleCredentialsFailed(const SignOn::Error &err)
 {
     if (signInCredentials.creatingSignInCredentials || signInCredentials.updatingSignInCredentials) {
+        Account::ErrorType errType = signOnErrorToErrorType(err.type());
         QString providerName = account->providerName();
         signInCredentials.cleanup(signInCredentials.creatingSignInCredentials); // delete identity if creating.
         setStatus(Account::Synced);
         //: Error emitted if account credentials save failed at the database level
         //% "Unable to save credentials for %1 account in database: %2"
-        emit q->signInError(qtTrId("sailfish_accounts-account-credentials_database_failed").arg(providerName).arg(err.message()));
+        emit q->signInError(qtTrId("sailfish_accounts-account-credentials_database_failed").arg(providerName).arg(err.message()), errType);
     }
 }
 
@@ -646,14 +672,15 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
         signInCredentials.signingInWithCredentials = false; // error occured.
     }
 
+    Account::ErrorType errType = signOnErrorToErrorType(err.type());
     QString errMess = err.message();
     setStatus(Account::Synced);
     if (errMess == QLatin1String("userActionFinished error: 5")) {
-        emit q->signInError(networkConnectionFailure);
+        emit q->signInError(networkConnectionFailure, errType);
     } else if (errMess == QLatin1String("userActionFinished error: 10")) {
-        emit q->signInError(noCachedCredentials);
+        emit q->signInError(noCachedCredentials, errType);
     } else {
-        emit q->signInError(errMess);
+        emit q->signInError(errMess, errType);
     }
 }
 
@@ -665,7 +692,7 @@ void AccountPrivate::handleAccountError()
         setStatus(Account::Synced);
         //: Error emitted if account creation failed at the database level
         //% "Unable to save %1 account in database"
-        emit q->signInError(qtTrId("sailfish_accounts-account-account_database_failed").arg(providerName));
+        emit q->signInError(qtTrId("sailfish_accounts-account-account_database_failed").arg(providerName), Account::DatabaseError);
     } else {
         qWarning() << Q_FUNC_INFO << "sync failed or other error occurred"; // XXX TODO: properly manage this (eg, emit error)
     }
@@ -1439,21 +1466,21 @@ void Account::createSignInCredentials(const QString &applicationName,
     if (d->status != Account::Initialized && d->status != Account::Synced) {
         //: Error emitted if function called while account is in invalid state
         //% "Account status is not Initialized or Synced"
-        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_status"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_status"), Account::SignInInvalidStatusError);
         return;
     }
 
     if (parameters == NULL) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
-        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_params"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_params"), Account::SignInMissingDataError);
         return;
     }
 
     if (applicationName.isEmpty()) {
         //: Error emitted if function called with invalid application name
         //% "Invalid application name specified"
-        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_appname"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_appname"), Account::SignInMissingDataError);
         return;
     }
 
@@ -1461,7 +1488,7 @@ void Account::createSignInCredentials(const QString &applicationName,
     if (!service.isValid()) {
         //: Error emitted if function called with invalid service name
         //% "Invalid service name specified via SignInParameters"
-        emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_srvname"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_same"), Account::SignInInvalidCredentialsError);
         return;
     }
 
@@ -1486,7 +1513,7 @@ void Account::createSignInCredentials(const QString &applicationName,
     if (hasSignInCredentials(applicationName, credentialsName)) {
         //: Error emitted if signon credentials already exist
         //% "Named credentials already exist for this application"
-        emit signInError(qtTrId("sailfish_accounts-account-csic_already_exist"));
+        emit signInError(qtTrId("sailfish_accounts-account-csic_already_exist"), Account::SignInMissingDataError);
         return;
     }
 
@@ -1540,7 +1567,7 @@ void Account::createSignInCredentials(const QString &applicationName,
             if (d->signInCredentials.identity == NULL) {
                 //: Error emitted if identity creation fails
                 //% "Failed to create credentials"
-                emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"));
+                emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"), Account::SignInInvalidCredentialsError);
                 return;
             }
 
@@ -1571,7 +1598,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         if (identityUsername.isNull()) {
             //: Error emitted if encrypting username fails
             //% "Error occurred while encrypting username"
-            emit signInError(qtTrId("sailfish_accounts-account-uname_encryption_failed"));
+            emit signInError(qtTrId("sailfish_accounts-account-uname_encryption_failed"), Account::SignInUnknownError);
             return;
         }
 
@@ -1584,7 +1611,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         if (identitySecret.isNull()) {
             //: Error emitted if encrypting password fails
             //% "Error occurred while encrypting password"
-            emit signInError(qtTrId("sailfish_accounts-account-pword_encryption_failed"));
+            emit signInError(qtTrId("sailfish_accounts-account-pword_encryption_failed"), Account::SignInUnknownError);
             return;
         }
 
@@ -1596,7 +1623,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         if (d->signInCredentials.identity == NULL) {
             //: Error emitted if identity creation fails
             //% "Failed to create credentials"
-            emit signInError(qtTrId("sailfish_accounts-account-unpw_identity_failed"));
+            emit signInError(qtTrId("sailfish_accounts-account-unpw_identity_failed"), Account::SignInUnknownError);
             return;
         }
 
@@ -1661,28 +1688,28 @@ void Account::updateSignInCredentials(const QString &applicationName,
     if (d->status != Account::Initialized && d->status != Account::Synced) {
         //: Error emitted if function called while account is in invalid state
         //% "Account status is not Initialized or Synced"
-        emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_status"));
+        emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_status"), Account::SignInInvalidStatusError);
         return;
     }
 
     if (parameters == NULL) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
-        emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_params"));
+        emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_params"), Account::SignInMissingDataError);
         return;
     }
 
     if (applicationName.isEmpty()) {
         //: Error emitted if function called with invalid application name
         //% "Invalid application name specified"
-        emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_appname"));
+        emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_appname"), Account::SignInMissingDataError);
         return;
     }
 
     if (!hasSignInCredentials(applicationName, credentialsName)) {
         //: Error emitted if no such credentials exist
         //% "Cannot update nonexistent credentials"
-        emit signInError(qtTrId("sailfish_accounts-account-usic_nonexistent_credentials"));
+        emit signInError(qtTrId("sailfish_accounts-account-usic_nonexistent_credentials"), Account::SignInInvalidCredentialsError);
         return;
     }
 
@@ -1691,7 +1718,7 @@ void Account::updateSignInCredentials(const QString &applicationName,
             || d->signInCredentials.signingInWithCredentials) {
         //: Error emitted if function called while account is already signing in
         //% "Account is currently creating, updating, removing or signing in with credentials"
-        emit signInError(qtTrId("sailfish_accounts-account-usic_signin_busy"));
+        emit signInError(qtTrId("sailfish_accounts-account-usic_signin_busy"), Account::SignInInvalidStatusError);
         return;
     }
 
@@ -1704,7 +1731,7 @@ void Account::updateSignInCredentials(const QString &applicationName,
     if (updateIdentity == NULL) {
         //: Error emitted if identity could not be loaded in order to update it
         //% "Failed to load credentials to update"
-        emit signInError(qtTrId("sailfish_accounts-account-update_load_failed"));
+        emit signInError(qtTrId("sailfish_accounts-account-update_load_failed"), Account::SignInInvalidCredentialsError);
         return;
     }
 
@@ -1749,7 +1776,7 @@ void Account::updateSignInCredentials(const QString &applicationName,
         if (identityUsername.isNull()) {
             //: Error emitted if encrypting username fails
             //% "Error occurred while encrypting username"
-            emit signInError(qtTrId("sailfish_accounts-account-uname_encryption_failed"));
+            emit signInError(qtTrId("sailfish_accounts-account-uname_encryption_failed"), Account::SignInUnknownError);
             return;
         }
 
@@ -1762,7 +1789,7 @@ void Account::updateSignInCredentials(const QString &applicationName,
         if (identitySecret.isNull()) {
             //: Error emitted if encrypting password fails
             //% "Error occurred while encrypting password"
-            emit signInError(qtTrId("sailfish_accounts-account-pword_encryption_failed"));
+            emit signInError(qtTrId("sailfish_accounts-account-pword_encryption_failed"), Account::SignInUnknownError);
             return;
         }
 
@@ -1918,28 +1945,28 @@ void Account::signIn(const QString &applicationName,
     if (d->status != Account::Initialized && d->status != Account::Synced) {
         //: Error emitted if function called while account is in invalid state
         //% "Account status is not Initialized or Synced"
-        emit signInError(qtTrId("sailfish_accounts-account-signin_invalid_status"));
+        emit signInError(qtTrId("sailfish_accounts-account-signin_invalid_status"), Account::SignInInvalidStatusError);
         return;
     }
 
     if (parameters == NULL) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
-        emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_params"));
+        emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_params"), Account::SignInMissingDataError);
         return;
     }
 
     if (applicationName.isEmpty()) {
         //: Error emitted if function called with invalid application name
         //% "Invalid application name specified"
-        emit signInError(qtTrId("sailfish_accounts-account-signin_invalid_appname"));
+        emit signInError(qtTrId("sailfish_accounts-account-signin_invalid_appname"), Account::SignInMissingDataError);
         return;
     }
 
     if (!hasSignInCredentials(applicationName, credentialsName)) {
         //: Error emitted if signon credentials do not exist
         //% "Named credentials do not exist for this application"
-        emit signInError(qtTrId("sailfish_accounts-account-signin_not_exist"));
+        emit signInError(qtTrId("sailfish_accounts-account-signin_not_exist"), Account::SignInInvalidCredentialsError);
         return;
     }
 
@@ -1951,7 +1978,7 @@ void Account::signIn(const QString &applicationName,
     if (signInIdentity == NULL) {
         //: Error emitted if signon credentials could not be loaded from the database
         //% "Credentials with id %1 could not be loaded"
-        emit signInError(qtTrId("sailfish_accounts-account-load_credentials_error").arg(identityId));
+        emit signInError(qtTrId("sailfish_accounts-account-load_credentials_error").arg(identityId), Account::SignInInvalidCredentialsError);
         return;
     }
 
@@ -1971,7 +1998,7 @@ void Account::signIn(const QString &applicationName,
         d->signInCredentials.cleanup();
         //: Error emitted if an error occurred while creating a signon session
         //% "Unable to create signon session with the specified parameters"
-        emit signInError(qtTrId("sailfish_accounts-account-session_create_failed"));
+        emit signInError(qtTrId("sailfish_accounts-account-session_create_failed"), Account::SignInUnknownError);
         return;
     }
 
