@@ -877,9 +877,47 @@ void tst_Account::credentialsFunctions()
     QTRY_COMPARE(sieSpy.count(), sieCount+1);
     sieCount = sieSpy.count();
 
+    // Create credentials (non-oauth2)
+    SignInParameters *sip6 = account->signInParameters("test-service2", "userSix", "passSix");
+    account->createSignInCredentials("testSix", "testSix", sip6);
+    QCOMPARE(account->status(), Account::SigningIn);
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    // Update these credentials then cancel immediately
+    account->updateSignInCredentials("testSix", "testSix", sip6);
+    QCOMPARE(account->status(), Account::SigningIn);
+    sieSpy.clear();
+    account->cancelSignInOperation();
+    QTRY_COMPARE(sieSpy.count(), 1);
+    QCOMPARE(sieSpy.at(0).at(1).toInt(), int(Account::SignInOperationCanceledError));
+    QCOMPARE(account->status(), Account::Synced);
+
+    // Sign in with these credentials then cancel immediately
+    account->signIn("testSix", "testSix", sip6);
+    QCOMPARE(account->status(), Account::SigningIn);
+    sieSpy.clear();
+    sieCount = sieSpy.count();
+    account->cancelSignInOperation();
+    QTRY_COMPARE(sieSpy.count(), 1);
+    QCOMPARE(sieSpy.at(0).at(1).toInt(), int(Account::SignInOperationCanceledError));
+    QCOMPARE(account->status(), Account::Synced);
+
+    // Create credentials (non-oauth2) then cancel immediately
+    SignInParameters *sip7 = account->signInParameters("test-service2", "userSeven", "passSeven");
+    account->createSignInCredentials("testSeven", "testSeven", sip7);
+    QCOMPARE(account->status(), Account::SigningIn);
+    sieSpy.clear();
+    sieCount = sieSpy.count();
+    account->cancelSignInOperation();
+    QTRY_COMPARE(sieSpy.count(), 1);
+    QCOMPARE(sieSpy.at(0).at(1).toInt(), int(Account::SignInOperationCanceledError));
+    QCOMPARE(account->status(), Account::Synced);
+    QVERIFY(!account->hasSignInCredentials("testSeven", "testSeven"));
+
     // remove credentials
     account->removeSignInCredentials("testFour", "testFour");
     account->removeSignInCredentials("testThree", "testThree");
+    account->removeSignInCredentials("testSix", "testSix");
 
     // remove account.
     account->remove();

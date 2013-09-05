@@ -58,6 +58,8 @@ public:
     void setAccount(Accounts::Account *acc, bool queryInfo);
     void setStatus(Account::Status newStatus);
 
+    void cancelCredentialsOperation(bool removeIdentity);
+
     Account *q;
     Accounts::Manager *manager;
     Accounts::Account *account;
