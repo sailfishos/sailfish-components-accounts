@@ -127,7 +127,9 @@ void SignInCredentials::cleanup(bool removeIdentity)
 {
     if (identity != NULL) {
         if (session != NULL) {
+            session->disconnect();
             identity->destroySession(session);
+            session = NULL;
         }
 
         if (removeIdentity == true) {
@@ -135,7 +137,9 @@ void SignInCredentials::cleanup(bool removeIdentity)
             identity->remove();
         }
 
+        identity->disconnect();
         identity->deleteLater();
+        identity = NULL;
     }
 
     creatingSignInCredentials = false;
@@ -754,6 +758,16 @@ void AccountPrivate::setStatus(Account::Status newStatus)
         status = newStatus;
         emit q->statusChanged();
     }
+}
+
+void AccountPrivate::cancelCredentialsOperation(bool removeIdentity)
+{
+    signInCredentials.cleanup(removeIdentity);
+    setStatus(Account::Synced);
+
+    //: Error emitted if the sign-in operation was canceled
+    //% "The sign-in operation was canceled"
+    emit q->signInError(qtTrId("sailfish_accounts-account-credentials-operation-canceled"), Account::SignInOperationCanceledError);
 }
 
 //-----------------------------------
@@ -2068,7 +2082,30 @@ void Account::signOut(const QString &applicationName,
     signInIdentity->signOut();
 }
 
+/*!
+    \qmlmethod Account::cancelSignInOperation()
 
+    Cancels the sign-in operation started by a call to createSignInCredentials(),
+    updateSignInCredentials() or signIn(). Upon cancellation, the signInError() is emitted with
+    SignInOperationCanceledError.
+
+    This function has no effect if none of these functions have been called, or if the sign-in
+    operation started by the function has already finished (that is, if signInCredentialsCreated(),
+    signInCredentialsUpdated(), signInResponse() or signInError() have already been emitted).
+*/
+void Account::cancelSignInOperation()
+{
+    if (d->status != Account::SigningIn) {
+        qWarning("Account::cancelCredentialsCreation() called, but no sign-in operation in progress");
+        return;
+    }
+
+    bool creatingAccount = d->signInCredentials.creatingSignInCredentials;
+    d->signInCredentials.creatingSignInCredentials = false;
+    d->signInCredentials.updatingSignInCredentials = false;
+    d->signInCredentials.signingInWithCredentials = false;
+    d->cancelCredentialsOperation(creatingAccount);
+}
 
 /*!
     \qmlproperty bool Account::enabled

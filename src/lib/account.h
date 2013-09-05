@@ -79,7 +79,8 @@ public:
         SignInCredentialsExpiredError,
         SignInNetworkError,
         SignInMissingDataError,
-        SignInPermissionDeniedError
+        SignInPermissionDeniedError,
+        SignInOperationCanceledError
     };
 
 public:
@@ -139,6 +140,9 @@ public:
     Status status() const;
     ErrorType error() const;
     QString errorMessage() const;
+
+public Q_SLOTS:
+    void cancelSignInOperation();
 
 Q_SIGNALS:
     void enabledChanged();
