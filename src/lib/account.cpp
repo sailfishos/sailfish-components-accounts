@@ -588,6 +588,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
+        configurationValues.insert(configurationValueKey, signInCredentials.identity->id());
         maybeSetCredentialsIdForProvider(account, signInCredentials.identity->id(), signInCredentials.method, signInCredentials.serviceName, signInCredentials.symmetricKey);
         if (account->displayName().isEmpty() && !signInCredentials.username.isEmpty()) {
             account->setDisplayName(signInCredentials.username);
