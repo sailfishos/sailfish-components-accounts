@@ -588,6 +588,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
+        configurationValues.insert(configurationValueKey, signInCredentials.identity->id());
         maybeSetCredentialsIdForProvider(account, signInCredentials.identity->id(), signInCredentials.method, signInCredentials.serviceName, signInCredentials.symmetricKey);
         if (account->displayName().isEmpty() && !signInCredentials.username.isEmpty()) {
             account->setDisplayName(signInCredentials.username);
@@ -1155,6 +1156,21 @@ QVariantMap Account::configurationValues(const QString &serviceName) const
     account, or be empty, else calling this function will have no effect.
     If the \a serviceName is empty, the global account configuration
     settings will updated instead.
+
+    The follow variant types are supported:
+
+    \list
+    \o QVariant::Int
+    \o QVariant::UInt
+    \o QVariant::LongLong
+    \o QVariant::ULongLong
+    \o QVariant::String
+    \o QVariant::StringList
+    \o QVariant::List (in this case, the value will be converted to a QStringList)
+    \endlist
+
+    If a variant in the given \a values uses a type outside of those listed above, it will not
+    be added to the configuration settings.
 */
 void Account::setConfigurationValues(const QString &serviceName, const QVariantMap &values)
 {
@@ -1172,6 +1188,7 @@ void Account::setConfigurationValues(const QString &serviceName, const QVariantM
         QVariant currValue = values.value(key);
         if (currValue.type() == QVariant::Bool
                 || currValue.type() == QVariant::Int
+                || currValue.type() == QVariant::UInt
                 || currValue.type() == QVariant::LongLong
                 || currValue.type() == QVariant::ULongLong
                 || currValue.type() == QVariant::String
@@ -1179,6 +1196,9 @@ void Account::setConfigurationValues(const QString &serviceName, const QVariantM
             validValues.insert(key, currValue);
         } else if (currValue.type() == QVariant::List) {
             validValues.insert(key, currValue.toStringList());
+        } else {
+            qWarning() << "Account::setConfigurationValues(): variant type " << currValue.type()
+                       << "for key '" + key + "' not supported, value will not be added";
         }
     }
 
@@ -1209,7 +1229,8 @@ void Account::setConfigurationValues(const QString &serviceName, const QVariantM
 
     Sets the configuration setting named \a key for the account which applies
     specifically to the service with the specified \a serviceName to the
-    given \a value.
+    given \a value. The \a value must be of a supported type; see setConfigurationValues() for
+    the list of types that are supported.
 
     The \a serviceName must identify a service supported by the
     account, or be empty, else calling this function will have no effect.
