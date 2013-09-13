@@ -162,7 +162,7 @@ Q_SIGNALS:
 // the following should be private, but are public to allow AccountFactory
 // (from jolla-settings-accounts) to use them during account creation.
 public:
-    Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent);
+    Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent, const QVariantMap &serviceConfigValues = QVariantMap());
     Accounts::Account *account();
 
 private:

@@ -131,6 +131,7 @@ QVariant sanitiseValue(const QVariant &value)
         retn = value;
     } else if (valueType == QVariant::Bool
             || valueType == QVariant::Int
+            || valueType == QVariant::UInt
             || valueType == QVariant::LongLong
             || valueType == QVariant::ULongLong
             || valueType == QVariant::String
