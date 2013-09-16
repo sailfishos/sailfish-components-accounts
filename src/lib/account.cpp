@@ -587,6 +587,23 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
             signInCredentials.responseData.insert(key, data.getProperty(key));
         }
 
+        // second, re-set all of the configuration values, as they will
+        // have been clobbered by the store sign in credentials call.
+        account->selectService(Accounts::Service());
+        foreach (const QString &cachedKey, configurationValues.keys()) {
+            account->setValue(cachedKey, configurationValues.value(cachedKey));
+        }
+        foreach (const QString &srvName, serviceConfigurationValues.keys()) {
+            Accounts::Service srv = manager->service(srvName);
+            if (srv.isValid()) {
+                account->selectService(srv);
+                QVariantMap scvs = serviceConfigurationValues.value(srvName);
+                foreach (const QString &cachedKey, scvs.keys()) {
+                    account->setValue(cachedKey, scvs.value(cachedKey));
+                }
+            }
+        }
+
         // then update the account with the credentials information.
         QString credName = signInCredentials.credentialsName.isEmpty() ? QLatin1String("default") : signInCredentials.credentialsName;
         QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
@@ -951,9 +968,58 @@ void Account::componentComplete()
 }
 
 // helpers for AccountFactory only.
-Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent)
-    : QObject(parent), d(new AccountPrivate(this, account, queryInfoOnCreation)) { }
 Accounts::Account *Account::account() { return d->account; }
+Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent, const QVariantMap &serviceConfigValues)
+    : QObject(parent), d(new AccountPrivate(this, account, queryInfoOnCreation))
+{
+    if (!serviceConfigValues.isEmpty()) {
+        foreach (const QString &serviceName, serviceConfigValues.keys()) {
+            // sanitize the configuration values
+            if (serviceConfigValues[serviceName].type() != QVariant::Map) {
+                qWarning() << Q_FUNC_INFO << "Configuration for service" << serviceName << "is not a QVariantMap!";
+                continue;
+            }
+
+            QVariantMap sanitizedConfig;
+            QVariantMap vm = serviceConfigValues[serviceName].toMap();
+            foreach (const QString &key, vm.keys()) {
+                QVariant currValue = vm[key];
+                if (currValue.type() == QVariant::Bool
+                        || currValue.type() == QVariant::Int
+                        || currValue.type() == QVariant::UInt
+                        || currValue.type() == QVariant::LongLong
+                        || currValue.type() == QVariant::ULongLong
+                        || currValue.type() == QVariant::String
+                        || currValue.type() == QVariant::StringList) {
+                    sanitizedConfig.insert(key, currValue);
+                } else if (currValue.type() == QVariant::List) {
+                    sanitizedConfig.insert(key, currValue.toStringList());
+                } else {
+                    qWarning() << Q_FUNC_INFO << "Unsupported configuration value" << currValue << "for key" << key;
+                }
+            }
+
+            if (serviceName.isEmpty()) {
+                foreach (const QString &key, sanitizedConfig.keys()) {
+                    d->account->setValue(key, sanitizedConfig.value(key));
+                }
+                d->configurationValues = sanitizedConfig;
+            } else {
+                Accounts::Service srv = d->manager->service(serviceName);
+                if (!srv.isValid()) {
+                    qWarning() << Q_FUNC_INFO << "Unsupported service" << serviceName;
+                } else {
+                    d->account->selectService(srv);
+                    foreach (const QString &key, sanitizedConfig.keys()) {
+                        d->account->setValue(key, sanitizedConfig.value(key));
+                    }
+                    d->account->selectService(Accounts::Service());
+                    d->serviceConfigurationValues.insert(serviceName, sanitizedConfig);
+                }
+            }
+        }
+    }
+}
 
 /*!
     \qmlmethod void Account::sync()
