@@ -18,11 +18,6 @@ SilicaListView {
     signal _accountRemoveRequested(int accountId)
 
     model: AccountModel { id: accountModel }
-    header: PageHeader {
-        //: accounts list view
-        //% "Accounts"
-        title: qsTrId("components_accounts-he-accounts_list")
-    }
 
     delegate: ListItem {
         contentHeight: Theme.itemSizeMedium
