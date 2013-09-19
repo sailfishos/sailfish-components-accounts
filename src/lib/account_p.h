@@ -60,6 +60,8 @@ public:
 
     void cancelCredentialsOperation(bool removeIdentity);
 
+    void setUserName(const QString &user);
+
     Account *q;
     Accounts::Manager *manager;
     Accounts::Account *account;
@@ -73,6 +75,7 @@ public:
     QString providerName;
     bool enabled;
     QString displayName;
+    QString defaultCredentialsUserName;
     QVariantMap configurationValues;
     QMap<QString, QVariantMap> serviceConfigurationValues;
     QStringList supportedServiceNames;

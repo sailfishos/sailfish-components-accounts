@@ -75,6 +75,7 @@ private slots:
     void identifier();
     void providerName();
     void displayName();
+    void defaultCredentialsUserName();
     void supportedServiceNames();
     void status();
     void error();
@@ -242,6 +243,48 @@ void tst_Account::displayName()
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
     QCOMPARE(account->displayName(), QString(QLatin1String("test-display-name-two")));
+    account->remove();
+}
+
+void tst_Account::defaultCredentialsUserName()
+{
+    Accounts::Manager manager;
+    QScopedPointer<Accounts::Account> newA(manager.createAccount("test-provider"));
+    QSignalSpy newASyncedSpy(newA.data(), SIGNAL(synced()));
+    newA->setEnabled(true);
+    newA->sync();
+    QTRY_VERIFY(newASyncedSpy.count() > 0);
+
+    QScopedPointer<Account> account(new Account);
+    account->classBegin();
+    account->setIdentifier(newA->id());
+    account->setDisplayName("someDisplayname");
+    account->sync();
+    account->componentComplete();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QString userName = QLatin1String("testUser");
+
+    SignInParameters *sip = account->signInParameters("test-service2", userName, "pass");
+    QSignalSpy credentialsCreatedSpy(account.data(), SIGNAL(signInCredentialsCreated(QVariantMap)));
+    account->createSignInCredentials("appName", "credName", sip, "symmetricKey");
+    QCOMPARE(account->status(), Account::SigningIn);
+    QTRY_COMPARE(account->status(), Account::Synced);
+    QCOMPARE(credentialsCreatedSpy.count(), 1);
+    QCOMPARE(account->defaultCredentialsUserName(), userName);
+
+    // ensure returned username/pass matches expectation
+    QVariantMap responseData = credentialsCreatedSpy.takeFirst().at(0).toMap();
+    QCOMPARE(responseData.value("UserName").toString(), userName);
+
+    // changing display name should not affect username
+    QCOMPARE(account->displayName(), QString(QLatin1String("someDisplayname")));
+    QString newUserName(QLatin1String("newDisplayName"));
+    account->setDisplayName(newUserName);
+    QCOMPARE(account->displayName(), newUserName);
+    QCOMPARE(account->defaultCredentialsUserName(), userName);
+
+    account->removeSignInCredentials("appName", "credName");
     account->remove();
 }
 
