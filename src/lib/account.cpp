@@ -33,6 +33,8 @@
 // Copied from libaccounts-qt account.h
 #define ACCOUNTS_KEY_CREDENTIALS_ID QLatin1String("CredentialsId")
 
+#define DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY QLatin1String("default_credentials_username")
+
 /*
     High-level description:
 
@@ -355,6 +357,10 @@ void AccountPrivate::asyncQueryInfo()
         }
     }
 
+    if (configurationValues.contains(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY)) {
+        setUserName(configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString());
+    }
+
     // do sync if required.
     if (status == Account::Invalid || status == Account::Error) {
         // error occurred during initialization, or was removed.
@@ -440,6 +446,10 @@ void AccountPrivate::handleSynced()
             configurationValues = allValues;
         }
 
+        if (configurationValues.contains(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY)) {
+            setUserName(configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString());
+        }
+
         // and update our status.
         if (signInCredentials.creatingSignInCredentials) {
             if (signInCredentials.storingEncryptedTokens) {
@@ -523,7 +533,13 @@ void AccountPrivate::handleCredentialsInfo(const SignOn::IdentityInfo &info)
     signInCredentials.identity->storeCredentials(signInCredentials.identityInfo);
 }
 
-void maybeSetCredentialsIdForProvider(Accounts::Account *account, int identityId, const QString &method, const QString &serviceName, const QString &symmetricKey)
+void maybeSetCredentialsIdForProvider(Accounts::Account *account,
+                                      int identityId,
+                                      const QString &method,
+                                      const QString &serviceName,
+                                      const QString &symmetricKey,
+                                      const QString &username,
+                                      QVariantMap *configurationValues)
 {
     // if the method is oauth2, and if no credentialsId has been set
     // for the services from that provider, we can set the given credentialsId
@@ -576,6 +592,15 @@ void maybeSetCredentialsIdForProvider(Accounts::Account *account, int identityId
             }
         }
     }
+
+    if (!username.isEmpty()) {
+        account->setValue(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY, username);
+        configurationValues->insert(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY, username);
+        if (account->displayName().isEmpty()) {
+            // display name defaults to username
+            account->setDisplayName(username);
+        }
+    }
 }
 void AccountPrivate::handleResponse(const SignOn::SessionData &data)
 {
@@ -610,10 +635,13 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
         configurationValues.insert(configurationValueKey, signInCredentials.identity->id());
-        maybeSetCredentialsIdForProvider(account, signInCredentials.identity->id(), signInCredentials.method, signInCredentials.serviceName, signInCredentials.symmetricKey);
-        if (account->displayName().isEmpty() && !signInCredentials.username.isEmpty()) {
-            account->setDisplayName(signInCredentials.username);
-        }
+        maybeSetCredentialsIdForProvider(account,
+                                         signInCredentials.identity->id(),
+                                         signInCredentials.method,
+                                         signInCredentials.serviceName,
+                                         signInCredentials.symmetricKey,
+                                         signInCredentials.username,
+                                         &configurationValues);
 
         // and write the changes to the accounts database
         connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountError()), Qt::UniqueConnection);
@@ -785,6 +813,14 @@ void AccountPrivate::cancelCredentialsOperation(bool removeIdentity)
     //: Error emitted if the sign-in operation was canceled
     //% "The sign-in operation was canceled"
     emit q->signInError(qtTrId("sailfish_accounts-account-credentials-operation-canceled"), Account::SignInOperationCanceledError);
+}
+
+void AccountPrivate::setUserName(const QString &user)
+{
+    if (!user.isEmpty() && user != defaultCredentialsUserName) {
+        defaultCredentialsUserName = user;
+        emit q->defaultCredentialsUserNameChanged();
+    }
 }
 
 //-----------------------------------
@@ -1065,6 +1101,11 @@ void Account::sync()
         d->configurationValuesPendingInit = false;
     }
 
+    // set the user name
+    if (!d->defaultCredentialsUserName.isEmpty() && d->configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString().isEmpty()) {
+        d->account->setValue(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY, d->defaultCredentialsUserName);
+    }
+
     // set the global configuration values.
     d->account->selectService(Accounts::Service());
     QStringList allKeys = d->account->allKeys();
@@ -1084,7 +1125,7 @@ void Account::sync()
             // remove removed keys
             // The CredentialsId key may have been added by Accounts::Account internally due to a
             // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
-            if (key != ACCOUNTS_KEY_CREDENTIALS_ID) {
+            if (key != ACCOUNTS_KEY_CREDENTIALS_ID && key != DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY) {
                 d->account->remove(key);
             }
         }
@@ -2292,6 +2333,12 @@ void Account::setDisplayName(const QString &dn)
     else
         d->setStatus(Account::Modified);
     emit displayNameChanged();
+}
+
+QString Account::defaultCredentialsUserName() const
+{
+    return d->defaultCredentialsUserName;
+
 }
 
 /*!
