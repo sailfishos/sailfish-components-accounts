@@ -1,3 +1,4 @@
+module Sailfish.Accounts
 plugin sailfishaccountsplugin
 AccountProviderPicker 1.0 AccountProviderPicker.qml
 AccountProviderPickerDialog 1.0 AccountProviderPickerDialog.qml
