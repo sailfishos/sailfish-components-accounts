@@ -23,7 +23,8 @@ Dialog {
         header: DialogHeader {
             //: Number of selected accounts
             //% "%n selected"
-            acceptText: qsTrId("components_accounts-he-selected_accounts", root._selectionCount)
+            property string countString: qsTrId("components_accounts-he-selected_accounts", root._selectionCount)
+            acceptText: canAccept ? countString : title
             dialog: root
         }
 
