@@ -635,6 +635,17 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
         configurationValues.insert(configurationValueKey, signInCredentials.identity->id());
+
+        // if the provider is Jolla, we should write the username to an account setting.
+        if (account->providerName() == QString::fromLatin1("jolla")) {
+            account->selectService(manager->service(QString::fromLatin1("jolla-store")));
+            account->setValue(QString::fromLatin1("username"), signInCredentials.username);
+            account->selectService(Accounts::Service());
+            QVariantMap storeValues = serviceConfigurationValues.value(QString::fromLatin1("jolla-store"));
+            storeValues.insert(QString::fromLatin1("username"), signInCredentials.username);
+            serviceConfigurationValues.insert(QString::fromLatin1("jolla-store"), storeValues);
+        }
+
         maybeSetCredentialsIdForProvider(account,
                                          signInCredentials.identity->id(),
                                          signInCredentials.method,
