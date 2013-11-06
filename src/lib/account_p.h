@@ -62,6 +62,8 @@ public:
 
     void setUserName(const QString &user);
 
+    void updateStoreRepositories(bool enable);
+
     Account *q;
     Accounts::Manager *manager;
     Accounts::Account *account;
