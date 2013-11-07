@@ -27,6 +27,9 @@
 #include <SignOn/SessionData>
 #include <SignOn/AuthSession>
 
+#include <QDBusInterface>
+#include <QDBusConnection>
+
 #define CREDENTIALS_GROUP QLatin1String("segregated_credentials")
 #define BUILD_CREDENTIALS_CONFIGURATION_KEY(appName, credName) QString(QLatin1String("%1/%2/%3")).arg(appName).arg(CREDENTIALS_GROUP).arg(credName)
 
@@ -403,6 +406,9 @@ void AccountPrivate::displayNameChangedHandler()
 
 void AccountPrivate::invalidate()
 {
+    if (account && account->providerName() == "jolla") {
+        updateStoreRepositories(false);
+    }
     // NOTE: the Accounts::Manager instance ALWAYS owns the account pointer.
     // If the manager gets deleted while the Account instance is
     // alive, we need to ensure that invalidate() gets called also.
@@ -414,6 +420,17 @@ void AccountPrivate::invalidate()
     account = 0;
     setStatus(Account::Invalid);
 }
+
+void AccountPrivate::updateStoreRepositories(bool enable)
+{
+    QDBusInterface ssuInterface("org.nemo.ssu",
+                                "/org/nemo/ssu",
+                                "org.nemo.ssu",
+                                QDBusConnection::systemBus());
+    ssuInterface.call("modifyRepo", (enable ? 1 : 0), "store");
+    ssuInterface.call("updateRepos");
+}
+
 
 void AccountPrivate::handleSynced()
 {
@@ -476,6 +493,9 @@ void AccountPrivate::handleSynced()
                 QVariantMap responseData = signInCredentials.responseData;
                 signInCredentials.cleanup();
                 setStatus(Account::Synced);
+                if (account->providerName() == "jolla") {
+                    updateStoreRepositories(true);
+                }
                 emit q->signInCredentialsCreated(responseData);
             }
         } else {
