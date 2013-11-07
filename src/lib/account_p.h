@@ -103,6 +103,7 @@ public Q_SLOTS:
     void enabledHandler(const QString &, bool);
     void displayNameChangedHandler();
     void invalidate();
+    void handleRemoved();
     void handleSynced();
     void asyncQueryInfo();
 

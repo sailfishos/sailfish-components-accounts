@@ -224,7 +224,7 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
     connect(account, SIGNAL(synced()),
             this, SLOT(handleSynced()), Qt::UniqueConnection);
     connect(account, SIGNAL(removed()),
-            this, SLOT(invalidate()), Qt::UniqueConnection);
+            this, SLOT(handleRemoved()), Qt::UniqueConnection);
     connect(account, SIGNAL(destroyed()),
             this, SLOT(invalidate()), Qt::UniqueConnection);
 
@@ -404,11 +404,16 @@ void AccountPrivate::displayNameChangedHandler()
     }
 }
 
-void AccountPrivate::invalidate()
+void AccountPrivate::handleRemoved()
 {
     if (account && account->providerName() == "jolla") {
         updateStoreRepositories(false);
     }
+    invalidate();
+}
+
+void AccountPrivate::invalidate()
+{
     // NOTE: the Accounts::Manager instance ALWAYS owns the account pointer.
     // If the manager gets deleted while the Account instance is
     // alive, we need to ensure that invalidate() gets called also.
