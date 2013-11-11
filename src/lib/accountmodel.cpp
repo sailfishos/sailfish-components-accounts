@@ -254,13 +254,15 @@ void AccountModel::componentComplete()
 
 void AccountModel::accountCreated(Accounts::AccountId id)
 {
-    Q_D(AccountModel);
-    Accounts::Account *account = d->manager->account(id);
+    if (id) {
+        Q_D(AccountModel);
+        Accounts::Account *account = d->manager->account(id);
 
-    if (account != 0) {
-        addedAccount(account);
-        d->accountsList.insert(0, new DisplayData(account));
-        reload();
+        if (account != 0) {
+            addedAccount(account);
+            d->accountsList.insert(0, new DisplayData(account));
+            reload();
+        }
     }
 }
 
