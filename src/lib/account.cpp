@@ -1259,9 +1259,15 @@ void Account::remove()
         }
     }
 
-    d->setStatus(Account::SyncInProgress);
-    d->account->remove();
-    d->account->sync();
+    if (d->account->id()) {
+        // only remove if we've synced / have an id.
+        d->setStatus(Account::SyncInProgress);
+        d->account->remove();
+        d->account->sync();
+    } else {
+        d->account->deleteLater();
+        d->invalidate();
+    }
 }
 
 
