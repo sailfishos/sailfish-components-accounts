@@ -390,6 +390,8 @@ void AccountPrivate::enabledHandler(const QString &serviceName, bool newEnabled)
             enabled = newEnabled;
             emit q->enabledChanged();
         }
+    } else {
+        emit q->enabledWithServiceChanged(serviceName);
     }
 }
 
@@ -1466,6 +1468,8 @@ bool Account::isEnabledWithService(const QString &serviceName)
 
     Note: After calling this, isEnabledWithService() will report the service as enabled, but
     this change will not take effect in the database until sync() is called.
+    The \l enabledWithServiceChanged() signal will be emitted when the change
+    is committed to the database.
 */
 void Account::enableWithService(const QString &serviceName)
 {
@@ -1509,6 +1513,8 @@ void Account::enableWithService(const QString &serviceName)
 
     Note: After calling this, isEnabledWithService() will report the service as disabled, but
     this change will not take effect in the database until sync() is called.
+    The \l enabledWithServiceChanged() signal will be emitted when the change
+    is committed to the database.
 */
 void Account::disableWithService(const QString &serviceName)
 {
