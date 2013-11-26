@@ -392,6 +392,27 @@ void tst_Account::enableDisableWithService()
     // verify the service really was disabled
     QVERIFY(!a->enabledServices().contains(m.service(QLatin1String("test-service2"))));
 
+    // ensure that per-service signals are emitted appropriately
+    // first, ensure that it is disabled with the test service.
+    account->disableWithService("test-service2");
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced); // wait for sync.
+
+    // then connect up our signal spy, and trigger some changes.
+    QSignalSpy srvspy(account.data(), SIGNAL(enabledWithServiceChanged(QString)));
+    account->enableWithService(QLatin1String("test-service2"));
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced); // wait for sync.
+    QCOMPARE(srvspy.count(), 1);
+    QCOMPARE(srvspy.takeFirst().at(0).toString(), QString(QLatin1String("test-service2")));
+    QVERIFY(account->isEnabledWithService(QString(QLatin1String("test-service2"))));
+    account->disableWithService(QLatin1String("test-service2"));
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced); // wait for sync.
+    QCOMPARE(srvspy.count(), 1);
+    QCOMPARE(srvspy.takeFirst().at(0).toString(), QString(QLatin1String("test-service2")));
+    QVERIFY(!account->isEnabledWithService(QString(QLatin1String("test-service2"))));
+
     // cleanup
     account->remove();
 }

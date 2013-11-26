@@ -157,6 +157,8 @@ Q_SIGNALS:
     void errorMessageChanged();
     void defaultCredentialsUserNameChanged();
 
+    void enabledWithServiceChanged(const QString &serviceName);
+
     void signInCredentialsCreated(const QVariantMap &data);
     void signInCredentialsUpdated(const QVariantMap &data);
     void signInResponse(const QVariantMap &data);
