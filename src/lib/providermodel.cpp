@@ -79,7 +79,20 @@ ProviderModel::ProviderModel(QObject* parent)
 
     for (int i = 0; i < providers.size(); i++) {
         QDomDocument domDocument = providers[i].domDocument();
-        d->providerList << providers[i];
+
+        // add it sorted by provider display name
+        bool addedProvider = false;
+        for (int j = 0; j < d->providerList.size(); ++j) {
+            if (providers[i].displayName() < d->providerList[j].displayName()) {
+                d->providerList.insert(j, providers[i]);
+                addedProvider = true;
+                break;
+            }
+        }
+
+        if (!addedProvider) {
+            d->providerList << providers[i];
+        }
     }
 }
 

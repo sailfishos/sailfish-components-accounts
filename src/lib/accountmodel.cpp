@@ -77,6 +77,34 @@ public:
     bool componentComplete;
 };
 
+namespace {
+    void insertAccountSorted(DisplayData *data,
+                             Accounts::Account *account,
+                             QList<DisplayData *> *accountsList,
+                             QList<DisplayData *> *filteredAccountsList)
+    {
+        // sort by provider display name then account display name
+        bool addedAccount = false;
+        for (int j = 0; j < accountsList->size(); ++j) {
+            Accounts::Provider listAccountProvider = accountsList->at(j)->account->provider();
+            Accounts::Provider thisAccountProvider = account->provider();
+            if (thisAccountProvider.displayName() < listAccountProvider.displayName()
+                    || (thisAccountProvider.displayName() == listAccountProvider.displayName()
+                        && account->displayName() < accountsList->at(j)->account->displayName())) {
+                accountsList->insert(j, data);
+                filteredAccountsList->insert(j, data);
+                addedAccount = true;
+                break;
+            }
+        }
+
+        if (!addedAccount) {
+            accountsList->append(data);
+            filteredAccountsList->append(data);
+        }
+    }
+}
+
 
 /*!
     \qmltype AccountModel
@@ -125,8 +153,7 @@ AccountModel::AccountModel(QObject* parent)
         Accounts::Account *account = d->manager->account(id);
         addedAccount(account);
         DisplayData *data = new DisplayData(account);
-        d->accountsList.append(data);
-        d->filteredAccountsList.append(data);
+        insertAccountSorted(data, account, &d->accountsList, &d->filteredAccountsList);
     }
 }
 
@@ -260,7 +287,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
 
         if (account != 0) {
             addedAccount(account);
-            d->accountsList.insert(0, new DisplayData(account));
+            insertAccountSorted(new DisplayData(account), account, &d->accountsList, &d->filteredAccountsList);
             reload();
         }
     }
