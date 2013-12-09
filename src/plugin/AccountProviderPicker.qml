@@ -5,8 +5,11 @@ import Sailfish.Accounts 1.0
 SilicaListView {
     id: root
 
+    property alias serviceFilter: providerModel.serviceFilter
+
     signal providerSelected(int index, string providerName)
     signal providerDeselected(int index, string providerName)
+
 
     property AccountManager _accountManager: AccountManager {}
     property bool _hasExistingJollaAccount
