@@ -6,6 +6,7 @@ Dialog {
     id: root
 
     property int providerCount: view.count
+    property alias serviceFilter: view.serviceFilter
 
     property int _selectionCount
     property alias _viewHeader: view.header

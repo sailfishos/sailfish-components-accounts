@@ -8,22 +8,19 @@
 #ifndef SAILFISH_ACCOUNTS__PROVIDERMODEL_H
 #define SAILFISH_ACCOUNTS__PROVIDERMODEL_H
 
-//accounts-qt
-#include <Accounts/Manager>
-
 //Qt
-#include <QAbstractTableModel>
-#include <QDomDocument>
-#include <QString>
+#include <QAbstractListModel>
+#include <QQmlParserStatus>
+#include <QStringList>
 
-class Provider;
-class Q_DECL_EXPORT ProviderModel : public QAbstractListModel
+class Q_DECL_EXPORT ProviderModel : public QAbstractListModel, public QQmlParserStatus
 {
     Q_OBJECT
     class ProviderModelPrivate;
+    Q_INTERFACES(QQmlParserStatus)
+    Q_PROPERTY(QStringList serviceFilter READ serviceFilter WRITE setServiceFilter NOTIFY serviceFilterChanged)
 
 public:
-
     enum Roles{
         ProviderNameRole = Qt::UserRole + 1,
         ProviderDisplayNameRole,
@@ -34,13 +31,20 @@ public:
     ProviderModel(QObject* parent = 0);
     ~ProviderModel();
 
+    QStringList serviceFilter() const;
+    void setServiceFilter(const QStringList &serviceFilter);
+
     int rowCount( const QModelIndex & index = QModelIndex() ) const;
     QVariant data( const QModelIndex &index, int role ) const;
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    void classBegin();
+    void componentComplete();
+
+signals:
+    void serviceFilterChanged();
+
 protected:
     QHash<int, QByteArray> roleNames() const;
-#endif
 
 private:
     ProviderModelPrivate* d_ptr;
