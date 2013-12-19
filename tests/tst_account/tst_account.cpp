@@ -286,6 +286,14 @@ void tst_Account::defaultCredentialsUserName()
 
     account->removeSignInCredentials("appName", "credName");
     account->remove();
+
+    // chack that signInParameters for uninitialized account won't crash.
+    QScopedPointer<Account> account2(new Account);
+    account2->classBegin();
+    account2->componentComplete();
+    account->sync();
+    sip = account2->signInParameters("test-service2", userName, "pass");
+    QVERIFY(sip != 0);
 }
 
 void tst_Account::providerName()
