@@ -1576,7 +1576,7 @@ SignInParameters *Account::signInParameters(const QString &serviceName, const QS
     // Note: we don't use service-segregation, but instead we use per-application segregation.
     // So, we use the ServiceAccount's AuthData only to get the method/mechanism/params.
     Accounts::Service srv = d->manager->service(serviceName);
-    if (srv.isValid()) {
+    if (srv.isValid() && d->account) {
         Accounts::AccountService as(d->account, srv);
         Accounts::AuthData authData(as.authData());
         validServiceName = serviceName;
