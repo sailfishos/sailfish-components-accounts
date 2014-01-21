@@ -60,6 +60,14 @@ BuildRequires: qt5-plugin-sqldriver-sqlite
 %description doc
 %{summary}.
 
+%package tools
+Summary: Development tools for %{name}
+Group: Applications/System
+Requires: %{name} = %{version}-%{release}
+
+%description tools
+%{summary}.
+
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -107,6 +115,10 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 %files doc
 %defattr(-,root,root,-)
 %{_docdir}/%{name}
+
+%files tools
+%defattr(-,root,root,-)
+%{_bindir}/sailfish-accounts-tool
 
 %post
 /sbin/ldconfig
