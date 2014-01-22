@@ -12,6 +12,7 @@ SOURCES += \
     $$PWD/accountmanager.cpp \
     $$PWD/accountmodel.cpp \
     $$PWD/globalaccountmanager_p.cpp \
+    $$PWD/globaltranslatorcache_p.cpp \
     $$PWD/provider.cpp \
     $$PWD/providermodel.cpp \
     $$PWD/service.cpp \
@@ -29,6 +30,7 @@ HEADERS += \
     $$PWD/accountvalueencryption_p.h \
     $$PWD/accountvalueencryption_qca_p.h \
     $$PWD/globalaccountmanager_p.h \
+    $$PWD/globaltranslatorcache_p.h \
     $$PWD/provider.h \
     $$PWD/providermodel.h \
     $$PWD/service.h \

@@ -6,6 +6,8 @@
  */
 
 #include "servicetype.h"
+#include "globaltranslatorcache_p.h"
+#include <QTranslator>
 
 /*!
     \qmltype ServiceType
@@ -46,7 +48,7 @@ QString ServiceType::name() const
 
 QString ServiceType::displayName() const
 {
-    return m_serviceType.displayName();
+    return SailfishAccounts::translatedDisplayName(m_serviceType);
 }
 
 /*!

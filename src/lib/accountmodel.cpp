@@ -10,6 +10,7 @@
 #include "account.h"
 #include "provider.h"
 #include "globalaccountmanager_p.h"
+#include "globaltranslatorcache_p.h"
 
 //Qt
 #include <QtDebug>
@@ -78,6 +79,7 @@ public:
 };
 
 namespace {
+
     void insertAccountSorted(DisplayData *data,
                              Accounts::Account *account,
                              QList<DisplayData *> *accountsList,
@@ -88,8 +90,8 @@ namespace {
         for (int j = 0; j < accountsList->size(); ++j) {
             Accounts::Provider listAccountProvider = accountsList->at(j)->account->provider();
             Accounts::Provider thisAccountProvider = account->provider();
-            if (thisAccountProvider.displayName() < listAccountProvider.displayName()
-                    || (thisAccountProvider.displayName() == listAccountProvider.displayName()
+            if (SailfishAccounts::translatedDisplayName(thisAccountProvider) < SailfishAccounts::translatedDisplayName(listAccountProvider)
+                    || (SailfishAccounts::translatedDisplayName(thisAccountProvider) == SailfishAccounts::translatedDisplayName(listAccountProvider)
                         && account->displayName() < accountsList->at(j)->account->displayName())) {
                 accountsList->insert(j, data);
                 filteredAccountsList->insert(j, data);
@@ -255,7 +257,7 @@ QVariant AccountModel::data(const QModelIndex &index, int role) const
 
     if (role == ProviderDisplayNameRole) {
         Accounts::Provider provider = d->manager->provider(account->providerName());
-        data->providerDisplayName = provider.displayName();
+        data->providerDisplayName = SailfishAccounts::translatedDisplayName(provider);
         return QVariant::fromValue(data->providerDisplayName);
     }
 

@@ -17,4 +17,3 @@ Accounts::Manager *globalAccountManager()
 
     return g_accountManagers.localData();
 }
-
