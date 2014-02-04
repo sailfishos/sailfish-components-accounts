@@ -9,6 +9,7 @@
 #include "providermodel.h"
 #include "provider.h"
 #include "globalaccountmanager_p.h"
+#include "globaltranslatorcache_p.h"
 
 //Qt
 #include <QDebug>
@@ -72,7 +73,6 @@ static QString retrieveDescription(const Accounts::Provider &provider)
     }
 }
 
-
 /*!
     \qmltype ProviderModel
     \instantiates ProviderModel
@@ -123,7 +123,7 @@ ProviderModel::ProviderModel(QObject* parent)
         // add it sorted by provider display name
         bool addedProvider = false;
         for (int j = 0; j < d->providerList.size(); ++j) {
-            if (providers[i].displayName() < d->providerList[j].displayName()) {
+            if (SailfishAccounts::translatedDisplayName(providers[i]) < SailfishAccounts::translatedDisplayName(d->providerList[j])) {
                 d->providerList.insert(j, providers[i]);
                 addedProvider = true;
                 break;
@@ -203,7 +203,7 @@ QVariant ProviderModel::data(const QModelIndex& index, int role) const
         return provider.name();
 
     if (role == ProviderDisplayNameRole)
-        return provider.displayName();
+        return SailfishAccounts::translatedDisplayName(provider);
 
     if (role == ProviderDescriptionRole)
         return retrieveDescription(provider);

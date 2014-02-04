@@ -7,6 +7,8 @@
 
 #include "provider.h"
 #include "globalaccountmanager_p.h"
+#include "globaltranslatorcache_p.h"
+#include <QTranslator>
 
 //libaccounts-qt
 #include <Accounts/Manager>
@@ -63,7 +65,7 @@ QString Provider::name() const
 
 QString Provider::displayName() const
 {
-    return m_provider.displayName();
+    return SailfishAccounts::translatedDisplayName(m_provider);
 }
 
 /*!
