@@ -11,6 +11,9 @@
 #include <QHash>
 #include <QString>
 #include <QByteArray>
+#include <QFileInfo>
+#include <QLocale>
+#include <QtDebug>
 
 #include <Accounts/Provider>
 #include <Accounts/Service>
@@ -27,8 +30,21 @@ public:
     {
         QTranslator *translator = 0;
         if (!translators.contains(trCatalog)) {
+            QFileInfo fi(trCatalog);
             translator = new QTranslator;
-            translator->load(trCatalog);
+            if (fi.isAbsolute()) {
+                if (fi.exists()) {
+                    // fully specified path to file
+                    translator->load(trCatalog);
+                } else {
+                    // partially specified path to file
+                    QString trPath = fi.path();
+                    QString trFile = fi.fileName();
+                    translator->load(QLocale(), trFile, "-", trPath);
+                }
+            } else {
+                translator->load(QLocale(), trCatalog, "-", "/usr/share/translations");
+            }
             translators.insert(trCatalog, translator);
         } else {
             translator = translators.value(trCatalog);
