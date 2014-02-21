@@ -24,6 +24,7 @@
 #include "providermodel.h"
 #include "service.h"
 #include "servicetype.h"
+#include "servicemodel.h"
 #include "signinparameters.h"
 
 // using custom translator so it gets properly removed from qApp when engine is deleted
@@ -74,6 +75,7 @@ public:
         qmlRegisterType<ProviderModel>("Sailfish.Accounts", 1, 0, "ProviderModel");
         qmlRegisterType<Service>("Sailfish.Accounts", 1, 0, "Service");
         qmlRegisterType<ServiceType>("Sailfish.Accounts", 1, 0, "ServiceType");
+        qmlRegisterType<ServiceModel>("Sailfish.Accounts", 1, 0, "ServiceModel");
         qmlRegisterType<SignInParameters>("Sailfish.Accounts", 1, 0, "SignInParameters");
     }
 };

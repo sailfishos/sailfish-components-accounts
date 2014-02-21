@@ -17,6 +17,7 @@ SOURCES += \
     $$PWD/providermodel.cpp \
     $$PWD/service.cpp \
     $$PWD/servicetype.cpp \
+    $$PWD/servicemodel.cpp \
     $$PWD/signinparameters.cpp
 
 HEADERS += \
@@ -35,6 +36,7 @@ HEADERS += \
     $$PWD/providermodel.h \
     $$PWD/service.h \
     $$PWD/servicetype.h \
+    $$PWD/servicemodel.h \
     $$PWD/signinparameters.h
 
 # We can use either QCA or OpenSSL-EVP for AES encryption of credentials
