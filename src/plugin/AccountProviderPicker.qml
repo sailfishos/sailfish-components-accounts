@@ -40,6 +40,7 @@ SilicaListView {
 
         // don't offer the chance to create multiple jolla accounts through the UI
         visible: model.providerName !== "jolla" || !root._hasExistingJollaAccount
+        contentHeight: visible ? Theme.itemSizeSmall : 0
 
         onClicked: {
             root._providerClicked(model.index, model.providerName)
