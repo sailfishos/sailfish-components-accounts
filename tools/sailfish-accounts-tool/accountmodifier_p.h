@@ -12,17 +12,27 @@
 #include <Accounts/Account>
 #include <Accounts/Manager>
 
+#include "accountsyncmanager.h"
+
 class AccountModifier : public QObject
 {
     Q_OBJECT
 
 public:
+    enum Mode {
+        UnknownMode,
+        ModifyServiceSettings,
+        UpdateSyncServices
+    };
+
     QString providerName;
     QString serviceName;
     QString modeSwitch;
     QString settingName;
     QString settingType;
     QString settingValue;
+    Mode mode;
+    AccountSyncManager accountSyncManager;
 
     AccountModifier(QObject *parent = 0);
     ~AccountModifier();
@@ -36,6 +46,10 @@ Q_SIGNALS:
     void done();
 
 private:
+    void checkServiceSettingArgs();
+    bool applyServiceSettingChanges();
+    bool applySyncUpdateChanges();
+
     Accounts::Manager *m_accountManager;
     Accounts::AccountIdList m_allAccountIds;
     Accounts::Account *m_currAccount;

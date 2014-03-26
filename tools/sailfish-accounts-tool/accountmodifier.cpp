@@ -10,6 +10,7 @@
 
 AccountModifier::AccountModifier(QObject *parent)
     : QObject(parent)
+    , mode(UnknownMode)
     , m_accountManager(new Accounts::Manager)
     , m_currAccount(0)
     , m_currAccountIdx(-1)
@@ -56,6 +57,12 @@ QVariant convertSettingValue(const QString &settingName, const QString &settingT
 
 void AccountModifier::start()
 {
+    if (mode == UnknownMode) {
+        qWarning() << Q_FUNC_INFO << "No mode set for AccountModifier!";
+        emit done();
+        return;
+    }
+
     if (!m_accountManager) {
         qWarning() << Q_FUNC_INFO << "could not instantiate account manager!";
         emit done();
@@ -69,6 +76,16 @@ void AccountModifier::start()
         return;
     }
 
+    if (mode == ModifyServiceSettings) {
+        checkServiceSettingArgs();
+    }
+
+    m_currAccountIdx = -1;
+    next();
+}
+
+void AccountModifier::checkServiceSettingArgs()
+{
     bool emptyProvider = providerName.isEmpty();
     bool emptyService = serviceName.isEmpty();
     bool modifyMode = modeSwitch == QString::fromLatin1("-m");
@@ -93,9 +110,6 @@ void AccountModifier::start()
                    << (modifyMode ? "modified in" : "removed from")
                    << serviceName << "of" << providerName << "accounts!";
     }
-
-    m_currAccountIdx = -1;
-    next();
 }
 
 void AccountModifier::next()
@@ -118,10 +132,30 @@ void AccountModifier::next()
         return;
     }
 
-    connect(m_currAccount, SIGNAL(error(Accounts::Error)), this, SLOT(error(Accounts::Error)));
-    connect(m_currAccount, SIGNAL(synced()), this, SLOT(next()));
-    bool doingSync = false;
+    bool needsSync = false;
+    switch (mode) {
+    case ModifyServiceSettings:
+        needsSync = applyServiceSettingChanges();
+        break;
+    case UpdateSyncServices:
+        needsSync = applySyncUpdateChanges();
+        break;
+    default:
+        qWarning() << Q_FUNC_INFO << "Unhandled AccountModifier mode!";
+        emit done();
+        return;
+    }
+    if (needsSync) {
+        connect(m_currAccount, SIGNAL(error(Accounts::Error)), this, SLOT(error(Accounts::Error)));
+        connect(m_currAccount, SIGNAL(synced()), this, SLOT(next()));
+        m_currAccount->sync(); // can't use syncAndBlock() or it causes deadlock in some cases.
+    } else {
+        next();
+    }
+}
 
+bool AccountModifier::applyServiceSettingChanges()
+{
     if (providerName.isEmpty() || m_currAccount->providerName() == providerName) {
         QVariant variantSettingValue = convertSettingValue(settingName, settingType, settingValue);
         if (serviceName == QString::fromLatin1("--global")) {
@@ -147,13 +181,60 @@ void AccountModifier::next()
                 }
             }
         }
-        doingSync = true;
-        m_currAccount->sync(); // can't use syncAndBlock() or it causes deadlock in some cases.
+        return true;
+    }
+    return false;
+}
+
+bool AccountModifier::applySyncUpdateChanges()
+{
+    Accounts::ServiceList allServices = m_currAccount->services();
+
+    bool genericSyncServiceEnabled = false;
+    bool hasGenericSyncService = false;
+    uint credentialsId = 0;
+    foreach (const Accounts::Service &srv, allServices) {
+        bool isGenericSyncService = srv.serviceType() == QStringLiteral("sync")
+                && accountSyncManager.defaultTemplateProfile(m_currAccount, srv).isEmpty();
+        if (isGenericSyncService) {
+            m_currAccount->selectService(srv);
+            hasGenericSyncService = true;
+            genericSyncServiceEnabled = m_currAccount->enabled();
+            credentialsId = m_currAccount->credentialsId();
+            if (credentialsId == 0) {
+                qWarning() << "Cannot update sync services, the generic sync service doesn't have a valid credentialsId!";
+                return false;
+            }
+            break;
+        }
+    }
+    m_currAccount->selectService(Accounts::Service());
+    if (!hasGenericSyncService) {
+        return false;
     }
 
-    if (!doingSync) {
-        next();
+    bool madeChanges = false;
+    foreach (const Accounts::Service &srv, allServices) {
+        QString templateProfile = accountSyncManager.defaultTemplateProfile(m_currAccount, srv);
+        if (templateProfile.isEmpty() || accountSyncManager.hasProfile(m_currAccount, srv)) {
+            continue;
+        }
+        m_currAccount->selectService(srv);
+
+        // copy credentials and set enabled status according to generic sync service
+        m_currAccount->setCredentialsId(credentialsId);
+        m_currAccount->setEnabled(genericSyncServiceEnabled);
+
+        // generate sync profile
+        QString profileId = accountSyncManager.createProfile(templateProfile, m_currAccount, srv, genericSyncServiceEnabled);
+        if (profileId.isEmpty()) {
+            qWarning() << "Unable to create sync profile for" << srv.name() << "!";
+            return false;
+        }
+        madeChanges = true;
     }
+    m_currAccount->selectService(Accounts::Service());
+    return madeChanges;
 }
 
 void AccountModifier::error(Accounts::Error err)
