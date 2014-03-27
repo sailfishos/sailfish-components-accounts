@@ -6,6 +6,9 @@ CONFIG += hide_symbols
 CONFIG += link_pkgconfig
 PKGCONFIG += accounts-qt5 libsignon-qt5
 
+LIBS += -L../../src/lib -lsailfishaccounts
+INCLUDEPATH += . ../../src/lib
+
 SOURCES += accountmodifier.cpp main.cpp
 HEADERS += accountmodifier_p.h
 

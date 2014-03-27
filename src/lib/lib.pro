@@ -5,7 +5,7 @@ TARGETPATH = $$[QT_INSTALL_LIBS]
 
 QT += qml dbus
 CONFIG += qt hide_symbols create_pc create_prl no_install_prl link_pkgconfig
-PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5
+PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5 buteosyncfw5
 
 SOURCES += \
     $$PWD/account.cpp \
@@ -18,7 +18,8 @@ SOURCES += \
     $$PWD/service.cpp \
     $$PWD/servicetype.cpp \
     $$PWD/servicemodel.cpp \
-    $$PWD/signinparameters.cpp
+    $$PWD/signinparameters.cpp \
+    $$PWD/accountsyncmanager.cpp
 
 HEADERS += \
     $$PWD/account.h \
@@ -37,7 +38,8 @@ HEADERS += \
     $$PWD/service.h \
     $$PWD/servicetype.h \
     $$PWD/servicemodel.h \
-    $$PWD/signinparameters.h
+    $$PWD/signinparameters.h \
+    $$PWD/accountsyncmanager.h
 
 # We can use either QCA or OpenSSL-EVP for AES encryption of credentials
 CONFIG(qca_encryption) {
@@ -64,7 +66,8 @@ develheaders.files = \
     $$PWD/provider.h \
     $$PWD/service.h \
     $$PWD/servicetype.h \
-    $$PWD/signinparameters.h
+    $$PWD/signinparameters.h \
+    $$PWD/accountsyncmanager.h
 
 target.path = $$[QT_INSTALL_LIBS]
 pkgconfig.files = $$PWD/pkgconfig/sailfishaccounts.pc
