@@ -23,7 +23,7 @@
 #include <QSet>
 #include <QList>
 
-static const QString SyncProfileTemplateKey = QStringLiteral("sync_profile");
+static const QString SyncProfileTemplateKey = QStringLiteral("sync_profile_template");
 
 static QString SyncProfileIdKey(const QString &templateProfileName)
 {
@@ -51,7 +51,7 @@ public:
     AccountSyncProfileManagerPrivate(AccountSyncManager *parent = 0);
     ~AccountSyncProfileManagerPrivate();
 
-    void creatingProfile(Accounts::Account *account, const QString &serviceName, const QString &profileId);
+    void finalizeProfileCreation(Accounts::Account *account, const QString &serviceName, const QString &profileId);
     bool startSync(const QString &profileId);
 
     QString syncProfileId(Accounts::Account *account, const Accounts::Service &srv) const;
@@ -88,7 +88,7 @@ AccountSyncProfileManagerPrivate::~AccountSyncProfileManagerPrivate()
     delete m_buteoClient;
 }
 
-void AccountSyncProfileManagerPrivate::creatingProfile(Accounts::Account *account, const QString &serviceName, const QString &profileId)
+void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account *account, const QString &serviceName, const QString &profileId)
 {
     ProfileCreationDetails details(profileId, account->id(), serviceName);
     profilesUnderCreation.append(details);
@@ -218,7 +218,7 @@ void AccountSyncManager::createProfile(const QString &templateProfileName, int a
         emit profileCreationError(accountId, serviceName, QString("Unable to create sync profile"));
         return;
     }
-    d->creatingProfile(account, serviceName, profileId);
+    d->finalizeProfileCreation(account, serviceName, profileId);
 }
 
 void AccountSyncManager::updateProfile(const QString &profileId, const QVariantMap &properties)
