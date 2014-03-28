@@ -26,6 +26,7 @@
 #include "servicetype.h"
 #include "servicemodel.h"
 #include "signinparameters.h"
+#include "accountsyncmanager.h"
 
 // using custom translator so it gets properly removed from qApp when engine is deleted
 class AppTranslator: public QTranslator
@@ -77,6 +78,7 @@ public:
         qmlRegisterType<ServiceType>("Sailfish.Accounts", 1, 0, "ServiceType");
         qmlRegisterType<ServiceModel>("Sailfish.Accounts", 1, 0, "ServiceModel");
         qmlRegisterType<SignInParameters>("Sailfish.Accounts", 1, 0, "SignInParameters");
+        qmlRegisterType<AccountSyncManager>("Sailfish.Accounts", 1, 0, "AccountSyncManager");
     }
 };
 
