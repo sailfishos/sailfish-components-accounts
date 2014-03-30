@@ -356,3 +356,5 @@ QString AccountSyncManager::defaultTemplateProfile(Accounts::Account *account, c
     account->selectService(Accounts::Service());
     return defaultTemplate;
 }
+
+#include "accountsyncmanager.moc"
