@@ -33,6 +33,7 @@ static QString SyncProfileIdKey(const QString &templateProfileName)
 
 class AccountSyncProfileManagerPrivate : public QObject
 {
+    Q_OBJECT
 public:
     class ProfileCreationDetails
     {
