@@ -764,9 +764,9 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
     QString errMess = err.message();
     setStatus(Account::Synced);
     if (errMess == QLatin1String("userActionFinished error: 5")) {
-        emit q->signInError(networkConnectionFailure, errType);
+        emit q->signInError(networkConnectionFailure, Account::SignInNetworkError);
     } else if (errMess == QLatin1String("userActionFinished error: 10")) {
-        emit q->signInError(noCachedCredentials, errType);
+        emit q->signInError(noCachedCredentials, Account::SignInCredentialsExpiredError);
     } else {
         emit q->signInError(errMess, errType);
     }
