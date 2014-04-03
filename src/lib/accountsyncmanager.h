@@ -39,7 +39,7 @@ public:
     Q_INVOKABLE void updateProfile(const QString &profileId, const QVariantMap &properties);
     Q_INVOKABLE void syncProfile(const QString &profileId);
 
-    Q_INVOKABLE QString profileId(int accountId, const QString &serviceName) const;
+    Q_INVOKABLE QStringList profileIds(int accountId, const QString &serviceName) const;
 
     QString createProfile(const QString &templateProfileName,
                           Accounts::Account *account,
@@ -49,7 +49,7 @@ public:
     bool updateSyncProfile(const QString &profileId, const QVariantMap &properties);
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
-    QString defaultTemplateProfile(Accounts::Account *account, const Accounts::Service &srv) const;
+    QStringList defaultTemplateProfiles(Accounts::Account *account, const Accounts::Service &srv) const;
 
 signals:
     void profileCreated(const QString &profileId);

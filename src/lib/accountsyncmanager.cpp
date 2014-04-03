@@ -23,7 +23,7 @@
 #include <QSet>
 #include <QList>
 
-static const QString SyncProfileTemplateKey = QStringLiteral("sync_profile_template");
+static const QString SyncProfileTemplatesKey = QStringLiteral("sync_profile_templates");
 
 static QString SyncProfileIdKey(const QString &templateProfileName)
 {
@@ -55,7 +55,7 @@ public:
     void finalizeProfileCreation(Accounts::Account *account, const QString &serviceName, const QString &profileId);
     bool startSync(const QString &profileId);
 
-    QString syncProfileId(Accounts::Account *account, const Accounts::Service &srv) const;
+    QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv) const;
 
     QList<ProfileCreationDetails> profilesUnderCreation;
     QSet<QString> m_profilesUnderSync;
@@ -112,16 +112,19 @@ bool AccountSyncProfileManagerPrivate::startSync(const QString &profileId)
     return true;
 }
 
-QString AccountSyncProfileManagerPrivate::syncProfileId(Accounts::Account *account, const Accounts::Service &srv) const
+QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *account, const Accounts::Service &srv) const
 {
     if (!account || !srv.isValid()) {
-        return QString();
+        return QStringList();
     }
     account->selectService(srv);
-    QString syncProfileTemplate = account->value(SyncProfileTemplateKey).toString();
-    QString syncProfileId = account->value(SyncProfileIdKey(syncProfileTemplate)).toString();
+    QStringList retn;
+    QStringList syncProfileTemplates = account->value(SyncProfileTemplatesKey).toStringList();
+    Q_FOREACH(const QString &syncProfileTemplate, syncProfileTemplates) {
+        retn.append(account->value(SyncProfileIdKey(syncProfileTemplate)).toString());
+    }
     account->selectService(Accounts::Service());
-    return syncProfileId;
+    return retn;
 }
 
 void AccountSyncProfileManagerPrivate::handleAccountSynced()
@@ -246,16 +249,16 @@ void AccountSyncManager::syncProfile(const QString &profileId)
     }
 }
 
-QString AccountSyncManager::profileId(int accountId, const QString &serviceName) const
+QStringList AccountSyncManager::profileIds(int accountId, const QString &serviceName) const
 {
     Accounts::Account *account = d->m_accountManager->account(accountId);
     if (account) {
         Accounts::Service srv = d->m_accountManager->service(serviceName);
         if (srv.isValid()) {
-            return d->syncProfileId(account, srv);
+            return d->syncProfileIds(account, srv);
         }
     }
-    return QString();
+    return QStringList();
 }
 
 QString AccountSyncManager::createProfile(const QString &templateProfileName,
@@ -343,18 +346,18 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
 
 bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv) const
 {
-    return !d->syncProfileId(account, srv).isEmpty();
+    return !d->syncProfileIds(account, srv).isEmpty();
 }
 
-QString AccountSyncManager::defaultTemplateProfile(Accounts::Account *account, const Accounts::Service &srv) const
+QStringList AccountSyncManager::defaultTemplateProfiles(Accounts::Account *account, const Accounts::Service &srv) const
 {
     if (!account || !srv.isValid()) {
-        return QString();
+        return QStringList();
     }
     account->selectService(srv);
-    QString defaultTemplate = account->value(SyncProfileTemplateKey).toString();
+    QStringList defaultTemplates = account->value(SyncProfileTemplatesKey).toStringList();
     account->selectService(Accounts::Service());
-    return defaultTemplate;
+    return defaultTemplates;
 }
 
 #include "accountsyncmanager.moc"
