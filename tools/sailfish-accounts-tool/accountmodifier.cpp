@@ -195,7 +195,7 @@ bool AccountModifier::applySyncUpdateChanges()
     uint credentialsId = 0;
     foreach (const Accounts::Service &srv, allServices) {
         bool isGenericSyncService = srv.serviceType() == QStringLiteral("sync")
-                && accountSyncManager.defaultTemplateProfile(m_currAccount, srv).isEmpty();
+                && accountSyncManager.defaultTemplateProfiles(m_currAccount, srv).isEmpty();
         if (isGenericSyncService) {
             m_currAccount->selectService(srv);
             hasGenericSyncService = true;
@@ -215,23 +215,25 @@ bool AccountModifier::applySyncUpdateChanges()
 
     bool madeChanges = false;
     foreach (const Accounts::Service &srv, allServices) {
-        QString templateProfile = accountSyncManager.defaultTemplateProfile(m_currAccount, srv);
-        if (templateProfile.isEmpty() || accountSyncManager.hasProfile(m_currAccount, srv)) {
-            continue;
-        }
+        QStringList templateProfiles = accountSyncManager.defaultTemplateProfiles(m_currAccount, srv);
         m_currAccount->selectService(srv);
+        Q_FOREACH(const QString &templateProfile, templateProfiles) {
+            if (templateProfile.isEmpty() || accountSyncManager.hasProfile(m_currAccount, srv)) {
+                continue;
+            }
 
-        // copy credentials and set enabled status according to generic sync service
-        m_currAccount->setCredentialsId(credentialsId);
-        m_currAccount->setEnabled(genericSyncServiceEnabled);
+            // copy credentials and set enabled status according to generic sync service
+            m_currAccount->setCredentialsId(credentialsId);
+            m_currAccount->setEnabled(genericSyncServiceEnabled);
 
-        // generate sync profile
-        QString profileId = accountSyncManager.createProfile(templateProfile, m_currAccount, srv, genericSyncServiceEnabled);
-        if (profileId.isEmpty()) {
-            qWarning() << "Unable to create sync profile for" << srv.name() << "!";
-            return false;
+            // generate sync profile
+            QString profileId = accountSyncManager.createProfile(templateProfile, m_currAccount, srv, genericSyncServiceEnabled);
+            if (profileId.isEmpty()) {
+                qWarning() << "Unable to create sync profile for" << srv.name() << "!";
+                return false;
+            }
+            madeChanges = true;
         }
-        madeChanges = true;
     }
     m_currAccount->selectService(Accounts::Service());
     return madeChanges;
