@@ -6,6 +6,7 @@
  */
 
 #include "accountsyncmanager.h"
+#include "accountsyncoptions_p.h"
 
 // buteo-syncfw
 #include <ProfileEngineDefs.h>
@@ -225,13 +226,13 @@ void AccountSyncManager::createProfile(const QString &templateProfileName, int a
     d->finalizeProfileCreation(account, serviceName, profileId);
 }
 
-void AccountSyncManager::updateProfile(const QString &profileId, const QVariantMap &properties)
+void AccountSyncManager::updateProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options)
 {
     if (profileId.isEmpty()) {
         emit profileUpdateError(profileId, QStringLiteral("specified profileId is an empty string"));
         return;
     }
-    if (!updateSyncProfile(profileId, properties)) {
+    if (!updateSyncProfile(profileId, properties, options)) {
         emit profileUpdateError(profileId, QStringLiteral("Unable to update sync profile"));
         return;
     }
@@ -259,6 +260,16 @@ QStringList AccountSyncManager::profileIds(int accountId, const QString &service
         }
     }
     return QStringList();
+}
+
+AccountSyncOptions *AccountSyncManager::accountSyncOptions(const QString &profileId)
+{
+    Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
+    if (!profile) {
+        qWarning() << "Invalid profile name:" << profileId;
+        return 0;
+    }
+    return AccountSyncOptionsPrivate::fromButeoProfile(*profile, this);
 }
 
 QString AccountSyncManager::createProfile(const QString &templateProfileName,
@@ -324,7 +335,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
     return profileId;
 }
 
-bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVariantMap &properties)
+bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options)
 {
     if (profileId.isEmpty()) {
         qWarning() << "Invalid profileId";
@@ -339,7 +350,22 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
     Q_FOREACH (const QString &key, properties.keys()) {
         profile->setKey(key, properties[key].toString());
     }
-    QString savedProfileId = d->m_profileManager->updateProfile(*profile);
+
+    QString savedProfileId;
+    if (options) {
+        AccountSyncOptionsPrivate::writeToButeoProfile(options, profile);
+        savedProfileId = d->m_profileManager->updateProfile(*profile);
+        if (!d->m_buteoClient) {
+            d->m_buteoClient = new Buteo::SyncClientInterface;
+            QString pid = profileId;    // buteo api requires in-param
+            Buteo::SyncSchedule schedule = profile->syncSchedule();     // buteo api requires in-param
+            if (!d->m_buteoClient->setSyncSchedule(pid, schedule)) {
+                qWarning() << "Buteo::SyncClientInterface::setSyncSchedule() failed for profile" << pid;
+            }
+        }
+    } else {
+        savedProfileId = d->m_profileManager->updateProfile(*profile);
+    }
     delete profile;
     return !savedProfileId.isEmpty();
 }

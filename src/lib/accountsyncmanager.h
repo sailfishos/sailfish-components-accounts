@@ -18,6 +18,7 @@ namespace Accounts {
 }
 
 class AccountSyncProfileManagerPrivate;
+class AccountSyncOptions;
 
 class Q_DECL_EXPORT AccountSyncManager : public QObject
 {
@@ -36,17 +37,18 @@ public:
     ~AccountSyncManager();
 
     Q_INVOKABLE void createProfile(const QString &templateProfileName, int accountId, const QString &serviceName);
-    Q_INVOKABLE void updateProfile(const QString &profileId, const QVariantMap &properties);
+    Q_INVOKABLE void updateProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
     Q_INVOKABLE void syncProfile(const QString &profileId);
 
     Q_INVOKABLE QStringList profileIds(int accountId, const QString &serviceName) const;
+    Q_INVOKABLE AccountSyncOptions *accountSyncOptions(const QString &profileId);
 
     QString createProfile(const QString &templateProfileName,
                           Accounts::Account *account,
                           const Accounts::Service &srv,
                           bool enableProfile,
                           const QVariantMap &properties = QVariantMap());
-    bool updateSyncProfile(const QString &profileId, const QVariantMap &properties);
+    bool updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
     QStringList defaultTemplateProfiles(Accounts::Account *account, const Accounts::Service &srv) const;
