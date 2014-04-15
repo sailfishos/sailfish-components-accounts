@@ -16,7 +16,7 @@ BuildRequires:  pkgconfig(Qt5DBus)
 BuildRequires:  pkgconfig(libsignon-qt5)
 BuildRequires:  pkgconfig(accounts-qt5)
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
-BuildRequires:  pkgconfig(buteosyncfw5)
+BuildRequires:  pkgconfig(buteosyncfw5) >= 0.6.33
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools
 Requires:  sailfishsilica-qt5 >= 0.8.67
