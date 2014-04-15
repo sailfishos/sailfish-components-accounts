@@ -28,6 +28,7 @@ class Q_DECL_EXPORT SignInParameters : public QObject
     Q_PROPERTY(QString password READ password CONSTANT)
 
     Q_ENUMS(UiPolicy)
+    Q_ENUMS(CredentialsPolicy)
 
 public:
     enum UiPolicy {
@@ -35,6 +36,11 @@ public:
         RequestPasswordPolicy   = SignOn::RequestPasswordPolicy,
         NoUserInteractionPolicy = SignOn::NoUserInteractionPolicy,
         ValidationPolicy        = SignOn::ValidationPolicy
+    };
+
+    enum CredentialsPolicy {
+        UseCachedCredentialsPolicy = 0,
+        RefreshCredentialsPolicy = 1
     };
 
 public:

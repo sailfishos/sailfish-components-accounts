@@ -27,6 +27,7 @@
 #include <SignOn/SessionData>
 #include <SignOn/AuthSession>
 
+#include <QTimer>
 #include <QDBusInterface>
 #include <QDBusConnection>
 
@@ -151,6 +152,8 @@ void SignInCredentials::cleanup(bool removeIdentity)
     updatingSignInCredentials = false;
     signingInWithCredentials = false;
     storingEncryptedTokens = false;
+    forcingCredentialsRefresh = false;
+    haveForcedCredentialsExpiry = false;
 
     identityInfo = SignOn::IdentityInfo();
 
@@ -188,6 +191,8 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     signInCredentials.updatingSignInCredentials = false;
     signInCredentials.signingInWithCredentials = false;
     signInCredentials.storingEncryptedTokens = false;
+    signInCredentials.forcingCredentialsRefresh = false;
+    signInCredentials.haveForcedCredentialsExpiry = false;
     signInCredentials.identity = NULL;
     signInCredentials.session = NULL;
 
@@ -688,7 +693,8 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
     } else if (signInCredentials.updatingSignInCredentials || signInCredentials.signingInWithCredentials) {
         // if it is "password" method, then the username/password are encrypted, and we need to decrypt.
         // if it is "oauth2" (oauth1.0a / oauth2) then we just emit the tokens immediately,
-        // as the security is provided by signond (and the fact that the client needs to know the clientid).
+        // as the security is provided by signond (and the fact that the client needs to know the clientid),
+        // unless we're forcing a refresh.
         signInCredentials.responseData.clear();
         QStringList keys = data.propertyNames();
         foreach (const QString &key, keys) {
@@ -698,12 +704,34 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         bool emitUpdated = signInCredentials.updatingSignInCredentials;
         if (signInCredentials.method.toLower() == QLatin1String("oauth2")) {
             QVariantMap responseData = signInCredentials.responseData;
-            signInCredentials.cleanup();
-            setStatus(Account::Synced);
-            if (emitUpdated) {
-                emit q->signInCredentialsUpdated(responseData);
+            if (signInCredentials.forcingCredentialsRefresh) {
+                if (!signInCredentials.haveForcedCredentialsExpiry) {
+                    // we need to use the ProvidedTokens hook to overwrite the expiry.
+                    signInCredentials.haveForcedCredentialsExpiry = true;
+                    QVariantMap providedTokens;
+                    Q_FOREACH (const QString &key, responseData.keys()) {
+                        if (key == QStringLiteral("ExpiresIn")) {
+                            providedTokens.insert(key, QVariant::fromValue<int>(1));
+                        } else {
+                            providedTokens.insert(key, responseData.value(key));
+                        }
+                    }
+                    QVariantMap sipParams = signInCredentials.sessionData;
+                    sipParams.insert(QStringLiteral("ProvidedTokens"), providedTokens);
+                    signInCredentials.session->process(SignOn::SessionData(sipParams), signInCredentials.mechanism);
+                } else {
+                    // we need to wait for the expiry to finish before forcing refresh.
+                    signInCredentials.forcingCredentialsRefresh = false;
+                    QTimer::singleShot(3000, this, SLOT(handleExpiryTimeout()));
+                }
             } else {
-                emit q->signInResponse(responseData);
+                signInCredentials.cleanup();
+                setStatus(Account::Synced);
+                if (emitUpdated) {
+                    emit q->signInCredentialsUpdated(responseData);
+                } else {
+                    emit q->signInResponse(responseData);
+                }
             }
         } else {
             // decrypt the (encrypted) response data, and emit
@@ -729,6 +757,12 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
             }
         }
     }
+}
+
+void AccountPrivate::handleExpiryTimeout()
+{
+    // we've expired the tokens successfully. Now we perform "normal" sign-in.
+    signInCredentials.session->process(SignOn::SessionData(signInCredentials.sessionData), signInCredentials.mechanism);
 }
 
 void AccountPrivate::handleCredentialsFailed(const SignOn::Error &err)
@@ -1747,6 +1781,8 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.creatingSignInCredentials = true;
         d->signInCredentials.updatingSignInCredentials = false;
         d->signInCredentials.storingEncryptedTokens = false; // we never attempt to store encrypted tokens for OAuth2, signond handles that.
+        d->signInCredentials.forcingCredentialsRefresh = false; // creating, don't need to force refresh
+        d->signInCredentials.haveForcedCredentialsExpiry = false;
 
         if (needToCreateIdentity) {
             // we need to create the credentials.
@@ -1829,6 +1865,8 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.creatingSignInCredentials = true;
         d->signInCredentials.updatingSignInCredentials = false;
         d->signInCredentials.storingEncryptedTokens = true; // for password method, we store encrypted username/password immediately
+        d->signInCredentials.forcingCredentialsRefresh = false;
+        d->signInCredentials.haveForcedCredentialsExpiry = false;
 
         connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
                 d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
@@ -1949,6 +1987,8 @@ void Account::updateSignInCredentials(const QString &applicationName,
         d->signInCredentials.creatingSignInCredentials = false;
         d->signInCredentials.updatingSignInCredentials = true;
         d->signInCredentials.storingEncryptedTokens = false;
+        d->signInCredentials.forcingCredentialsRefresh = false;
+        d->signInCredentials.haveForcedCredentialsExpiry = false;
 
         connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
                 d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
@@ -2000,6 +2040,8 @@ void Account::updateSignInCredentials(const QString &applicationName,
         d->signInCredentials.creatingSignInCredentials = false;
         d->signInCredentials.updatingSignInCredentials = true;
         d->signInCredentials.storingEncryptedTokens = true; // for password method, we store encrypted username/password immediately
+        d->signInCredentials.forcingCredentialsRefresh = false;
+        d->signInCredentials.haveForcedCredentialsExpiry = false;
 
         connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
                 d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
@@ -2172,12 +2214,20 @@ void Account::signIn(const QString &applicationName,
         return;
     }
 
+    QVariantMap sipParams = parameters->parameters();
+    int credPolicy = sipParams.value(QStringLiteral("CredentialsPolicy"),
+                                     QVariant::fromValue<int>(SignInParameters::UseCachedCredentialsPolicy))
+                                     .toInt();
+    sipParams.remove(QStringLiteral("CredentialsPolicy"));
+
+    d->signInCredentials.forcingCredentialsRefresh = credPolicy == SignInParameters::RefreshCredentialsPolicy;
+    d->signInCredentials.haveForcedCredentialsExpiry = false;
     d->signInCredentials.signingInWithCredentials = true;
 
     d->signInCredentials.serviceName = parameters->serviceName();
     d->signInCredentials.method = parameters->method();
     d->signInCredentials.mechanism = parameters->mechanism();
-    d->signInCredentials.sessionData = parameters->parameters();
+    d->signInCredentials.sessionData = sipParams;
     d->signInCredentials.applicationName = applicationName;
     d->signInCredentials.symmetricKey = symmetricKey;
     d->signInCredentials.credentialsName = credName;
@@ -2198,7 +2248,7 @@ void Account::signIn(const QString &applicationName,
             d, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
 
     d->setStatus(Account::SigningIn);
-    d->signInCredentials.session->process(SignOn::SessionData(parameters->parameters()), parameters->mechanism());
+    d->signInCredentials.session->process(SignOn::SessionData(sipParams), parameters->mechanism());
 }
 
 /*!
