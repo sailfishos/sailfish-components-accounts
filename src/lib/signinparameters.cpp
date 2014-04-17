@@ -286,6 +286,32 @@ QString SignInParameters::password() const
     params.setParameter("UiPolicy", SignInParameters.NoUserInteractionPolicy)
     // application can now sign in to Facebook with these parameters
     \endqml
+
+    Further, the "CredentialsPolicy" parameter is applicable for OAuth services.
+    The value of this parameter may be:
+    \list
+    \li UseCachedCredentialsPolicy - sign in will return cached credentials if they exist and have not expired
+    \li RefreshCredentialsPolicy - sign in will cause a token refresh to occur even if cached credentials exist and have not expired
+    \endlist
+
+    Note that the \c UseCachedCredentialsPolicy can still result in a token
+    refresh occurring, if the currently cached tokens have expired.
+    The \c RefreshCredentialsPolicy should be used if the token has been
+    invalidated server-side, and the client application has detected this
+    case (due to the error message which is returned from the server).
+    For example:
+
+    \qml
+    var params = account.signInParameters("google-sync")
+    params.setParameter("ClientId", "123456789abcdef")
+    params.setParameter("ClientSecret", "abcdef123456789")
+    params.setParameter("UiPolicy", SignInParameters.NoUserInteractionPolicy)
+    params.setParameter("CredentialsPolicy", SignInParameters.RefreshCredentialsPolicy)
+    // signing in will return refreshed tokens (if they are able to be refreshed)
+    \endqml
+
+    The \c CredentialsPolicy parameter is ignored if the service is not an
+    OAuth-enabled service.
 */
 
 void SignInParameters::setParameter(const QString &parameterName, const QVariant &parameterValue)

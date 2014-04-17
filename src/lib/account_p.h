@@ -26,6 +26,8 @@ struct SignInCredentials {
     bool updatingSignInCredentials;
     bool signingInWithCredentials;
     bool storingEncryptedTokens;
+    bool forcingCredentialsRefresh;
+    bool haveForcedCredentialsExpiry;
 
     SignOn::Identity *identity;
     SignOn::AuthSession *session;
@@ -112,6 +114,7 @@ public Q_SLOTS:
     void handleCredentialsInfo(const SignOn::IdentityInfo &info);
     void handleCredentialsFailed(const SignOn::Error &err);
     void handleResponse(const SignOn::SessionData &data);
+    void handleExpiryTimeout();
     void handleSignOnError(const SignOn::Error &err);
     void handleAccountError();
 };
