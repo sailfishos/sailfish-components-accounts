@@ -14,6 +14,10 @@
 #include <QSet>
 #include <QList>
 
+static const AccountSyncOptions::PastSyncPeriod DefaultPastSyncPeriod = AccountSyncOptions::OneMonthAgo;
+static const AccountSyncOptions::Direction DefaultDirection = AccountSyncOptions::TwoWaySync;
+static const bool DefaultAutomaticSync = true;
+
 static QList<AccountSyncSchedule::Days> getDayList()
 {
     QList<AccountSyncSchedule::Days> days;
@@ -321,10 +325,10 @@ AccountSyncSchedule::Days AccountSyncSchedule::weekendDays()
 
 AccountSyncOptionsPrivate::AccountSyncOptionsPrivate()
     : m_schedule(0)
-    , m_pastSyncPeriod(AccountSyncOptions::ThreeDaysAgo)
-    , m_direction(AccountSyncOptions::OneWayToDevice)
+    , m_pastSyncPeriod(DefaultPastSyncPeriod)
+    , m_direction(DefaultDirection)
     , m_modified(false)
-    , m_autoSync(false)
+    , m_autoSync(DefaultAutomaticSync)
 {
 }
 
@@ -337,7 +341,7 @@ AccountSyncOptions *AccountSyncOptionsPrivate::fromButeoProfile(const Buteo::Syn
     if (savedPastPeriod > 0) {
         d->m_pastSyncPeriod = pastSyncPeriodFromDays((unsigned int)savedPastPeriod);
     } else {
-        d->m_pastSyncPeriod = AccountSyncOptions::ThreeDaysAgo;
+        d->m_pastSyncPeriod = DefaultPastSyncPeriod;
     }
     Buteo::SyncProfile::SyncDirection buteoDirection = source.syncDirection();
     switch (buteoDirection) {
@@ -351,10 +355,10 @@ AccountSyncOptions *AccountSyncOptionsPrivate::fromButeoProfile(const Buteo::Syn
         d->m_direction = AccountSyncOptions::OneWayFromDevice;
         break;
     case Buteo::SyncProfile::SYNC_DIRECTION_UNDEFINED:
-        d->m_direction = AccountSyncOptions::OneWayToDevice;
+        d->m_direction = DefaultDirection;
         break;
     }
-    d->m_autoSync = source.boolKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE);
+    d->m_autoSync = source.boolKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE, DefaultAutomaticSync);
     d->m_schedule = AccountSyncSchedulePrivate::fromButeoSchedule(source.syncSchedule(), options);
     d->m_modified = false;
     return options;
