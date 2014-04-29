@@ -118,6 +118,7 @@ QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *
     if (!account || !srv.isValid()) {
         return QStringList();
     }
+    Accounts::Service prevService = account->selectedService();
     account->selectService(srv);
     QStringList retn;
     QStringList syncProfileTemplates = account->value(SyncProfileTemplatesKey).toStringList();
@@ -127,7 +128,7 @@ QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *
             retn.append(profileId);
         }
     }
-    account->selectService(Accounts::Service());
+    account->selectService(prevService);
     return retn;
 }
 
@@ -290,11 +291,12 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         return QString();
     }
 
+    Accounts::Service prevService = account->selectedService();
     account->selectService(srv);
 
     Buteo::SyncProfile *templateProfile = d->m_profileManager->syncProfile(templateProfileName);
     if (!templateProfile) {
-        account->selectService(Accounts::Service());
+        account->selectService(prevService);
         qWarning() << "Unable to load template profile:" << templateProfileName;
         return QString();
     }
@@ -302,7 +304,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
     Buteo::SyncProfile *profile = templateProfile->clone();
     if (!profile) {
         delete templateProfile;
-        account->selectService(Accounts::Service());
+        account->selectService(prevService);
         qWarning() << "unable to clone template profile:" << templateProfileName;
         return QString();
     }
@@ -331,7 +333,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         account->setValue(SyncProfileIdKey(templateProfile->name()), profile->name());
     }
 
-    account->selectService(Accounts::Service());
+    account->selectService(prevService);
     delete profile;
     delete templateProfile;
 
@@ -383,9 +385,10 @@ QStringList AccountSyncManager::defaultTemplateProfiles(Accounts::Account *accou
     if (!account || !srv.isValid()) {
         return QStringList();
     }
+    Accounts::Service prevService = account->selectedService();
     account->selectService(srv);
     QStringList defaultTemplates = account->value(SyncProfileTemplatesKey).toStringList();
-    account->selectService(Accounts::Service());
+    account->selectService(prevService);
     return defaultTemplates;
 }
 
