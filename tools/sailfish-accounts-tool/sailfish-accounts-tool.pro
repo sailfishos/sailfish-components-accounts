@@ -6,7 +6,9 @@ CONFIG += hide_symbols
 CONFIG += link_pkgconfig
 PKGCONFIG += accounts-qt5 libsignon-qt5
 
-LIBS += -L../../src/lib -lsailfishaccounts
+QMAKE_CXXFLAGS += -fPIC -fvisibility=hidden -fvisibility-inlines-hidden
+
+LIBS += -L../../src/lib -lsailfishaccounts -pie -rdynamic
 INCLUDEPATH += . ../../src/lib
 
 SOURCES += accountmodifier.cpp main.cpp

@@ -37,6 +37,8 @@ public:
     AccountModifier(QObject *parent = 0);
     ~AccountModifier();
 
+    bool errorOccurred() const;
+
 public Q_SLOTS:
     void start();
     void next();
@@ -54,6 +56,7 @@ private:
     Accounts::AccountIdList m_allAccountIds;
     Accounts::Account *m_currAccount;
     int m_currAccountIdx;
+    bool m_error;
 };
 
 #endif
