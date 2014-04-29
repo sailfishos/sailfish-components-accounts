@@ -118,13 +118,17 @@ QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *
     if (!account || !srv.isValid()) {
         return QStringList();
     }
+    Accounts::Service prevService = account->selectedService();
     account->selectService(srv);
     QStringList retn;
     QStringList syncProfileTemplates = account->value(SyncProfileTemplatesKey).toStringList();
     Q_FOREACH(const QString &syncProfileTemplate, syncProfileTemplates) {
-        retn.append(account->value(SyncProfileIdKey(syncProfileTemplate)).toString());
+        QString profileId = account->value(SyncProfileIdKey(syncProfileTemplate)).toString();
+        if (!profileId.isEmpty()) {
+            retn.append(profileId);
+        }
     }
-    account->selectService(Accounts::Service());
+    account->selectService(prevService);
     return retn;
 }
 
@@ -287,11 +291,12 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         return QString();
     }
 
+    Accounts::Service prevService = account->selectedService();
     account->selectService(srv);
 
     Buteo::SyncProfile *templateProfile = d->m_profileManager->syncProfile(templateProfileName);
     if (!templateProfile) {
-        account->selectService(Accounts::Service());
+        account->selectService(prevService);
         qWarning() << "Unable to load template profile:" << templateProfileName;
         return QString();
     }
@@ -299,7 +304,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
     Buteo::SyncProfile *profile = templateProfile->clone();
     if (!profile) {
         delete templateProfile;
-        account->selectService(Accounts::Service());
+        account->selectService(prevService);
         qWarning() << "unable to clone template profile:" << templateProfileName;
         return QString();
     }
@@ -311,9 +316,9 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
     profile->setBoolKey(Buteo::KEY_USE_ACCOUNTS, true);
     profile->setEnabled(enableProfile);
 
-    // disable the schedule by default
+    // enable the profile schedule
     Buteo::SyncSchedule schedule = profile->syncSchedule();
-    schedule.setScheduleEnabled(false);
+    schedule.setScheduleEnabled(true);
     profile->setSyncSchedule(schedule);
 
     // set custom properties; note this may override any properties already set
@@ -328,7 +333,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         account->setValue(SyncProfileIdKey(templateProfile->name()), profile->name());
     }
 
-    account->selectService(Accounts::Service());
+    account->selectService(prevService);
     delete profile;
     delete templateProfile;
 
@@ -380,9 +385,10 @@ QStringList AccountSyncManager::defaultTemplateProfiles(Accounts::Account *accou
     if (!account || !srv.isValid()) {
         return QStringList();
     }
+    Accounts::Service prevService = account->selectedService();
     account->selectService(srv);
     QStringList defaultTemplates = account->value(SyncProfileTemplatesKey).toStringList();
-    account->selectService(Accounts::Service());
+    account->selectService(prevService);
     return defaultTemplates;
 }
 
