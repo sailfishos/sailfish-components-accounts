@@ -122,7 +122,10 @@ QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *
     QStringList retn;
     QStringList syncProfileTemplates = account->value(SyncProfileTemplatesKey).toStringList();
     Q_FOREACH(const QString &syncProfileTemplate, syncProfileTemplates) {
-        retn.append(account->value(SyncProfileIdKey(syncProfileTemplate)).toString());
+        QString profileId = account->value(SyncProfileIdKey(syncProfileTemplate)).toString();
+        if (!profileId.isEmpty()) {
+            retn.append(profileId);
+        }
     }
     account->selectService(Accounts::Service());
     return retn;
