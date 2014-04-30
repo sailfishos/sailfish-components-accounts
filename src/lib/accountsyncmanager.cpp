@@ -316,9 +316,9 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
     profile->setBoolKey(Buteo::KEY_USE_ACCOUNTS, true);
     profile->setEnabled(enableProfile);
 
-    // disable the schedule by default
+    // enable the profile schedule
     Buteo::SyncSchedule schedule = profile->syncSchedule();
-    schedule.setScheduleEnabled(false);
+    schedule.setScheduleEnabled(true);
     profile->setSyncSchedule(schedule);
 
     // set custom properties; note this may override any properties already set
