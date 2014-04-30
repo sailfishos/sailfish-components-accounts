@@ -73,6 +73,9 @@ int main(int argc, char *argv[])
         QObject::connect(&am, SIGNAL(done()), &qca, SLOT(quit()));
         QTimer::singleShot(5, &am, SLOT(start()));
         qca.exec();
+        if (am.errorOccurred()) {
+            return -1;
+        }
         return 0;
     }
 
