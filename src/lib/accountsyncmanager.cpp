@@ -282,13 +282,39 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
                                           bool enableProfile,
                                           const QVariantMap &properties)
 {
+    Buteo::SyncProfile *profile = newProfileFromTemplate(templateProfileName,
+                                                         account,
+                                                         srv,
+                                                         enableProfile,
+                                                         properties);
+    if (!profile) {
+        return QString();
+    }
+    QString profileId = d->m_profileManager->updateProfile(*profile);
+    if (profileId.isEmpty()) {
+        qWarning() << "Unable to save sync profile with ProfileManager for template:" << templateProfileName;
+    } else {
+        Accounts::Service prevService = account->selectedService();
+        account->selectService(srv);
+        account->setValue(SyncProfileIdKey(templateProfileName), profile->name());
+        account->selectService(prevService);
+    }
+    return profileId;
+}
+
+Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &templateProfileName,
+                                                               Accounts::Account *account,
+                                                               const Accounts::Service &srv,
+                                                               bool enableProfile,
+                                                               const QVariantMap &properties)
+{
     if (!account || !srv.isValid()) {
         qWarning() << "Invalid account or service";
-        return QString();
+        return 0;
     }
     if (templateProfileName.isEmpty()) {
         qWarning() << "Invalid templateProfileName";
-        return QString();
+        return 0;
     }
 
     Accounts::Service prevService = account->selectedService();
@@ -298,7 +324,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
     if (!templateProfile) {
         account->selectService(prevService);
         qWarning() << "Unable to load template profile:" << templateProfileName;
-        return QString();
+        return 0;
     }
 
     Buteo::SyncProfile *profile = templateProfile->clone();
@@ -306,7 +332,7 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         delete templateProfile;
         account->selectService(prevService);
         qWarning() << "unable to clone template profile:" << templateProfileName;
-        return QString();
+        return 0;
     }
 
     QString accountIdStr = QString::number(account->id());
@@ -326,18 +352,9 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         profile->setKey(key, properties[key].toString());
     }
 
-    QString profileId = d->m_profileManager->updateProfile(*profile);
-    if (profileId.isEmpty()) {
-        qWarning() << "Unable to save sync profile" << templateProfile->name();
-    } else {
-        account->setValue(SyncProfileIdKey(templateProfile->name()), profile->name());
-    }
-
     account->selectService(prevService);
-    delete profile;
     delete templateProfile;
-
-    return profileId;
+    return profile;
 }
 
 bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options)

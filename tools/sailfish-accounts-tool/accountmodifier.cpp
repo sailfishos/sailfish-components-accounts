@@ -6,13 +6,22 @@
 #include <Accounts/Manager>
 #include <Accounts/Account>
 
+// buteo-syncfw
+#include <ProfileEngineDefs.h>
+
+#include <QStandardPaths>
+#include <QFile>
+#include <QDir>
 #include <QtDebug>
+
+static const QString AccountUpdateMarkerFilename = ".accounts-update-sync-services";
 
 AccountModifier::AccountModifier(QObject *parent)
     : QObject(parent)
     , mode(UnknownMode)
     , m_accountManager(new Accounts::Manager)
     , m_currAccount(0)
+    , m_buteoClient(0)
     , m_currAccountIdx(-1)
     , m_error(false)
 {
@@ -85,6 +94,8 @@ void AccountModifier::start()
         return;
     }
 
+    qWarning() << "Found" << m_allAccountIds.size() << "accounts in total";
+
     if (mode == ModifyServiceSettings) {
         checkServiceSettingArgs();
     }
@@ -129,6 +140,15 @@ void AccountModifier::next()
 
     m_currAccountIdx += 1;
     if (m_currAccountIdx >= m_allAccountIds.size()) {
+        if (mode == UpdateSyncServices) {
+            QStringList homePaths = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
+            if (homePaths.count()) {
+                QString path = homePaths[0] + QDir::separator() + AccountUpdateMarkerFilename;
+                if (!QFile::remove(path)) {
+                    qWarning() << "sailfish-accounts-tool marker file:" << path << "doesn't exist, not removing";
+                }
+            }
+        }
         emit done();
         return;
     }
@@ -243,13 +263,33 @@ bool AccountModifier::applySyncUpdateChanges()
             m_currAccount->setCredentialsId(credentialsId);
             m_currAccount->setEnabled(genericSyncServiceEnabled);
 
-            // generate sync profile
-            QString profileId = accountSyncManager.createProfile(templateProfile, m_currAccount, srv, genericSyncServiceEnabled);
-            if (profileId.isEmpty()) {
-                qWarning() << "Unable to create sync profile for" << srv.name() << "!";
+            // Create the profile. This can't use AccountSyncManager::createProfile() because this
+            // tool may be run without privileged permissions, so use SyncClientInterface to talk
+            // to msyncd to save the profiles instead of doing it in-process.
+            Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, genericSyncServiceEnabled);
+
+            if (!profile) {
+                qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
                 return false;
             }
+
+            QString newProfileId = QStringLiteral("%1-%2").arg(templateProfile).arg(m_currAccount->id());
+
+            if (!m_buteoClient) {
+                m_buteoClient = new Buteo::SyncClientInterface;
+            }
+            if (!m_buteoClient->updateProfile(*profile)) {
+                qWarning() << "SyncClientInterface::updateProfile() failed for" << srv.name() << "!";
+                m_error = true;
+                return false;
+            }
+
+            // save the profile name to the account
+            QString profileKey = QStringLiteral("%1/%2").arg(templateProfile).arg(Buteo::KEY_PROFILE_ID);
+            m_currAccount->setValue(profileKey, newProfileId);
+
+            delete profile;
             madeChanges = true;
         }
     }
