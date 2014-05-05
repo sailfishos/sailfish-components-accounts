@@ -379,11 +379,11 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
         savedProfileId = d->m_profileManager->updateProfile(*profile);
         if (!d->m_buteoClient) {
             d->m_buteoClient = new Buteo::SyncClientInterface;
-            QString pid = profileId;    // buteo api requires in-param
-            Buteo::SyncSchedule schedule = profile->syncSchedule();     // buteo api requires in-param
-            if (!d->m_buteoClient->setSyncSchedule(pid, schedule)) {
-                qWarning() << "Buteo::SyncClientInterface::setSyncSchedule() failed for profile" << pid;
-            }
+        }
+        QString pid = profileId;    // buteo api requires in-param
+        Buteo::SyncSchedule schedule = profile->syncSchedule();     // buteo api requires in-param
+        if (!d->m_buteoClient->setSyncSchedule(pid, schedule)) {
+            qWarning() << "Buteo::SyncClientInterface::setSyncSchedule() failed for profile" << pid;
         }
     } else {
         savedProfileId = d->m_profileManager->updateProfile(*profile);
