@@ -274,6 +274,12 @@ bool AccountModifier::applySyncUpdateChanges()
                 return false;
             }
 
+            // In version 1.0.5 and earlier, google-contacts were not synced by default, so updated
+            // profiles should not use 2-way sync by default in case this is not the preferred option.
+            if (srv.name() == QStringLiteral("google-contacts")) {
+                profile->setSyncDirection(Buteo::SyncProfile::SYNC_DIRECTION_FROM_REMOTE);
+            }
+
             QString newProfileId = QStringLiteral("%1-%2").arg(templateProfile).arg(m_currAccount->id());
 
             if (!m_buteoClient) {
