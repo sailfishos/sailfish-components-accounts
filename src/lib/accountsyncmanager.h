@@ -13,6 +13,10 @@
 
 #include <Accounts/AccountService>
 
+namespace Buteo {
+    class SyncProfile;
+}
+
 namespace Accounts {
     class Account;
 }
@@ -52,6 +56,12 @@ public:
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
     QStringList defaultTemplateProfiles(Accounts::Account *account, const Accounts::Service &srv) const;
+
+    Buteo::SyncProfile *newProfileFromTemplate(const QString &templateProfileName,
+                                               Accounts::Account *account,
+                                               const Accounts::Service &srv,
+                                               bool enableProfile,
+                                               const QVariantMap &properties = QVariantMap());
 
 signals:
     void profileCreated(const QString &profileId);

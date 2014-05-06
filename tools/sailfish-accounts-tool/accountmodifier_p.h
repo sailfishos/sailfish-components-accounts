@@ -12,6 +12,8 @@
 #include <Accounts/Account>
 #include <Accounts/Manager>
 
+#include <buteosyncfw5/SyncClientInterface.h>
+
 #include "accountsyncmanager.h"
 
 class AccountModifier : public QObject
@@ -55,6 +57,7 @@ private:
     Accounts::Manager *m_accountManager;
     Accounts::AccountIdList m_allAccountIds;
     Accounts::Account *m_currAccount;
+    Buteo::SyncClientInterface *m_buteoClient;
     int m_currAccountIdx;
     bool m_error;
 };

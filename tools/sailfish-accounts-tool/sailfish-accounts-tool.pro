@@ -4,7 +4,7 @@ TEMPLATE = app
 CONFIG += hide_symbols
 
 CONFIG += link_pkgconfig
-PKGCONFIG += accounts-qt5 libsignon-qt5
+PKGCONFIG += accounts-qt5 libsignon-qt5 buteosyncfw5
 
 QMAKE_CXXFLAGS += -fPIC -fvisibility=hidden -fvisibility-inlines-hidden
 
