@@ -153,6 +153,9 @@ AccountModel::AccountModel(QObject* parent)
     Accounts::AccountIdList idList = d->manager->accountList();
     foreach (Accounts::AccountId id, idList) {
         Accounts::Account *account = d->manager->account(id);
+        if (!account->provider().isValid()) {
+            continue;
+        }
         addedAccount(account);
         DisplayData *data = new DisplayData(account);
         insertAccountSorted(data, account, &d->accountsList, &d->filteredAccountsList);
