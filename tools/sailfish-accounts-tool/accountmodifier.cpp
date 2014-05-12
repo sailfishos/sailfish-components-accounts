@@ -15,6 +15,8 @@
 #include <QtDebug>
 
 static const QString AccountUpdateMarkerFilename = ".accounts-update-sync-services";
+static const QString KeyProviderAvailable = QStringLiteral("provider-available");
+static const QString KeyEnableWhenProviderAvailable = QStringLiteral("enable-when-provider-available");
 
 AccountModifier::AccountModifier(QObject *parent)
     : QObject(parent)
@@ -166,6 +168,9 @@ void AccountModifier::next()
     case ModifyServiceSettings:
         needsSync = applyServiceSettingChanges();
         break;
+    case UpdateProviderAvailability:
+        needsSync = applyProviderAvailabilityChanges();
+        break;
     case UpdateSyncServices:
         needsSync = applySyncUpdateChanges();
         break;
@@ -301,6 +306,45 @@ bool AccountModifier::applySyncUpdateChanges()
     }
     m_currAccount->selectService(Accounts::Service());
     return madeChanges;
+}
+
+bool AccountModifier::applyProviderAvailabilityChanges()
+{
+    if (m_currAccount->providerName() != providerName) {
+        return false;
+    }
+    if (!serviceType.isEmpty()) {
+        Accounts::Service matchingService;
+        Accounts::ServiceList allServices = m_currAccount->services();
+        foreach (const Accounts::Service &srv, allServices) {
+            if (srv.serviceType() == serviceType) {
+                m_currAccount->selectService(srv);
+                if (m_currAccount->enabled()) {
+                    matchingService = srv;
+                    break;
+                }
+            }
+        }
+        if (!matchingService.isValid()) {
+            qWarning() << providerName << "provider does not have any enabled services of type"
+                       << serviceType << ", provider-available status will not be updated";
+            return false;
+        }
+    }
+    m_currAccount->selectService(Accounts::Service());
+    if (m_currAccount->value(KeyProviderAvailable).toBool() == providerAvailable) {
+        return false;
+    }
+    if (providerAvailable) {
+        QVariant shouldEnable = m_currAccount->value(KeyEnableWhenProviderAvailable);
+        m_currAccount->setEnabled(!shouldEnable.isValid() || shouldEnable.toBool());
+        m_currAccount->remove(KeyEnableWhenProviderAvailable);
+    } else {
+        m_currAccount->setValue(KeyEnableWhenProviderAvailable, m_currAccount->enabled());
+        m_currAccount->setEnabled(false);
+    }
+    m_currAccount->setValue(KeyProviderAvailable, providerAvailable);
+    return true;
 }
 
 void AccountModifier::error(Accounts::Error err)

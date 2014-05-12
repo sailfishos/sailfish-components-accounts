@@ -24,7 +24,8 @@ public:
     enum Mode {
         UnknownMode,
         ModifyServiceSettings,
-        UpdateSyncServices
+        UpdateSyncServices,
+        UpdateProviderAvailability
     };
 
     QString providerName;
@@ -33,6 +34,8 @@ public:
     QString settingName;
     QString settingType;
     QString settingValue;
+    QString serviceType;
+    bool providerAvailable;
     Mode mode;
     AccountSyncManager accountSyncManager;
 
@@ -53,6 +56,7 @@ private:
     void checkServiceSettingArgs();
     bool applyServiceSettingChanges();
     bool applySyncUpdateChanges();
+    bool applyProviderAvailabilityChanges();
 
     Accounts::Manager *m_accountManager;
     Accounts::AccountIdList m_allAccountIds;

@@ -34,8 +34,6 @@ int main(int argc, char *argv[])
             "%1 -p <provider_name> -s <service_name> -m <setting_name> <setting_type> <setting_value>\n"
             "To remove a setting, use -r switch:\n"
             "%1 -p <provider_name> -s <service_name> -r <setting_name>\n"
-            "To update per-data sync services to have the correct sync settings and sync profiles:\n"
-            "%1 --update-sync-services\n"
             "Examples:\n"
             "1) Adding a new boolean property 'new_property' to the 'sync' service of all facebook accounts:\n"
             "%1 -p facebook -s sync -m new_property bool true\n"
@@ -46,12 +44,24 @@ int main(int argc, char *argv[])
             "4) Modifying 'existing property' for the global service of all facebook accounts:\n"
             "%1 -p facebook -s --global -m existing_property bool false \n"
             "\n"
+            "To update per-data sync services to have the correct sync settings and sync profiles:\n"
+            "%1 --update-sync-services\n"
+            "To update the provider-available and enabled status of all accounts of type <provider> with a particular service that is enabled:\n"
+            "%1 --provider-available false -p <provider> [-t <service-type>]\n"
+            "%1 (For example, --provider-available false -p onlinesync -t caldav)\n"
+            "\n"
             "Valid setting types are: %2\n\n")
         .arg(appName).arg(validSettingTypes.join(','));
 
     bool updatingSyncServices = (args.value(1) == QStringLiteral("--update-sync-services"));
+    bool updateProviderAvailability = (args.value(1) == QStringLiteral("--provider-available"));
     if (updatingSyncServices) {
         am.mode = AccountModifier::UpdateSyncServices;
+    } else if (updateProviderAvailability) {
+        am.mode = AccountModifier::UpdateProviderAvailability;
+        am.providerAvailable = args.value(2) == QStringLiteral("true");
+        am.providerName = args.value(4);
+        am.serviceType = args.value(6);
     } else {
         am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);
@@ -62,14 +72,20 @@ int main(int argc, char *argv[])
         am.settingValue = args.value(8);
     }
 
-    bool validSettingChanges = ((providerSwitch == QString::fromLatin1("-p")) &&
-        (serviceSwitch == QString::fromLatin1("-s")) &&
-        (!am.settingName.isEmpty()) &&
-        ((am.modeSwitch == QString::fromLatin1("-r") && argc == 7) ||
-         ((am.modeSwitch == QString::fromLatin1("-m") && argc == 9 &&
-                 validSettingTypes.contains(am.settingType)))));
+    bool validParams = true;
+    if (am.mode == AccountModifier::UpdateProviderAvailability) {
+        validParams = args.value(3) == QStringLiteral("-p")
+                && (args.length() == 5 || args.value(5) == QStringLiteral("-t"));
+    } else if (am.mode == AccountModifier::ModifyServiceSettings) {
+        validParams = ((providerSwitch == QString::fromLatin1("-p")) &&
+            (serviceSwitch == QString::fromLatin1("-s")) &&
+            (!am.settingName.isEmpty()) &&
+            ((am.modeSwitch == QString::fromLatin1("-r") && argc == 7) ||
+             ((am.modeSwitch == QString::fromLatin1("-m") && argc == 9 &&
+                     validSettingTypes.contains(am.settingType)))));
+    }
 
-    if (validSettingChanges || updatingSyncServices) {
+    if (validParams) {
         QObject::connect(&am, SIGNAL(done()), &qca, SLOT(quit()));
         QTimer::singleShot(5, &am, SLOT(start()));
         qca.exec();
