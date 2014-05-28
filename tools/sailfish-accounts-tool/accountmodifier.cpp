@@ -229,29 +229,42 @@ bool AccountModifier::applySyncUpdateChanges()
 {
     Accounts::ServiceList allServices = m_currAccount->services();
 
-    bool genericSyncServiceEnabled = false;
-    bool hasGenericSyncService = false;
+    bool enableSyncServices = false;
+    bool shouldUpdateServices = false;
     uint credentialsId = 0;
 
-    // Find the generic sync service. This will be the one called "<provider>-sync".
-    foreach (const Accounts::Service &srv, allServices) {
-        bool isGenericSyncService = srv.serviceType() == QStringLiteral("sync")
-                && srv.name() == (srv.provider() + "-sync");
-        if (isGenericSyncService) {
-            m_currAccount->selectService(srv);
-            hasGenericSyncService = true;
-            genericSyncServiceEnabled = m_currAccount->enabled();
-            credentialsId = m_currAccount->credentialsId();
-            if (credentialsId == 0) {
-                qWarning() << "Cannot update sync services, the generic sync service doesn't have a valid credentialsId!";
-                m_error = true;
-                return false;
+    // check if is a generic email account
+    if (m_currAccount->providerName() == QStringLiteral("email")) {
+        foreach (const Accounts::Service &srv, allServices) {
+            if (srv.name() == QStringLiteral("email")) {
+                m_currAccount->selectService(srv);
+                shouldUpdateServices = true;
+                enableSyncServices = m_currAccount->enabled();
+                break;
             }
-            break;
+        }
+    } else {
+        // Find the generic sync service. This will be the one called "<provider>-sync".
+        foreach (const Accounts::Service &srv, allServices) {
+            bool isGenericSyncService = srv.serviceType() == QStringLiteral("sync")
+                    && srv.name() == (srv.provider() + "-sync");
+            if (isGenericSyncService) {
+                m_currAccount->selectService(srv);
+                shouldUpdateServices = true;
+                enableSyncServices = m_currAccount->enabled();
+                credentialsId = m_currAccount->credentialsId();
+                if (credentialsId == 0) {
+                    qWarning() << "Cannot update sync services, the generic sync service doesn't have a valid credentialsId!";
+                    m_error = true;
+                    return false;
+                }
+                break;
+            }
         }
     }
+
     m_currAccount->selectService(Accounts::Service());
-    if (!hasGenericSyncService) {
+    if (!shouldUpdateServices) {
         return false;
     }
 
@@ -263,15 +276,16 @@ bool AccountModifier::applySyncUpdateChanges()
             if (templateProfile.isEmpty() || accountSyncManager.hasProfile(m_currAccount, srv)) {
                 continue;
             }
-
-            // copy credentials and set enabled status according to generic sync service
-            m_currAccount->setCredentialsId(credentialsId);
-            m_currAccount->setEnabled(genericSyncServiceEnabled);
+            if (credentialsId != 0) {
+                // copy credentials and set enabled status according to generic sync service
+                m_currAccount->setCredentialsId(credentialsId);
+            }
+            m_currAccount->setEnabled(enableSyncServices);
 
             // Create the profile. This can't use AccountSyncManager::createProfile() because this
             // tool may be run without privileged permissions, so use SyncClientInterface to talk
             // to msyncd to save the profiles instead of doing it in-process.
-            Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, genericSyncServiceEnabled);
+            Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, enableSyncServices);
 
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
