@@ -99,7 +99,7 @@ AccountSyncSchedule::Interval AccountSyncSchedulePrivate::intervalFromMinutes(un
 {
     // roughly match the AccountSyncSchedule intervals if there is no exact match
     AccountSyncSchedule::Interval interval;
-    if (minutes <= 15) {
+    if (minutes > 0 && minutes <= 15) {
         interval = AccountSyncSchedule::Every15Minutes;
     } else if (minutes <= 45) {
         interval = AccountSyncSchedule::Every30Minutes;
@@ -116,7 +116,7 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
     AccountSyncSchedule *result = new AccountSyncSchedule(parent);
     AccountSyncSchedulePrivate *d = result->d;
 
-    if (source.time().isValid()) {
+    if (source.interval() == 0 && source.time().isValid()) {
         result->setDailySyncMode(source.time(), daysFromQtDaySet(source.days()));
     } else if (source.interval() > 0) {
         result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daysFromQtDaySet(source.days()));
@@ -158,7 +158,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
     result.setScheduleEnabled(d->m_enabled);
     result.setDays(daysToQtDaySet(d->m_days));
 
-    if (d->m_dailySyncTime.isValid()) {
+    if (d->m_dailySyncTime.isValid() && d->m_interval == 0) {
         result.setTime(d->m_dailySyncTime);
     } else {
         result.setInterval(intervalToMinutes(d->m_interval));
