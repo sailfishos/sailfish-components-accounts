@@ -270,8 +270,28 @@ bool AccountModifier::applySyncUpdateChanges()
 
     bool madeChanges = false;
     foreach (const Accounts::Service &srv, allServices) {
-        QStringList templateProfiles = accountSyncManager.defaultTemplateProfiles(m_currAccount, srv);
+        // ensure that the sync service settings are set up appropriately
         m_currAccount->selectService(srv);
+        if (srv.name() == QStringLiteral("facebook-sync") ||
+            srv.name() == QStringLiteral("facebook-calendars") ||
+            srv.name() == QStringLiteral("facebook-microblog")) {
+            // prior to version 1.0.7 these services did not include the rsvp_event scope
+            QVariant scopesValue = m_currAccount->value(QStringLiteral("auth/oauth2/user_agent/Scope"), QVariant());
+            if (scopesValue.isValid()) {
+                QStringList scopes = scopesValue.toStringList();
+                if (!scopes.contains(QStringLiteral("rsvp_event"))) {
+                    scopes.append(QStringLiteral("rsvp_event"));
+                    m_currAccount->setValue(QStringLiteral("auth/oauth2/user_agent/Scope"), QVariant::fromValue<QStringList>(scopes));
+                    madeChanges = true;
+                }
+            } else {
+                qWarning() << "unable to load scopes information for" << srv.name()
+                           << "of account" << m_currAccount->id() << ", not updating!";
+            }
+        }
+
+        // ensure that the sync profiles are set up appropriately
+        QStringList templateProfiles = accountSyncManager.defaultTemplateProfiles(m_currAccount, srv);
         Q_FOREACH(const QString &templateProfile, templateProfiles) {
             if (templateProfile.isEmpty() || accountSyncManager.hasProfile(m_currAccount, srv)) {
                 continue;
