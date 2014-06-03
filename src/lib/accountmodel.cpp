@@ -14,11 +14,15 @@
 
 //Qt
 #include <QtDebug>
+#include <QTimer>
 
 //libaccounts-qt
 #include <Accounts/Manager>
 #include <Accounts/Account>
 #include <Accounts/Provider>
+
+
+static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 
 struct DisplayData {
     DisplayData(Accounts::Account *acct)
@@ -60,6 +64,7 @@ class AccountModel::AccountModelPrivate
 public:
     AccountModelPrivate()
         : filterType(AccountModel::NoFilter)
+        , rowToUpdate(-1)
         , componentComplete(false)
     {
     }
@@ -75,6 +80,7 @@ public:
     QList<DisplayData *> filteredAccountsList;
     AccountModel::FilterType filterType;
     QString filter;
+    int rowToUpdate;
     bool componentComplete;
 };
 
@@ -124,6 +130,7 @@ namespace {
     \li \c providerName
     \li \c providerDisplayName
     \li \c accountEnabled
+    \li \c accountError
     \endlist
 */
 
@@ -139,6 +146,8 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountIconRole, "accountIcon" );
     d->headerData.insert(ProviderNameRole, "providerName");
     d->headerData.insert(ProviderDisplayNameRole, "providerDisplayName");
+    d->headerData.insert(AccountEnabledRole, "accountEnabled");
+    d->headerData.insert(AccountErrorRole, "accountError");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),
@@ -246,26 +255,34 @@ QVariant AccountModel::data(const QModelIndex &index, int role) const
 
     if (role == AccountIconRole) {
         if (data->accountIcon.isNull()) {
-            Accounts::Provider provider = d->manager->provider(account->providerName());
-            data->accountIcon = provider.iconName();
+            data->accountIcon = account->provider().iconName();
         }
         return QVariant::fromValue(data->accountIcon);
     }
 
     if (role == ProviderNameRole) {
-        Accounts::Provider provider = d->manager->provider(account->providerName());
-        data->providerName = provider.name();
+        if (data->providerName.isEmpty()) {
+            data->providerName = account->providerName();
+        }
         return QVariant::fromValue(data->providerName);
     }
 
     if (role == ProviderDisplayNameRole) {
-        Accounts::Provider provider = d->manager->provider(account->providerName());
-        data->providerDisplayName = SailfishAccounts::translatedDisplayName(provider);
+        if (data->providerDisplayName.isEmpty()) {
+            data->providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+        }
         return QVariant::fromValue(data->providerDisplayName);
     }
 
     if (role == AccountEnabledRole) {
         return QVariant::fromValue(account->enabled());
+    }
+
+    if (role == AccountErrorRole) {
+        if (account->value(AccountCredentialsNeedUpdateKey).toBool()) {
+            return AccountNotSignedInError;
+        }
+        return NoAccountError;
     }
 
     return QVariant();
@@ -321,11 +338,23 @@ void AccountModel::accountRemoved(Accounts::AccountId id)
 
 void AccountModel::accountUpdated(Accounts::AccountId id)
 {
+    Q_D(AccountModel);
     int accountIndex = getFilteredAccountsIndex(id);
     if (accountIndex < 0) {
         return;
     }
-    emit dataChanged(index(accountIndex, 0), index(accountIndex, 0));
+    // the enabled status is updated in the account object asynchronously, so delay
+    // the emission of dataChanged()
+    d->rowToUpdate = accountIndex;
+    QTimer::singleShot(0, this, SLOT(delayedIndexUpdate()));
+}
+
+void AccountModel::delayedIndexUpdate()
+{
+    Q_D(AccountModel);
+    if (d->rowToUpdate >= 0) {
+        emit dataChanged(index(d->rowToUpdate, 0), index(d->rowToUpdate, 0));
+    }
 }
 
 void AccountModel::accountDisplayNameChanged()

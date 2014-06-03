@@ -51,17 +51,28 @@ SilicaListView {
             x: Theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             source: model.accountIcon
+            opacity: model.accountEnabled ? 1.0 : 0.3
         }
         Label {
             id: accountName
             anchors {
                 left: icon.right
                 leftMargin: Theme.paddingLarge
+                right: parent.right
+                rightMargin: Theme.paddingLarge
                 verticalCenter: parent.verticalCenter
                 verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
             }
+            truncationMode: TruncationMode.Fade
             text: model.providerDisplayName
-            color: highlighted ? Theme.highlightColor : Theme.primaryColor
+            color: {
+                if (highlighted || model.accountError !== AccountModel.NoAccountError) {
+                    return Theme.highlightColor
+                }
+                return model.accountEnabled
+                        ? Theme.primaryColor
+                        : Theme.rgba(Theme.primaryColor, 0.55)
+            }
         }
         Label {
             anchors {
@@ -72,8 +83,19 @@ SilicaListView {
                 rightMargin: Theme.paddingLarge
             }
             truncationMode: TruncationMode.Fade
-            text: model.accountDisplayName
-            color: highlighted ? Theme.secondaryHighlightColor : Theme.secondaryColor
+            text: model.accountError === AccountModel.AccountNotSignedInError
+                    //: The user has not logged into this account and needs to do so
+                    //% "Not signed in"
+                  ? qsTrId("component_accounts-la-not_signed_in")
+                  : model.accountDisplayName
+            color: {
+                if (highlighted || model.accountError !== AccountModel.NoAccountError) {
+                    return Theme.secondaryHighlightColor
+                }
+                return model.accountEnabled
+                        ? Theme.secondaryColor
+                        : Theme.rgba(Theme.secondaryColor, 0.3)
+            }
         }
 
         onClicked: {

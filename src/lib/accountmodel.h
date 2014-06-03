@@ -31,6 +31,7 @@ class Q_DECL_EXPORT AccountModel : public QAbstractListModel, public QQmlParserS
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
     Q_ENUMS(FilterType)
+    Q_ENUMS(AccountError)
     class AccountModelPrivate;
 
 public:
@@ -40,7 +41,8 @@ public:
         AccountIconRole,
         ProviderNameRole,
         ProviderDisplayNameRole,
-        AccountEnabledRole
+        AccountEnabledRole,
+        AccountErrorRole
     };
 
     enum FilterType {
@@ -48,6 +50,12 @@ public:
         ProviderFilter,
         ServiceFilter,
         ServiceTypeFilter
+    };
+
+    enum AccountError {
+        NoAccountError,
+        AccountNotSignedInError,
+        UnknownAccountError = 100
     };
 
     AccountModel(QObject *parent = 0);
@@ -79,6 +87,7 @@ private slots:
     void accountRemoved(Accounts::AccountId id);
     void accountUpdated(Accounts::AccountId id);
     void accountDisplayNameChanged();
+    void delayedIndexUpdate();
 
 private:
     int getAccountIndex(Accounts::AccountId id) const;
