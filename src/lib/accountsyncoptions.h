@@ -26,6 +26,7 @@ class Q_DECL_EXPORT AccountSyncSchedule : public QObject
     Q_PROPERTY(QTime peakEndTime READ peakEndTime NOTIFY peakEndTimeChanged)
     Q_PROPERTY(Interval peakInterval READ peakInterval NOTIFY peakIntervalChanged)
     Q_PROPERTY(int peakDays READ peakDays NOTIFY peakDaysChanged)
+    Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
     Q_ENUMS(Interval)
     Q_ENUMS(Day)
 
@@ -65,7 +66,7 @@ public:
                                      int peakDays);
     Q_INVOKABLE void setDefaultPeakSchedule();
 
-    Q_INVOKABLE bool modified() const;
+    bool modified() const;
 
     int days() const;
     Interval interval() const;
@@ -90,6 +91,7 @@ Q_SIGNALS:
     void peakStartTimeChanged();
     void peakEndTimeChanged();
     void peakDaysChanged();
+    void modifiedChanged();
 
 private:
     friend class AccountSyncSchedulePrivate;
@@ -105,6 +107,7 @@ class Q_DECL_EXPORT AccountSyncOptions : public QObject
     Q_PROPERTY(PastSyncPeriod pastSyncPeriod READ pastSyncPeriod WRITE setPastSyncPeriod NOTIFY pastSyncPeriodChanged)
     Q_PROPERTY(Direction direction READ direction WRITE setDirection NOTIFY directionChanged)
     Q_PROPERTY(AccountSyncSchedule *schedule READ schedule WRITE setSchedule NOTIFY scheduleChanged)
+    Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
     Q_ENUMS(PastSyncPeriod)
     Q_ENUMS(Direction)
 public:
@@ -144,6 +147,7 @@ Q_SIGNALS:
     void pastSyncPeriodChanged();
     void directionChanged();
     void scheduleChanged();
+    void modifiedChanged();
 
 private:
     friend class AccountSyncOptionsPrivate;

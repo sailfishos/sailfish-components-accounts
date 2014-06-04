@@ -20,6 +20,7 @@ public:
     AccountSyncSchedulePrivate(AccountSyncSchedule *schedule);
     ~AccountSyncSchedulePrivate();
 
+    void setModified(bool modified);
     void setDays(AccountSyncSchedule::Days d);
 
     static AccountSyncSchedule *fromButeoSchedule(const Buteo::SyncSchedule &source, QObject *parent);
@@ -46,7 +47,9 @@ public:
 class AccountSyncOptionsPrivate
 {
 public:
-    AccountSyncOptionsPrivate();
+    AccountSyncOptionsPrivate(AccountSyncOptions *parent);
+
+    void setModified(bool modified);
 
     static AccountSyncOptions *fromButeoProfile(const Buteo::SyncProfile &source, QObject *parent);
 
@@ -55,6 +58,7 @@ public:
     static unsigned int pastSyncPeriodToDays(AccountSyncOptions::PastSyncPeriod period);
     static AccountSyncOptions::PastSyncPeriod pastSyncPeriodFromDays(unsigned int dayCount);
 
+    AccountSyncOptions *q;
     AccountSyncSchedule *m_schedule;
     AccountSyncOptions::PastSyncPeriod m_pastSyncPeriod;
     AccountSyncOptions::Direction m_direction;
