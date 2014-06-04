@@ -25,8 +25,9 @@
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 
 struct DisplayData {
-    DisplayData(Accounts::Account *acct)
+    DisplayData(Accounts::Account *acct, bool isNew = false)
         : account(acct)
+        , isNewAccount(isNew)
     {
         Accounts::ServiceList services = account->services();
         foreach (const Accounts::Service &service, services) {
@@ -56,6 +57,7 @@ struct DisplayData {
     QString accountIcon;
     QStringList serviceNames;
     QStringList serviceTypes;
+    bool isNewAccount;
     Q_DISABLE_COPY(DisplayData);
 };
 
@@ -148,6 +150,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(ProviderDisplayNameRole, "providerDisplayName");
     d->headerData.insert(AccountEnabledRole, "accountEnabled");
     d->headerData.insert(AccountErrorRole, "accountError");
+    d->headerData.insert(IsNewAccountRole, "isNewAccount");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),
@@ -285,6 +288,10 @@ QVariant AccountModel::data(const QModelIndex &index, int role) const
         return NoAccountError;
     }
 
+    if (role == IsNewAccountRole) {
+        return data->isNewAccount;
+    }
+
     return QVariant();
 }
 
@@ -309,7 +316,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
 
         if (account != 0) {
             addedAccount(account);
-            insertAccountSorted(new DisplayData(account), account, &d->accountsList, &d->filteredAccountsList);
+            insertAccountSorted(new DisplayData(account, true), account, &d->accountsList, &d->filteredAccountsList);
             reload();
         }
     }
