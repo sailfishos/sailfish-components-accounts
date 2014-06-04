@@ -33,7 +33,7 @@ static QList<AccountSyncSchedule::Days> getDayList()
 
 AccountSyncSchedulePrivate::AccountSyncSchedulePrivate(AccountSyncSchedule *schedule)
     : q(schedule)
-    , m_interval(AccountSyncSchedule::Every15Minutes)
+    , m_interval(AccountSyncSchedule::NoInterval)
     , m_peakInterval(AccountSyncSchedule::Every15Minutes)
     , m_days(AccountSyncSchedule::everyday())
     , m_peakDays(0)
@@ -90,6 +90,8 @@ AccountSyncSchedule::Days AccountSyncSchedulePrivate::daysFromQtDaySet(const QSe
 unsigned int AccountSyncSchedulePrivate::intervalToMinutes(AccountSyncSchedule::Interval interval)
 {
     switch (interval) {
+    case AccountSyncSchedule::NoInterval:
+        return 0;
     case AccountSyncSchedule::Every15Minutes:
         return 15;
     case AccountSyncSchedule::Every30Minutes:
@@ -166,7 +168,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
     result.setScheduleEnabled(d->m_enabled);
     result.setDays(daysToQtDaySet(d->m_days));
 
-    if (d->m_dailySyncTime.isValid() && d->m_interval == 0) {
+    if (d->m_dailySyncTime.isValid() && d->m_interval == AccountSyncSchedule::NoInterval) {
         result.setTime(d->m_dailySyncTime);
     } else {
         result.setInterval(intervalToMinutes(d->m_interval));
@@ -210,6 +212,7 @@ void AccountSyncSchedule::setDailySyncMode(const QTime &time, int days)
 {
     if (d->m_dailySyncTime != time) {
         d->m_dailySyncTime = time;
+        d->m_interval = AccountSyncSchedule::NoInterval;
         emit dailySyncTimeChanged();
         d->setModified(true);
     }

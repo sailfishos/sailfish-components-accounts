@@ -35,7 +35,8 @@ public:
         Every15Minutes,
         Every30Minutes,
         EveryHour,
-        TwiceDailyInterval
+        TwiceDailyInterval,
+        NoInterval = 100
     };
 
     enum Day {
