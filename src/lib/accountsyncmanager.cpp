@@ -64,7 +64,6 @@ public:
     QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv) const;
 
     QList<ProfileCreationDetails> profilesUnderCreation;
-    QSet<QString> m_profilesUnderSync;
     AccountSyncManager *q;
     Accounts::Manager *m_accountManager;
     Buteo::ProfileManager *m_profileManager;
@@ -86,6 +85,9 @@ AccountSyncProfileManagerPrivate::AccountSyncProfileManagerPrivate(AccountSyncMa
     , m_profileManager(new Buteo::ProfileManager)
     , m_buteoClient(0)
 {
+    m_buteoClient = new Buteo::SyncClientInterface;
+    connect(m_buteoClient, SIGNAL(syncStatus(QString,int,QString,int)),
+            this, SLOT(handleSyncStatus(QString,int,QString,int)));
 }
 
 AccountSyncProfileManagerPrivate::~AccountSyncProfileManagerPrivate()
@@ -115,15 +117,9 @@ void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account
 
 bool AccountSyncProfileManagerPrivate::startSync(const QString &profileId)
 {
-    if (!m_buteoClient) {
-        m_buteoClient = new Buteo::SyncClientInterface;
-        connect(m_buteoClient, SIGNAL(syncStatus(QString,int,QString,int)),
-                this, SLOT(handleSyncStatus(QString,int,QString,int)));
-    }
     if (!m_buteoClient->startSync(profileId)) {
         return false;
     }
-    m_profilesUnderSync.insert(profileId);
     return true;
 }
 
@@ -179,9 +175,6 @@ void AccountSyncProfileManagerPrivate::handleAccountSyncError()
 
 void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId, int status, const QString &message, int statusDetails)
 {
-    if (!m_profilesUnderSync.contains(profileId)) {
-        return;
-    }
     switch (status) {
     case Sync::SYNC_QUEUED:
     case Sync::SYNC_PROGRESS:
@@ -191,12 +184,10 @@ void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId
         emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncStarted, message);
         break;
     case Sync::SYNC_DONE:
-        m_profilesUnderSync.remove(profileId);
         emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncFinished, message);
         break;
     case Sync::SYNC_ABORTED:
     case Sync::SYNC_CANCELLED:
-        m_profilesUnderSync.remove(profileId);
         emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncAborted, message);
         break;
     case Sync::SYNC_ERROR:
@@ -207,7 +198,6 @@ void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId
     case Sync::SYNC_CONNECTION_ERROR:
     case Sync::SYNC_SERVER_FAILURE:
     case Sync::SYNC_BAD_REQUEST:
-        m_profilesUnderSync.remove(profileId);
         emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncError, message + ", details:" + statusDetails);
         break;
     }
