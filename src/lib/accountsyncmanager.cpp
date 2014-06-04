@@ -309,9 +309,18 @@ QStringList AccountSyncManager::profileIds(int accountId, const QString &service
 {
     Accounts::Account *account = d->m_accountManager->account(accountId);
     if (account) {
-        Accounts::Service srv = d->m_accountManager->service(serviceName);
-        if (srv.isValid()) {
-            return d->syncProfileIds(account, srv);
+        if (serviceName.isEmpty()) {
+            QStringList ret;
+            Q_FOREACH (const Accounts::Service &srv, account->services()) {
+                account->selectService(srv);
+                ret << d->syncProfileIds(account, srv);
+            }
+            return ret;
+        } else {
+            Accounts::Service srv = d->m_accountManager->service(serviceName);
+            if (srv.isValid()) {
+                return d->syncProfileIds(account, srv);
+            }
         }
     }
     return QStringList();
