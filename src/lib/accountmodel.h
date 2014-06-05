@@ -42,7 +42,8 @@ public:
         ProviderNameRole,
         ProviderDisplayNameRole,
         AccountEnabledRole,
-        AccountErrorRole
+        AccountErrorRole,
+        IsNewAccountRole
     };
 
     enum FilterType {
