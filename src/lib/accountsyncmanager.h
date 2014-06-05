@@ -44,6 +44,8 @@ public:
     Q_INVOKABLE void updateProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
     Q_INVOKABLE void syncProfile(const QString &profileId);
 
+    Q_INVOKABLE int createAllProfiles(int accountId);
+
     Q_INVOKABLE QStringList profileIds(int accountId, const QString &serviceName) const;
     Q_INVOKABLE AccountSyncOptions *accountSyncOptions(const QString &profileId);
 
@@ -69,6 +71,9 @@ signals:
     void profileUpdated(const QString &profileId);
     void profileUpdateError(const QString &profileId, const QString &errorString);
     void profileSyncStatusChanged(const QString &profileId, int status, const QString &errorString);
+
+    void allProfilesCreated(int accountId, const QStringList &profileIds);
+    void allProfileCreationError(int accountId, const QString &errorString);
 
 private:
     AccountSyncProfileManagerPrivate *d;

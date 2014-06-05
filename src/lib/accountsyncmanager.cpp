@@ -23,6 +23,7 @@
 #include <QDebug>
 #include <QSet>
 #include <QList>
+#include <QHash>
 
 static const QString SyncProfileTemplatesKey = QStringLiteral("sync_profile_templates");
 
@@ -43,8 +44,11 @@ public:
             : accountId(0) {}
         ProfileCreationDetails(const QString &profId, int accId, const QString &service)
             : profileId(profId), accountId(accId), serviceName(service) {}
+        ProfileCreationDetails(int accId, const QHash<QString, QStringList> &multiple)
+            : multipleCreatedProfiles(multiple), accountId(accId) {}
         ~ProfileCreationDetails() {}
 
+        QHash<QString, QStringList> multipleCreatedProfiles;
         QString profileId;
         int accountId;
         QString serviceName;
@@ -54,6 +58,7 @@ public:
     ~AccountSyncProfileManagerPrivate();
 
     void finalizeProfileCreation(Accounts::Account *account, const QString &serviceName, const QString &profileId);
+    void finalizeProfileCreation(Accounts::Account *account, const QHash<QString, QStringList> &multipleCreatedProfiles);
     bool startSync(const QString &profileId);
 
     QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv) const;
@@ -99,6 +104,15 @@ void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account
     account->sync();
 }
 
+void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account *account, const QHash<QString, QStringList> &multipleCreatedProfiles)
+{
+    ProfileCreationDetails details(account->id(), multipleCreatedProfiles);
+    profilesUnderCreation.append(details);
+    connect(account, SIGNAL(synced()), this, SLOT(handleAccountSynced()));
+    connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountSyncError()));
+    account->sync();
+}
+
 bool AccountSyncProfileManagerPrivate::startSync(const QString &profileId)
 {
     if (!m_buteoClient) {
@@ -136,17 +150,30 @@ void AccountSyncProfileManagerPrivate::handleAccountSynced()
 {
     Accounts::Account *account = qobject_cast<Accounts::Account *>(sender());
     ProfileCreationDetails details = popProfileCreationDetails(account);
-    if (!details.profileId.isEmpty()) {
+    if (!details.multipleCreatedProfiles.isEmpty()) {
+        QStringList profileIds;
+        Q_FOREACH (const QString &serviceName, details.multipleCreatedProfiles.keys()) {
+            profileIds.append(details.multipleCreatedProfiles[serviceName]);
+        }
+        emit q->allProfilesCreated(account->id(), profileIds);
+    } else if (!details.profileId.isEmpty()) {
         emit q->profileCreated(details.profileId);
+    } else {
+        qWarning() << "AccountSyncProfileManager: invalid sync case!";
     }
 }
 
 void AccountSyncProfileManagerPrivate::handleAccountSyncError()
 {
+    QString errorString = QStringLiteral("Unable to sync account after profile creation");
     Accounts::Account *account = qobject_cast<Accounts::Account *>(sender());
     ProfileCreationDetails details = popProfileCreationDetails(account);
-    if (details.accountId != 0) {
-        emit q->profileCreationError(details.accountId, details.serviceName, QStringLiteral("Unable to sync account after profile creation"));
+    if (!details.multipleCreatedProfiles.isEmpty()) {
+        emit q->allProfileCreationError(details.accountId, errorString);
+    } else if (!details.profileId.isEmpty()) {
+        emit q->profileCreationError(details.accountId, details.serviceName, errorString);
+    } else {
+        qWarning() << "AccountSyncProfileManager: invalid sync error case!";
     }
 }
 
@@ -252,6 +279,30 @@ void AccountSyncManager::syncProfile(const QString &profileId)
     if (!d->startSync(profileId)) {
         emit profileSyncStatusChanged(profileId, SyncError, QStringLiteral("Unable to start sync!"));
     }
+}
+
+int AccountSyncManager::createAllProfiles(int accountId)
+{
+    int createdCount = 0;
+    QHash<QString, QStringList> createdProfiles;
+    Accounts::Account *account = d->m_accountManager->account(accountId);
+    if (account) {
+        Q_FOREACH (const Accounts::Service &srv, account->services()) {
+            account->selectService(srv);
+            Q_FOREACH (const QString &templateProfile, defaultTemplateProfiles(account, srv)) {
+                QString savedProfileId = account->value(SyncProfileIdKey(templateProfile)).toString();
+                if (savedProfileId.isEmpty()) {
+                    savedProfileId = createProfile(templateProfile, account, srv, account->enabled());
+                    createdProfiles[srv.name()].append(savedProfileId);
+                    createdCount++;
+                }
+            }
+        }
+    }
+    if (createdCount > 0) {
+        d->finalizeProfileCreation(account, createdProfiles);
+    }
+    return createdCount;
 }
 
 QStringList AccountSyncManager::profileIds(int accountId, const QString &serviceName) const
