@@ -33,7 +33,7 @@ static QList<AccountSyncSchedule::Days> getDayList()
 
 AccountSyncSchedulePrivate::AccountSyncSchedulePrivate(AccountSyncSchedule *schedule)
     : q(schedule)
-    , m_interval(AccountSyncSchedule::Every15Minutes)
+    , m_interval(AccountSyncSchedule::NoInterval)
     , m_peakInterval(AccountSyncSchedule::Every15Minutes)
     , m_days(AccountSyncSchedule::everyday())
     , m_peakDays(0)
@@ -47,12 +47,20 @@ AccountSyncSchedulePrivate::~AccountSyncSchedulePrivate()
 {
 }
 
+void AccountSyncSchedulePrivate::setModified(bool modified)
+{
+    if (modified != m_modified) {
+        m_modified = modified;
+        emit q->modifiedChanged();
+    }
+}
+
 void AccountSyncSchedulePrivate::setDays(AccountSyncSchedule::Days d)
 {
     if (m_days != d) {
         m_days = d;
-        m_modified = true;
         emit q->daysChanged();
+        setModified(true);
     }
 }
 
@@ -82,6 +90,8 @@ AccountSyncSchedule::Days AccountSyncSchedulePrivate::daysFromQtDaySet(const QSe
 unsigned int AccountSyncSchedulePrivate::intervalToMinutes(AccountSyncSchedule::Interval interval)
 {
     switch (interval) {
+    case AccountSyncSchedule::NoInterval:
+        return 0;
     case AccountSyncSchedule::Every15Minutes:
         return 15;
     case AccountSyncSchedule::Every30Minutes:
@@ -158,7 +168,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
     result.setScheduleEnabled(d->m_enabled);
     result.setDays(daysToQtDaySet(d->m_days));
 
-    if (d->m_dailySyncTime.isValid() && d->m_interval == 0) {
+    if (d->m_dailySyncTime.isValid() && d->m_interval == AccountSyncSchedule::NoInterval) {
         result.setTime(d->m_dailySyncTime);
     } else {
         result.setInterval(intervalToMinutes(d->m_interval));
@@ -188,8 +198,8 @@ void AccountSyncSchedule::setEnabled(bool enabled)
 {
     if (d->m_enabled != enabled) {
         d->m_enabled = enabled;
-        d->m_modified = true;
         emit enabledChanged();
+        d->setModified(true);
     }
 }
 
@@ -202,8 +212,9 @@ void AccountSyncSchedule::setDailySyncMode(const QTime &time, int days)
 {
     if (d->m_dailySyncTime != time) {
         d->m_dailySyncTime = time;
-        d->m_modified = true;
+        d->m_interval = AccountSyncSchedule::NoInterval;
         emit dailySyncTimeChanged();
+        d->setModified(true);
     }
     d->setDays((AccountSyncSchedule::Days)days);
 }
@@ -212,8 +223,8 @@ void AccountSyncSchedule::setIntervalSyncMode(Interval interval, int days)
 {
     if (d->m_interval != interval) {
         d->m_interval = interval;
-        d->m_modified = true;
         emit intervalChanged();
+        d->setModified(true);
     }
     d->setDays((AccountSyncSchedule::Days)days);
 }
@@ -225,23 +236,23 @@ void AccountSyncSchedule::setPeakSchedule(const QTime &peakStart,
 {
     if (d->m_peakStartTime != peakStart) {
         d->m_peakStartTime = peakStart;
-        d->m_modified = true;
         emit peakStartTimeChanged();
+        d->setModified(true);
     }
     if (d->m_peakEndTime != peakEnd) {
         d->m_peakEndTime = peakEnd;
-        d->m_modified = true;
         emit peakEndTimeChanged();
+        d->setModified(true);
     }
     if (d->m_peakInterval != peakInterval) {
         d->m_peakInterval = peakInterval;
-        d->m_modified = true;
         emit intervalChanged();
+        d->setModified(true);
     }
     if (d->m_peakDays != peakDays) {
         d->m_peakDays = (AccountSyncSchedule::Days)peakDays;
-        d->m_modified = true;
         emit peakDaysChanged();
+        d->setModified(true);
     }
 }
 
@@ -323,8 +334,9 @@ AccountSyncSchedule::Days AccountSyncSchedule::weekendDays()
 
 //==============================================
 
-AccountSyncOptionsPrivate::AccountSyncOptionsPrivate()
-    : m_schedule(0)
+AccountSyncOptionsPrivate::AccountSyncOptionsPrivate(AccountSyncOptions *parent)
+    : q(parent)
+    , m_schedule(0)
     , m_pastSyncPeriod(DefaultPastSyncPeriod)
     , m_direction(DefaultDirection)
     , m_modified(false)
@@ -360,6 +372,7 @@ AccountSyncOptions *AccountSyncOptionsPrivate::fromButeoProfile(const Buteo::Syn
     }
     d->m_autoSync = source.boolKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE, DefaultAutomaticSync);
     d->m_schedule = AccountSyncSchedulePrivate::fromButeoSchedule(source.syncSchedule(), options);
+    QObject::connect(d->m_schedule, SIGNAL(modifiedChanged()), options, SIGNAL(modifiedChanged()));
     d->m_modified = false;
     return options;
 }
@@ -422,9 +435,18 @@ AccountSyncOptions::PastSyncPeriod AccountSyncOptionsPrivate::pastSyncPeriodFrom
     }
 }
 
+void AccountSyncOptionsPrivate::setModified(bool modified)
+{
+    if (modified != m_modified) {
+        m_modified = modified;
+        emit q->modifiedChanged();
+    }
+}
+
+
 AccountSyncOptions::AccountSyncOptions(QObject *parent)
     : QObject(parent)
-    , d(new AccountSyncOptionsPrivate)
+    , d(new AccountSyncOptionsPrivate(this))
 {
 }
 
@@ -442,8 +464,8 @@ void AccountSyncOptions::setAutomaticSyncEnabled(bool enabled)
 {
     if (d->m_autoSync != enabled) {
         d->m_autoSync = enabled;
-        d->m_modified = true;
         emit automaticSyncEnabledChanged();
+        d->setModified(true);
     }
 }
 
@@ -461,8 +483,8 @@ void AccountSyncOptions::setPastSyncPeriod(PastSyncPeriod period)
 {
     if (d->m_pastSyncPeriod != period) {
         d->m_pastSyncPeriod = period;
-        d->m_modified = true;
         emit pastSyncPeriodChanged();
+        d->setModified(true);
     }
 }
 
@@ -475,8 +497,8 @@ void AccountSyncOptions::setDirection(Direction direction)
 {
     if (d->m_direction != direction) {
         d->m_direction = direction;
-        d->m_modified = true;
         emit directionChanged();
+        d->setModified(true);
     }
 }
 
@@ -489,7 +511,8 @@ void AccountSyncOptions::setSchedule(AccountSyncSchedule *schedule)
 {
     if (d->m_schedule != schedule) {
         d->m_schedule = schedule;
-        d->m_modified = true;
+        connect(d->m_schedule, SIGNAL(modifiedChanged()), this, SIGNAL(modifiedChanged()));
         emit scheduleChanged();
+        d->setModified(true);
     }
 }
