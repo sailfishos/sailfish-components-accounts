@@ -32,6 +32,19 @@ SilicaListView {
 
             ContextMenu {
                 MenuItem {
+                    text: model.accountEnabled
+                            //: Disables a user account
+                            //% "Disable"
+                          ? qsTrId("components_accounts-me-disable")
+                            //: Enables a user account
+                            //% "Enable"
+                          : qsTrId("components_accounts-me-enable")
+                    onClicked: {
+                        accountModel.setAccountEnabled(model.accountId, !accountEnabled)
+                    }
+                }
+
+                MenuItem {
                     //: Removes a user account
                     //% "Remove"
                     text: qsTrId("components_accounts-me-remove_account")
@@ -67,6 +80,12 @@ SilicaListView {
                     }
                 })
             }
+        }
+
+        onHighlightedChanged: {
+            // Set the icon.opacity value manually to ensure the icon opacity doesn't change before
+            // the label text colour change is applied (which is done when highlighted changes).
+            icon.opacity = model.accountEnabled ? 1.0 : 0.3
         }
 
         ListView.onRemove: animateRemoval()

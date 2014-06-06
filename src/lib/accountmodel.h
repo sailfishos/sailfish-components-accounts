@@ -68,6 +68,8 @@ public:
     QString filter() const;
     void setFilter(const QString &filter);
 
+    Q_INVOKABLE void setAccountEnabled(int index, bool enabled);
+
     int rowCount(const QModelIndex &index = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
 
@@ -88,6 +90,7 @@ private slots:
     void accountRemoved(Accounts::AccountId id);
     void accountUpdated(Accounts::AccountId id);
     void accountDisplayNameChanged();
+    void accountEnabledChanged();
     void delayedIndexUpdate();
 
 private:

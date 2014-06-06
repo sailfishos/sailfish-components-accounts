@@ -212,6 +212,18 @@ void AccountModel::setFilter(const QString &filter)
     }
 }
 
+void AccountModel::setAccountEnabled(int accountId, bool enabled)
+{
+    Q_D(AccountModel);
+    for (int i=0; i<d->accountsList.count(); i++) {
+        if (d->accountsList[i]->account->id() == (uint)accountId) {
+            d->accountsList[i]->account->setEnabled(enabled);
+            d->accountsList[i]->account->sync();
+            break;
+        }
+    }
+}
+
 void AccountModel::reload()
 {
     Q_D(AccountModel);
@@ -350,7 +362,7 @@ void AccountModel::accountUpdated(Accounts::AccountId id)
     if (accountIndex < 0) {
         return;
     }
-    // the enabled status is updated in the account object asynchronously, so delay
+    // the service settings are updated in the account object asynchronously, so delay
     // the emission of dataChanged()
     d->rowToUpdate = accountIndex;
     QTimer::singleShot(0, this, SLOT(delayedIndexUpdate()));
@@ -369,6 +381,14 @@ void AccountModel::accountDisplayNameChanged()
     Accounts::Account *account = qobject_cast<Accounts::Account*>(sender());
     if (account)
         accountUpdated(account->id());
+}
+
+void AccountModel::accountEnabledChanged()
+{
+    Accounts::Account *account = qobject_cast<Accounts::Account*>(sender());
+    if (account) {
+        accountUpdated(account->id());
+    }
 }
 
 int AccountModel::getAccountIndex(Accounts::AccountId id) const
@@ -400,14 +420,15 @@ void AccountModel::addedAccount(Accounts::Account *account)
     if (account) {
         QObject::connect(account, SIGNAL(displayNameChanged(QString)),
                 this, SLOT(accountDisplayNameChanged()));
+        QObject::connect(account, SIGNAL(enabledChanged(QString,bool)),
+                this, SLOT(accountEnabledChanged()));
     }
 }
 
 void AccountModel::removedAccount(Accounts::Account *account)
 {
     if (account) {
-        QObject::disconnect(account, SIGNAL(displayNameChanged(QString)),
-                this, SLOT(accountDisplayNameChanged()));
+        account->disconnect(this);
     }
 }
 
