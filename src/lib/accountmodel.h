@@ -92,8 +92,8 @@ private slots:
     void accountDisplayNameChanged();
     void accountEnabledChanged();
     void delayedIndexUpdate();
-    void activeSyncStarted(qulonglong accountId);
-    void activeSyncCompleted(qulonglong accountId, int result);
+    void exchangeSyncStarted(qulonglong accountId);
+    void exchangeSyncCompleted(qulonglong accountId, int result);
     void profileSyncStatusChanged(const QString &profileId, int status, const QString &errorString);
 
 private:

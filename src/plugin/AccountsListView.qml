@@ -92,7 +92,7 @@ SilicaListView {
             anchors {
                 left: icon.right
                 leftMargin: Theme.paddingLarge
-                right: parent.right
+                right: syncIndicator.running ? syncIndicator.left : parent.right
                 rightMargin: Theme.paddingLarge
                 verticalCenter: parent.verticalCenter
                 verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
@@ -108,12 +108,22 @@ SilicaListView {
                         : Theme.rgba(Theme.primaryColor, 0.55)
             }
         }
+        BusyIndicator {
+            id: syncIndicator
+            anchors {
+                right: parent.right
+                rightMargin: Theme.paddingLarge
+                verticalCenter: parent.verticalCenter
+            }
+            size: BusyIndicatorSize.Medium
+            running: model.performingInitialSync
+        }
         Label {
             anchors {
                 left: icon.right
                 leftMargin: Theme.paddingLarge
                 top: accountName.bottom
-                right: parent.right
+                right: syncIndicator.running ? syncIndicator.left : parent.right
                 rightMargin: Theme.paddingLarge
             }
             truncationMode: TruncationMode.Fade

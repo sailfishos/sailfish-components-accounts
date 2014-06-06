@@ -346,7 +346,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
     }
 }
 
-void AccountModel::activeSyncStarted(qulonglong accountId)
+void AccountModel::exchangeSyncStarted(qulonglong accountId)
 {
     Q_D(AccountModel);
 
@@ -358,7 +358,7 @@ void AccountModel::activeSyncStarted(qulonglong accountId)
     }
 }
 
-void AccountModel::activeSyncCompleted(qulonglong accountId, int result)
+void AccountModel::exchangeSyncCompleted(qulonglong accountId, int result)
 {
     Q_D(AccountModel);
 
@@ -385,8 +385,8 @@ void AccountModel::monitorSyncStatus(Accounts::Account *account)
         if (!d->dbusInitialized) {
             static const QString dbusAddress = QStringLiteral("com.nokia.asdbus");
             static const QString dbusPath = QStringLiteral("/com/nokia/asdbus");
-            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncStarted", this, SLOT(activeSyncStarted(qulonglong)));
-            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncCompleted", this, SLOT(activeSyncCompleted(qulonglong, int)));
+            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncStarted", this, SLOT(exchangeSyncStarted(qulonglong)));
+            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncCompleted", this, SLOT(exchangeSyncCompleted(qulonglong, int)));
             d->dbusInitialized = true;
         }
     } else {
