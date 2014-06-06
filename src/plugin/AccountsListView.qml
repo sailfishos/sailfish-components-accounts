@@ -16,6 +16,7 @@ SilicaListView {
 
     property bool _allowAccountDeletion
     signal _accountRemoveRequested(int accountId)
+    signal _accountSyncRequested(int accountId)
 
     model: AccountModel { id: accountModel }
 
@@ -49,6 +50,18 @@ SilicaListView {
                     //% "Remove"
                     text: qsTrId("components_accounts-me-remove_account")
                     onClicked: removeAccount()
+                }
+
+                MenuItem {
+                    //: Syncs the data for this account
+                    //% "Sync"
+                    text: qsTrId("components_accounts-me-sync")
+                    visible: model.accountEnabled
+                            && (menu.providerName === "activesync" || accountSyncManager.profileIds(model.accountId).length > 0)
+
+                    onClicked: {
+                        root._accountSyncRequested(model.accountId)
+                    }
                 }
             }
         }
@@ -153,6 +166,10 @@ SilicaListView {
         onClicked: {
             root.accountClicked(model.accountId, model.providerName)
         }
+    }
+
+    AccountSyncManager {
+        id: accountSyncManager
     }
 
     Component {
