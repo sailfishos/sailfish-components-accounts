@@ -23,8 +23,6 @@ SilicaListView {
     delegate: ListItem {
         id: delegateItem
 
-        property QtObject _syncHelper
-
         contentHeight: Theme.itemSizeMedium
         menu: root._allowAccountDeletion ? menuComponent : null
 
@@ -72,27 +70,6 @@ SilicaListView {
             remorseAction(qsTrId("component_accounts-la-remove_account"),
                           function() { root._accountRemoveRequested(model.accountId) })
 
-        }
-
-        function _getSyncHelper() {
-            if (_syncHelper == null) {
-                _syncHelper = syncHelperComponent.createObject(delegateItem, {"accountId": model.accountId})
-            }
-            return _syncHelper
-        }
-
-        property bool isNewAccount: model.isNewAccount
-        onIsNewAccountChanged: {
-            if (isNewAccount) {
-                var obj = _getSyncHelper()
-                obj.monitorAccountSyncStatus = true
-                obj.onAccountHasSyncingProfilesChanged.connect(function() {
-                    // only monitor the initial sync status change for a new account
-                    if (!obj.accountHasSyncingProfiles) {
-                        obj.monitorAccountSyncStatus = false
-                    }
-                })
-            }
         }
 
         onHighlightedChanged: {
@@ -146,7 +123,7 @@ SilicaListView {
                     //% "Not signed in"
                     return qsTrId("component_accounts-la-not_signed_in")
                 }
-                if (model.isNewAccount && _syncHelper && _syncHelper.accountHasSyncingProfiles) {
+                if (model.performingInitialSync) {
                     //: In the process of setting up this account
                     //% "Setting up account..."
                     return qsTrId("component_accounts-la-setting_up_account")
@@ -170,50 +147,6 @@ SilicaListView {
 
     AccountSyncManager {
         id: accountSyncManager
-    }
-
-    Component {
-        id: syncHelperComponent
-
-        AccountSyncManager {
-            property int accountId
-            property bool accountHasSyncingProfiles
-            property bool monitorAccountSyncStatus
-
-            property var _profilesSyncStatus
-            property int _trackedProfileCount
-
-            onProfileSyncStatusChanged: {
-                if (!monitorAccountSyncStatus) {
-                    return
-                }
-                if (_profilesSyncStatus === undefined) {
-                    _profilesSyncStatus = {}
-                    var accountProfiles = profileIds(accountId)
-                    for (var i=0; i<accountProfiles.length; i++) {
-                        _profilesSyncStatus[accountProfiles[i]] = AccountSyncManager.UnknownSyncStatus
-                        _trackedProfileCount++
-                    }
-                }
-                var profileIsSyncing = (status === AccountSyncManager.SyncStarted)
-                if (_profilesSyncStatus[profileId] !== undefined) {
-                    var wasSyncing = (_profilesSyncStatus[profileId] === AccountSyncManager.SyncStarted)
-                    if (wasSyncing && !profileIsSyncing) {
-                        // profile has finished syncing, remove it from the map
-                        delete _profilesSyncStatus[profileId]
-                        _trackedProfileCount--
-                    } else {
-                        _profilesSyncStatus[profileId] = status
-                        if (!accountHasSyncingProfiles && profileIsSyncing) {
-                            accountHasSyncingProfiles = true
-                        }
-                    }
-                }
-                if (_trackedProfileCount === 0) {
-                    accountHasSyncingProfiles = false
-                }
-            }
-        }
     }
 
     AccountManager { id: accountManager }

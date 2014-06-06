@@ -43,7 +43,7 @@ public:
         ProviderDisplayNameRole,
         AccountEnabledRole,
         AccountErrorRole,
-        IsNewAccountRole
+        PerformingInitialSyncRole
     };
 
     enum FilterType {
@@ -92,6 +92,9 @@ private slots:
     void accountDisplayNameChanged();
     void accountEnabledChanged();
     void delayedIndexUpdate();
+    void activeSyncStarted(qulonglong accountId);
+    void activeSyncCompleted(qulonglong accountId, int result);
+    void profileSyncStatusChanged(const QString &profileId, int status, const QString &errorString);
 
 private:
     int getAccountIndex(Accounts::AccountId id) const;
@@ -99,6 +102,7 @@ private:
     void addedAccount(Accounts::Account *account);
     void removedAccount(Accounts::Account *account);
     void reload();
+    void monitorSyncStatus(Accounts::Account *account);
 
 private:
     AccountModelPrivate* d_ptr;
