@@ -9,12 +9,14 @@
 #include "accountmodel.h"
 #include "account.h"
 #include "provider.h"
+#include "accountsyncmanager.h"
 #include "globalaccountmanager_p.h"
 #include "globaltranslatorcache_p.h"
 
 //Qt
 #include <QtDebug>
 #include <QTimer>
+#include <QDBusConnection>
 
 //libaccounts-qt
 #include <Accounts/Manager>
@@ -25,9 +27,10 @@
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 
 struct DisplayData {
-    DisplayData(Accounts::Account *acct, bool isNew = false)
+    DisplayData(Accounts::Account *acct)
         : account(acct)
-        , isNewAccount(isNew)
+        , performingInitialSync(false)
+        , monitorInitialSync(false)
     {
         Accounts::ServiceList services = account->services();
         foreach (const Accounts::Service &service, services) {
@@ -51,13 +54,15 @@ struct DisplayData {
         return false;
     }
 
+    QHash<QString, int> profilesSyncStatus;
     Accounts::Account *account;
     QString providerName;
     QString providerDisplayName;
     QString accountIcon;
     QStringList serviceNames;
     QStringList serviceTypes;
-    bool isNewAccount;
+    bool performingInitialSync;
+    bool monitorInitialSync;
     Q_DISABLE_COPY(DisplayData);
 };
 
@@ -65,9 +70,12 @@ class AccountModel::AccountModelPrivate
 {
 public:
     AccountModelPrivate()
-        : filterType(AccountModel::NoFilter)
+        : accountSyncManager(0)
+        , filterType(AccountModel::NoFilter)
+        , dbusConnection(QDBusConnection::sessionBus())
         , rowToUpdate(-1)
         , componentComplete(false)
+        , dbusInitialized(false)
     {
     }
 
@@ -78,12 +86,15 @@ public:
 
     QHash<int, QByteArray> headerData;
     Accounts::Manager *manager;
+    AccountSyncManager *accountSyncManager;
     QList<DisplayData *> accountsList;
     QList<DisplayData *> filteredAccountsList;
     AccountModel::FilterType filterType;
+    QDBusConnection dbusConnection;
     QString filter;
     int rowToUpdate;
     bool componentComplete;
+    bool dbusInitialized;
 };
 
 namespace {
@@ -150,7 +161,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(ProviderDisplayNameRole, "providerDisplayName");
     d->headerData.insert(AccountEnabledRole, "accountEnabled");
     d->headerData.insert(AccountErrorRole, "accountError");
-    d->headerData.insert(IsNewAccountRole, "isNewAccount");
+    d->headerData.insert(PerformingInitialSyncRole, "performingInitialSync");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),
@@ -300,8 +311,8 @@ QVariant AccountModel::data(const QModelIndex &index, int role) const
         return NoAccountError;
     }
 
-    if (role == IsNewAccountRole) {
-        return data->isNewAccount;
+    if (role == PerformingInitialSyncRole) {
+        return data->performingInitialSync;
     }
 
     return QVariant();
@@ -328,8 +339,111 @@ void AccountModel::accountCreated(Accounts::AccountId id)
 
         if (account != 0) {
             addedAccount(account);
-            insertAccountSorted(new DisplayData(account, true), account, &d->accountsList, &d->filteredAccountsList);
+            insertAccountSorted(new DisplayData(account), account, &d->accountsList, &d->filteredAccountsList);
+            monitorSyncStatus(account);
             reload();
+        }
+    }
+}
+
+void AccountModel::exchangeSyncStarted(qulonglong accountId)
+{
+    Q_D(AccountModel);
+
+    int i = getAccountIndex(accountId);
+    if (i >= 0 && d->accountsList.at(i)->monitorInitialSync) {
+        d->accountsList.at(i)->performingInitialSync = true;
+        int filteredIndex = getFilteredAccountsIndex(accountId);
+        emit dataChanged(index(filteredIndex, 0), index(filteredIndex, 0));
+    }
+}
+
+void AccountModel::exchangeSyncCompleted(qulonglong accountId, int result)
+{
+    Q_D(AccountModel);
+
+    Q_UNUSED(result);
+
+    int i = getAccountIndex(accountId);
+    if (i >= 0 && d->accountsList.at(i)->monitorInitialSync) {
+        d->accountsList.at(i)->performingInitialSync = false;
+        d->accountsList.at(i)->monitorInitialSync = false;
+        int filteredIndex = getFilteredAccountsIndex(accountId);
+        emit dataChanged(index(filteredIndex, 0), index(filteredIndex, 0));
+    }
+}
+
+void AccountModel::monitorSyncStatus(Accounts::Account *account)
+{
+    Q_D(AccountModel);
+
+    int accountIndex = getAccountIndex(account->id());
+    DisplayData *displayData = d->accountsList.at(accountIndex);
+    displayData->monitorInitialSync = true;
+
+    if (account->providerName() == QStringLiteral("activesync")) {
+        if (!d->dbusInitialized) {
+            static const QString dbusAddress = QStringLiteral("com.nokia.asdbus");
+            static const QString dbusPath = QStringLiteral("/com/nokia/asdbus");
+            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncStarted", this, SLOT(exchangeSyncStarted(qulonglong)));
+            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncCompleted", this, SLOT(exchangeSyncCompleted(qulonglong, int)));
+            d->dbusInitialized = true;
+        }
+    } else {
+        if (!d->accountSyncManager) {
+            d->accountSyncManager = new AccountSyncManager(this);
+            connect(d->accountSyncManager, SIGNAL(profileSyncStatusChanged(QString,int,QString)),
+                    SLOT(profileSyncStatusChanged(QString,int,QString)));
+        }
+    }
+}
+
+void AccountModel::profileSyncStatusChanged(const QString &profileId, int status, const QString &errorString)
+{
+    Q_D(AccountModel);
+    Q_UNUSED(errorString);
+
+    bool profileIsSyncing = (status == AccountSyncManager::SyncStarted);
+    for (int i=0; i<d->accountsList.count(); i++) {
+        DisplayData *displayData = d->accountsList.at(i);
+        if (!displayData->monitorInitialSync
+                || displayData->account->providerName() == QStringLiteral("activesync")) {
+            continue;
+        }
+        if (displayData->profilesSyncStatus.isEmpty()) {
+            Q_FOREACH(const QString &profileId, d->accountSyncManager->profileIds(displayData->account->id())) {
+                displayData->profilesSyncStatus[profileId] = AccountSyncManager::UnknownSyncStatus;
+            }
+            if (displayData->profilesSyncStatus.isEmpty()) {
+                // no profiles to be monitored for this account
+                displayData->monitorInitialSync = false;
+                continue;
+            }
+        }
+        if (displayData->profilesSyncStatus.contains(profileId)) {
+            bool wasSyncing = (displayData->profilesSyncStatus[profileId] == AccountSyncManager::SyncStarted);
+            bool emitDataChanged = false;
+            if (wasSyncing && !profileIsSyncing) {
+                // profile has finished syncing, remove it from the map
+                displayData->profilesSyncStatus.remove(profileId);
+            } else {
+                displayData->profilesSyncStatus[profileId] = status;
+                if (!displayData->performingInitialSync && profileIsSyncing) {
+                    displayData->performingInitialSync = true;
+                    emitDataChanged = true;
+                }
+            }
+            if (displayData->performingInitialSync && displayData->profilesSyncStatus.isEmpty()) {
+                // all profiles for this account have been synced, stop monitoring the sync status
+                displayData->performingInitialSync = false;
+                displayData->monitorInitialSync = false;
+                emitDataChanged = true;
+            }
+            if (emitDataChanged) {
+                int filteredIndex = getFilteredAccountsIndex(displayData->account->id());
+                emit dataChanged(index(filteredIndex, 0), index(filteredIndex, 0));
+            }
+            break;
         }
     }
 }

@@ -23,8 +23,6 @@ SilicaListView {
     delegate: ListItem {
         id: delegateItem
 
-        property QtObject _syncHelper
-
         contentHeight: Theme.itemSizeMedium
         menu: root._allowAccountDeletion ? menuComponent : null
 
@@ -74,27 +72,6 @@ SilicaListView {
 
         }
 
-        function _getSyncHelper() {
-            if (_syncHelper == null) {
-                _syncHelper = syncHelperComponent.createObject(delegateItem, {"accountId": model.accountId})
-            }
-            return _syncHelper
-        }
-
-        property bool isNewAccount: model.isNewAccount
-        onIsNewAccountChanged: {
-            if (isNewAccount) {
-                var obj = _getSyncHelper()
-                obj.monitorAccountSyncStatus = true
-                obj.onAccountHasSyncingProfilesChanged.connect(function() {
-                    // only monitor the initial sync status change for a new account
-                    if (!obj.accountHasSyncingProfiles) {
-                        obj.monitorAccountSyncStatus = false
-                    }
-                })
-            }
-        }
-
         onHighlightedChanged: {
             // Set the icon.opacity value manually to ensure the icon opacity doesn't change before
             // the label text colour change is applied (which is done when highlighted changes).
@@ -115,7 +92,7 @@ SilicaListView {
             anchors {
                 left: icon.right
                 leftMargin: Theme.paddingLarge
-                right: parent.right
+                right: syncIndicator.running ? syncIndicator.left : parent.right
                 rightMargin: Theme.paddingLarge
                 verticalCenter: parent.verticalCenter
                 verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
@@ -131,12 +108,22 @@ SilicaListView {
                         : Theme.rgba(Theme.primaryColor, 0.55)
             }
         }
+        BusyIndicator {
+            id: syncIndicator
+            anchors {
+                right: parent.right
+                rightMargin: Theme.paddingLarge
+                verticalCenter: parent.verticalCenter
+            }
+            size: BusyIndicatorSize.Medium
+            running: model.performingInitialSync
+        }
         Label {
             anchors {
                 left: icon.right
                 leftMargin: Theme.paddingLarge
                 top: accountName.bottom
-                right: parent.right
+                right: syncIndicator.running ? syncIndicator.left : parent.right
                 rightMargin: Theme.paddingLarge
             }
             truncationMode: TruncationMode.Fade
@@ -146,7 +133,7 @@ SilicaListView {
                     //% "Not signed in"
                     return qsTrId("component_accounts-la-not_signed_in")
                 }
-                if (model.isNewAccount && _syncHelper && _syncHelper.accountHasSyncingProfiles) {
+                if (model.performingInitialSync) {
                     //: In the process of setting up this account
                     //% "Setting up account..."
                     return qsTrId("component_accounts-la-setting_up_account")
@@ -170,50 +157,6 @@ SilicaListView {
 
     AccountSyncManager {
         id: accountSyncManager
-    }
-
-    Component {
-        id: syncHelperComponent
-
-        AccountSyncManager {
-            property int accountId
-            property bool accountHasSyncingProfiles
-            property bool monitorAccountSyncStatus
-
-            property var _profilesSyncStatus
-            property int _trackedProfileCount
-
-            onProfileSyncStatusChanged: {
-                if (!monitorAccountSyncStatus) {
-                    return
-                }
-                if (_profilesSyncStatus === undefined) {
-                    _profilesSyncStatus = {}
-                    var accountProfiles = profileIds(accountId)
-                    for (var i=0; i<accountProfiles.length; i++) {
-                        _profilesSyncStatus[accountProfiles[i]] = AccountSyncManager.UnknownSyncStatus
-                        _trackedProfileCount++
-                    }
-                }
-                var profileIsSyncing = (status === AccountSyncManager.SyncStarted)
-                if (_profilesSyncStatus[profileId] !== undefined) {
-                    var wasSyncing = (_profilesSyncStatus[profileId] === AccountSyncManager.SyncStarted)
-                    if (wasSyncing && !profileIsSyncing) {
-                        // profile has finished syncing, remove it from the map
-                        delete _profilesSyncStatus[profileId]
-                        _trackedProfileCount--
-                    } else {
-                        _profilesSyncStatus[profileId] = status
-                        if (!accountHasSyncingProfiles && profileIsSyncing) {
-                            accountHasSyncingProfiles = true
-                        }
-                    }
-                }
-                if (_trackedProfileCount === 0) {
-                    accountHasSyncingProfiles = false
-                }
-            }
-        }
     }
 
     AccountManager { id: accountManager }
