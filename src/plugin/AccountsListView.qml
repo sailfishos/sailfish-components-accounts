@@ -16,6 +16,7 @@ SilicaListView {
 
     property bool _allowAccountDeletion
     signal _accountRemoveRequested(int accountId)
+    signal _accountSyncRequested(int accountId)
 
     model: AccountModel { id: accountModel }
 
@@ -32,10 +33,35 @@ SilicaListView {
 
             ContextMenu {
                 MenuItem {
+                    text: model.accountEnabled
+                            //: Disables a user account
+                            //% "Disable"
+                          ? qsTrId("components_accounts-me-disable")
+                            //: Enables a user account
+                            //% "Enable"
+                          : qsTrId("components_accounts-me-enable")
+                    onClicked: {
+                        accountModel.setAccountEnabled(model.accountId, !accountEnabled)
+                    }
+                }
+
+                MenuItem {
                     //: Removes a user account
                     //% "Remove"
                     text: qsTrId("components_accounts-me-remove_account")
                     onClicked: removeAccount()
+                }
+
+                MenuItem {
+                    //: Syncs the data for this account
+                    //% "Sync"
+                    text: qsTrId("components_accounts-me-sync")
+                    visible: model.accountEnabled
+                            && (menu.providerName === "activesync" || accountSyncManager.profileIds(model.accountId).length > 0)
+
+                    onClicked: {
+                        root._accountSyncRequested(model.accountId)
+                    }
                 }
             }
         }
@@ -67,6 +93,12 @@ SilicaListView {
                     }
                 })
             }
+        }
+
+        onHighlightedChanged: {
+            // Set the icon.opacity value manually to ensure the icon opacity doesn't change before
+            // the label text colour change is applied (which is done when highlighted changes).
+            icon.opacity = model.accountEnabled ? 1.0 : 0.3
         }
 
         ListView.onRemove: animateRemoval()
@@ -134,6 +166,10 @@ SilicaListView {
         onClicked: {
             root.accountClicked(model.accountId, model.providerName)
         }
+    }
+
+    AccountSyncManager {
+        id: accountSyncManager
     }
 
     Component {
