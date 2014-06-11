@@ -92,6 +92,8 @@ unsigned int AccountSyncSchedulePrivate::intervalToMinutes(AccountSyncSchedule::
     switch (interval) {
     case AccountSyncSchedule::NoInterval:
         return 0;
+    case AccountSyncSchedule::Every5Minutes:
+        return 5;
     case AccountSyncSchedule::Every15Minutes:
         return 15;
     case AccountSyncSchedule::Every30Minutes:
@@ -109,7 +111,9 @@ AccountSyncSchedule::Interval AccountSyncSchedulePrivate::intervalFromMinutes(un
 {
     // roughly match the AccountSyncSchedule intervals if there is no exact match
     AccountSyncSchedule::Interval interval;
-    if (minutes > 0 && minutes <= 15) {
+    if (minutes > 0 && minutes <= 5) {
+        interval = AccountSyncSchedule::Every5Minutes;
+    } else if (minutes <= 15) {
         interval = AccountSyncSchedule::Every15Minutes;
     } else if (minutes <= 45) {
         interval = AccountSyncSchedule::Every30Minutes;
