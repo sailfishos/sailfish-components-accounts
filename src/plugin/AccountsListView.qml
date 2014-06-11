@@ -9,22 +9,25 @@ SilicaListView {
 
     property alias filterType: accountModel.filterType
     property alias filter: accountModel.filter
+    property bool entriesInteractive
 
     signal accountClicked(int accountId, string providerName)
+    signal accountRemoveRequested(int accountId)
+    signal accountSyncRequested(int accountId)
 
     //-------------- impl
 
-    property bool _allowAccountDeletion
-    signal _accountRemoveRequested(int accountId)
-    signal _accountSyncRequested(int accountId)
+    property bool _hideJollaAccount
 
     model: AccountModel { id: accountModel }
 
     delegate: ListItem {
         id: delegateItem
 
-        contentHeight: Theme.itemSizeMedium
-        menu: root._allowAccountDeletion ? menuComponent : null
+        enabled: root.entriesInteractive
+        contentHeight: visible ? Theme.itemSizeMedium : 0
+        visible: !root._hideJollaAccount || model.providerName !== "jolla"
+        menu: root.entriesInteractive ? menuComponent : null
 
         Component {
             id: menuComponent
@@ -58,7 +61,7 @@ SilicaListView {
                             && (menu.providerName === "activesync" || accountSyncManager.profileIds(model.accountId).length > 0)
 
                     onClicked: {
-                        root._accountSyncRequested(model.accountId)
+                        root.accountSyncRequested(model.accountId)
                     }
                 }
             }
@@ -68,7 +71,7 @@ SilicaListView {
             //: Deleting this account in 5 seconds
             //% "Removing account"
             remorseAction(qsTrId("component_accounts-la-remove_account"),
-                          function() { root._accountRemoveRequested(model.accountId) })
+                          function() { root.accountRemoveRequested(model.accountId) })
 
         }
 
