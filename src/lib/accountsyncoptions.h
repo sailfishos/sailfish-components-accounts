@@ -36,6 +36,7 @@ public:
         Every30Minutes,
         EveryHour,
         TwiceDailyInterval,
+        Every5Minutes,
         NoInterval = 100
     };
 
