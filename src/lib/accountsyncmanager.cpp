@@ -445,6 +445,11 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
     return !savedProfileId.isEmpty();
 }
 
+bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv) const
+{
+    return !d->syncProfileIds(account, srv, QString()).isEmpty();
+}
+
 bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const
 {
     return !d->syncProfileIds(account, srv, templateProfile).isEmpty();

@@ -16,6 +16,8 @@
 
 #include "accountsyncmanager.h"
 
+class QFile;
+
 class AccountModifier : public QObject
 {
     Q_OBJECT
@@ -37,6 +39,8 @@ public:
     QString settingValue;
     QString serviceType;
     bool providerAvailable;
+    bool scheduleCommandForNextBoot;
+    bool runScheduledCommands;
     Mode mode;
     AccountSyncManager accountSyncManager;
 
@@ -63,11 +67,16 @@ private:
     bool applySyncUpdateChanges();
     bool applyProviderAvailabilityChanges();
     bool createProfiles();
+    void addScheduledCommand(Mode command);
+    QList<Mode> loadScheduledCommands(QFile *file);
+
+    static QString markerFilePath();
 
     Accounts::Manager *m_accountManager;
     Accounts::AccountIdList m_allAccountIds;
     Accounts::Account *m_currAccount;
     Buteo::SyncClientInterface *m_buteoClient;
+    QList<Mode> m_commands;
     int m_currAccountIdx;
     bool m_error;
 };

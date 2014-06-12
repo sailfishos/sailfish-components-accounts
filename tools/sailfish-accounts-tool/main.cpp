@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
             "To update per-data sync services to have the correct sync settings and sync profiles:\n"
             "%1 --update-sync-services\n"
             "Note: msyncd must be running for this command to work!\n"
+            "Or, to schedule this command to be run on next boot:\n"
+            "%1 --update-sync-services-on-boot\n"
             "\n"
             "To update the provider-available and enabled status of all accounts of type <provider> with a particular service that is enabled:\n"
             "%1 --provider-available false -p <provider> [-t <service-type>]\n"
@@ -55,22 +57,30 @@ int main(int argc, char *argv[])
             "To create profiles for all account services that require them: (i.e. services that specify profile templates but do not have the created profiles)\n"
             "%1 --create-profiles\n"
             "Note: msyncd must be running for this command to work!\n"
+            "Or, to schedule this command to be run on next boot:\n"
+            "%1 --create-profiles-on-boot\n"
+            "\n"
+            "To run all command scheduled for the next boot:\n"
+            "%1 --run-scheduled-commands\n"
             "\n"
             "Valid setting types are: %2\n\n")
         .arg(appName).arg(validSettingTypes.join(','));
 
-    bool updatingSyncServices = (args.value(1) == QStringLiteral("--update-sync-services"));
-    bool updateProviderAvailability = (args.value(1) == QStringLiteral("--provider-available"));
-    bool createProfiles = (args.value(1) == QStringLiteral("--create-profiles"));
-    if (updatingSyncServices) {
+    QString firstOption = args.value(1);
+    bool scheduleForNextBoot = firstOption.endsWith(QStringLiteral("-on-boot"));
+    if (firstOption.startsWith(QStringLiteral("--update-sync-services"))) {
         am.mode = AccountModifier::UpdateSyncServices;
-    } else if (updateProviderAvailability) {
+        am.scheduleCommandForNextBoot = scheduleForNextBoot;
+    } else if (firstOption == QStringLiteral("--provider-available")) {
         am.mode = AccountModifier::UpdateProviderAvailability;
         am.providerAvailable = args.value(2) == QStringLiteral("true");
         am.providerName = args.value(4);
         am.serviceType = args.value(6);
-    } else if (createProfiles) {
+    } else if (firstOption.startsWith(QStringLiteral("--create-profiles"))) {
         am.mode = AccountModifier::CreateProfiles;
+        am.scheduleCommandForNextBoot = scheduleForNextBoot;
+    } else if (firstOption == QStringLiteral("--run-scheduled-commands")) {
+        am.runScheduledCommands = true;
     } else {
         am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);

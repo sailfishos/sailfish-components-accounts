@@ -14,12 +14,15 @@
 #include <QDir>
 #include <QtDebug>
 
-static const QString AccountUpdateMarkerFilename = ".accounts-update-sync-services";
+static const QString AccountToolMarkerFilename = ".sailfish-accounts-tool";
 static const QString KeyProviderAvailable = QStringLiteral("provider-available");
 static const QString KeyEnableWhenProviderAvailable = QStringLiteral("enable-when-provider-available");
 
 AccountModifier::AccountModifier(QObject *parent)
     : QObject(parent)
+    , providerAvailable(false)
+    , scheduleCommandForNextBoot(false)
+    , runScheduledCommands(false)
     , mode(UnknownMode)
     , m_accountManager(new Accounts::Manager)
     , m_currAccount(0)
@@ -75,6 +78,33 @@ QVariant convertSettingValue(const QString &settingName, const QString &settingT
 void AccountModifier::start()
 {
     m_error = false;
+
+    if (scheduleCommandForNextBoot) {
+        addScheduledCommand(mode);
+        emit done();
+        return;
+    }
+
+    if (runScheduledCommands) {
+        if (m_commands.isEmpty()) {
+            QFile file(markerFilePath());
+            if (!file.open(QIODevice::ReadOnly)) {
+                qWarning() << "Cannot open" << file.fileName() << "to run commands!";
+                done();
+                return;
+            }
+            m_commands = loadScheduledCommands(&file);
+            if (m_commands.isEmpty()) {
+                qWarning() << "No scheduled commands to run";
+                done();
+                return;
+            }
+            qWarning() << "AccountsModifier: running" << m_commands.count() << "scheduled commands";
+            mode = m_commands.takeFirst();
+        } else {
+            mode = m_commands.takeFirst();
+        }
+    }
 
     if (mode == UnknownMode) {
         qWarning() << Q_FUNC_INFO << "No mode set for AccountModifier!";
@@ -142,13 +172,13 @@ void AccountModifier::next()
 
     m_currAccountIdx += 1;
     if (m_currAccountIdx >= m_allAccountIds.size()) {
-        if (mode == UpdateSyncServices) {
-            QStringList homePaths = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
-            if (homePaths.count()) {
-                QString path = homePaths[0] + QDir::separator() + AccountUpdateMarkerFilename;
-                if (!QFile::remove(path)) {
-                    qWarning() << "sailfish-accounts-tool marker file:" << path << "doesn't exist, not removing";
-                }
+        if (runScheduledCommands) {
+            if (m_commands.isEmpty()) {
+                QFile::remove(markerFilePath());
+            } else {
+                // run the next command
+                start();
+                return;
             }
         }
         emit done();
@@ -392,6 +422,14 @@ bool AccountModifier::createProfiles()
     return created;
 }
 
+void AccountModifier::error(Accounts::Error err)
+{
+    qWarning() << Q_FUNC_INFO << "error during sync of account" << m_currAccount->id()
+               << ":" << err.type() << err.message();
+    m_error = true;
+    emit done();
+}
+
 /*
     Saves a profile out-of-process through Buteo::SyncClientInterface, rather than in-process through
     Buteo::ProfileManager. This ensures the profile can be updated even when sailfish-accounts-tool
@@ -417,10 +455,48 @@ bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Acc
     return true;
 }
 
-void AccountModifier::error(Accounts::Error err)
+void AccountModifier::addScheduledCommand(Mode command)
 {
-    qWarning() << Q_FUNC_INFO << "error during sync of account" << m_currAccount->id()
-               << ":" << err.type() << err.message();
-    m_error = true;
-    emit done();
+    QFile file(markerFilePath());
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning() << "Cannot open" << file.fileName() << "to schedule command!";
+        return;
+    }
+    QList<AccountModifier::Mode> cmds = loadScheduledCommands(&file);
+    if (!cmds.contains(command)) {
+        QString str = QString("%1,").arg(int(command));
+        file.write(str.toUtf8().constData());
+    }
+}
+
+QList<AccountModifier::Mode> AccountModifier::loadScheduledCommands(QFile *file)
+{
+    QList<AccountModifier::Mode> cmds;
+    if (!file) {
+        return cmds;
+    }
+    QByteArray ba = file->readAll();
+    if (!ba.isEmpty()) {
+        Q_FOREACH (const QString &cmd, QString::fromUtf8(ba.constData()).split(',')) {
+            if (cmd.isEmpty()) {
+                continue;
+            }
+            bool ok = false;
+            int cmdInt = cmd.toInt(&ok);
+            if (ok) {
+                cmds << Mode(cmdInt);
+            }
+        }
+    }
+    return cmds;
+}
+
+QString AccountModifier::markerFilePath()
+{
+    QStringList homePaths = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
+    if (homePaths.count()) {
+        return homePaths[0] + QDir::separator() + AccountToolMarkerFilename;
+    }
+    qWarning() << "Error: QStandardPaths cannot find HomeLocation!";
+    return QString();
 }
