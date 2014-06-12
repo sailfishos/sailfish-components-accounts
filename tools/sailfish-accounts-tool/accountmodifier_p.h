@@ -25,7 +25,8 @@ public:
         UnknownMode,
         ModifyServiceSettings,
         UpdateSyncServices,
-        UpdateProviderAvailability
+        UpdateProviderAvailability,
+        CreateProfiles
     };
 
     QString providerName;
@@ -54,9 +55,14 @@ Q_SIGNALS:
 
 private:
     void checkServiceSettingArgs();
+    bool saveProfileViaMsyncd(Accounts::Account *account,
+                              const Accounts::Service &srv,
+                              Buteo::SyncProfile *profile,
+                              const QString &templateProfile);
     bool applyServiceSettingChanges();
     bool applySyncUpdateChanges();
     bool applyProviderAvailabilityChanges();
+    bool createProfiles();
 
     Accounts::Manager *m_accountManager;
     Accounts::AccountIdList m_allAccountIds;

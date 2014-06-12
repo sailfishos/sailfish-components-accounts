@@ -174,6 +174,9 @@ void AccountModifier::next()
     case UpdateSyncServices:
         needsSync = applySyncUpdateChanges();
         break;
+    case CreateProfiles:
+        needsSync = createProfiles();
+        break;
     default:
         qWarning() << Q_FUNC_INFO << "Unhandled AccountModifier mode!";
         emit done();
@@ -302,11 +305,7 @@ bool AccountModifier::applySyncUpdateChanges()
             }
             m_currAccount->setEnabled(enableSyncServices);
 
-            // Create the profile. This can't use AccountSyncManager::createProfile() because this
-            // tool may be run without privileged permissions, so use SyncClientInterface to talk
-            // to msyncd to save the profiles instead of doing it in-process.
             Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, enableSyncServices);
-
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
@@ -319,20 +318,10 @@ bool AccountModifier::applySyncUpdateChanges()
                 profile->setSyncDirection(Buteo::SyncProfile::SYNC_DIRECTION_FROM_REMOTE);
             }
 
-            QString newProfileId = QStringLiteral("%1-%2").arg(templateProfile).arg(m_currAccount->id());
-
-            if (!m_buteoClient) {
-                m_buteoClient = new Buteo::SyncClientInterface;
-            }
-            if (!m_buteoClient->updateProfile(*profile)) {
-                qWarning() << "SyncClientInterface::updateProfile() failed for" << srv.name() << "!";
+            if (!saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile)) {
                 m_error = true;
                 return false;
             }
-
-            // save the profile name to the account
-            QString profileKey = QStringLiteral("%1/%2").arg(templateProfile).arg(Buteo::KEY_PROFILE_ID);
-            m_currAccount->setValue(profileKey, newProfileId);
 
             delete profile;
             madeChanges = true;
@@ -378,6 +367,53 @@ bool AccountModifier::applyProviderAvailabilityChanges()
         m_currAccount->setEnabled(false);
     }
     m_currAccount->setValue(KeyProviderAvailable, providerAvailable);
+    return true;
+}
+
+bool AccountModifier::createProfiles()
+{
+    bool created = false;
+    Q_FOREACH (const Accounts::Service &srv, m_currAccount->services()) {
+        m_currAccount->selectService(srv);
+        Q_FOREACH (const QString &templateProfile, accountSyncManager.defaultTemplateProfiles(m_currAccount, srv)) {
+            if (!accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
+                // Don't fail if any of the profiles cannot be created.
+                Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
+                if (!profile) {
+                    qWarning() << "Profile could not created for template:" << templateProfile;
+                } else {
+                    created = true;
+                    saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile);
+                }
+                delete profile;
+            }
+        }
+    }
+    return created;
+}
+
+/*
+    Saves a profile out-of-process through Buteo::SyncClientInterface, rather than in-process through
+    Buteo::ProfileManager. This ensures the profile can be updated even when sailfish-accounts-tool
+    is run without privileged permissions.
+ */
+bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Accounts::Service &srv, Buteo::SyncProfile *profile, const QString &templateProfile)
+{
+    if (!m_buteoClient) {
+        m_buteoClient = new Buteo::SyncClientInterface;
+    }
+    if (!m_buteoClient->updateProfile(*profile)) {
+        qWarning() << "SyncClientInterface::updateProfile() failed for" << srv.name() << "!";
+        return false;
+    }
+
+    // save the profile name to the account
+    QString profileKey = QStringLiteral("%1/%2").arg(templateProfile).arg(Buteo::KEY_PROFILE_ID);
+    QString newProfileId = QStringLiteral("%1-%2").arg(templateProfile).arg(account->id());
+    Accounts::Service prevService = account->selectedService();
+    account->selectService(srv);
+    account->setValue(profileKey, newProfileId);
+    account->selectService(prevService);
     return true;
 }
 

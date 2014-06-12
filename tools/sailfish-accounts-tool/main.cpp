@@ -46,15 +46,22 @@ int main(int argc, char *argv[])
             "\n"
             "To update per-data sync services to have the correct sync settings and sync profiles:\n"
             "%1 --update-sync-services\n"
+            "Note: msyncd must be running for this command to work!\n"
+            "\n"
             "To update the provider-available and enabled status of all accounts of type <provider> with a particular service that is enabled:\n"
             "%1 --provider-available false -p <provider> [-t <service-type>]\n"
-            "%1 (For example, --provider-available false -p onlinesync -t caldav)\n"
+            "(For example, --provider-available false -p onlinesync -t caldav)\n"
+            "\n"
+            "To create profiles for all account services that require them: (i.e. services that specify profile templates but do not have the created profiles)\n"
+            "%1 --create-profiles\n"
+            "Note: msyncd must be running for this command to work!\n"
             "\n"
             "Valid setting types are: %2\n\n")
         .arg(appName).arg(validSettingTypes.join(','));
 
     bool updatingSyncServices = (args.value(1) == QStringLiteral("--update-sync-services"));
     bool updateProviderAvailability = (args.value(1) == QStringLiteral("--provider-available"));
+    bool createProfiles = (args.value(1) == QStringLiteral("--create-profiles"));
     if (updatingSyncServices) {
         am.mode = AccountModifier::UpdateSyncServices;
     } else if (updateProviderAvailability) {
@@ -62,6 +69,8 @@ int main(int argc, char *argv[])
         am.providerAvailable = args.value(2) == QStringLiteral("true");
         am.providerName = args.value(4);
         am.serviceType = args.value(6);
+    } else if (createProfiles) {
+        am.mode = AccountModifier::CreateProfiles;
     } else {
         am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);
