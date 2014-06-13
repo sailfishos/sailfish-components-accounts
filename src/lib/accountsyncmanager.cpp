@@ -61,7 +61,7 @@ public:
     void finalizeProfileCreation(Accounts::Account *account, const QHash<QString, QStringList> &multipleCreatedProfiles);
     bool startSync(const QString &profileId);
 
-    QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv) const;
+    QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfileMatch = QString()) const;
 
     QList<ProfileCreationDetails> profilesUnderCreation;
     AccountSyncManager *q;
@@ -123,7 +123,7 @@ bool AccountSyncProfileManagerPrivate::startSync(const QString &profileId)
     return true;
 }
 
-QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *account, const Accounts::Service &srv) const
+QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfileMatch) const
 {
     if (!account || !srv.isValid()) {
         return QStringList();
@@ -133,6 +133,9 @@ QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *
     QStringList retn;
     QStringList syncProfileTemplates = account->value(SyncProfileTemplatesKey).toStringList();
     Q_FOREACH(const QString &syncProfileTemplate, syncProfileTemplates) {
+        if (!templateProfileMatch.isEmpty() && syncProfileTemplate != templateProfileMatch) {
+            continue;
+        }
         QString profileId = account->value(SyncProfileIdKey(syncProfileTemplate)).toString();
         if (!profileId.isEmpty()) {
             retn.append(profileId);
@@ -444,7 +447,12 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
 
 bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv) const
 {
-    return !d->syncProfileIds(account, srv).isEmpty();
+    return !d->syncProfileIds(account, srv, QString()).isEmpty();
+}
+
+bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const
+{
+    return !d->syncProfileIds(account, srv, templateProfile).isEmpty();
 }
 
 QStringList AccountSyncManager::defaultTemplateProfiles(Accounts::Account *account, const Accounts::Service &srv) const

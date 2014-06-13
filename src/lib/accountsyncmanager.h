@@ -56,6 +56,7 @@ public:
     bool updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
+    bool hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const;
     QStringList defaultTemplateProfiles(Accounts::Account *account, const Accounts::Service &srv) const;
 
     Buteo::SyncProfile *newProfileFromTemplate(const QString &templateProfileName,

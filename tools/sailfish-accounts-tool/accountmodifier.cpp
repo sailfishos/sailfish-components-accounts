@@ -14,12 +14,15 @@
 #include <QDir>
 #include <QtDebug>
 
-static const QString AccountUpdateMarkerFilename = ".accounts-update-sync-services";
+static const QString AccountToolMarkerFilename = ".sailfish-accounts-tool";
 static const QString KeyProviderAvailable = QStringLiteral("provider-available");
 static const QString KeyEnableWhenProviderAvailable = QStringLiteral("enable-when-provider-available");
 
 AccountModifier::AccountModifier(QObject *parent)
     : QObject(parent)
+    , providerAvailable(false)
+    , scheduleCommandForNextBoot(false)
+    , runScheduledCommands(false)
     , mode(UnknownMode)
     , m_accountManager(new Accounts::Manager)
     , m_currAccount(0)
@@ -75,6 +78,33 @@ QVariant convertSettingValue(const QString &settingName, const QString &settingT
 void AccountModifier::start()
 {
     m_error = false;
+
+    if (scheduleCommandForNextBoot) {
+        addScheduledCommand(mode);
+        emit done();
+        return;
+    }
+
+    if (runScheduledCommands) {
+        if (m_commands.isEmpty()) {
+            QFile file(markerFilePath());
+            if (!file.open(QIODevice::ReadOnly)) {
+                qWarning() << "Cannot open" << file.fileName() << "to run commands!";
+                done();
+                return;
+            }
+            m_commands = loadScheduledCommands(&file);
+            if (m_commands.isEmpty()) {
+                qWarning() << "No scheduled commands to run";
+                done();
+                return;
+            }
+            qWarning() << "AccountsModifier: running" << m_commands.count() << "scheduled commands";
+            mode = m_commands.takeFirst();
+        } else {
+            mode = m_commands.takeFirst();
+        }
+    }
 
     if (mode == UnknownMode) {
         qWarning() << Q_FUNC_INFO << "No mode set for AccountModifier!";
@@ -142,13 +172,13 @@ void AccountModifier::next()
 
     m_currAccountIdx += 1;
     if (m_currAccountIdx >= m_allAccountIds.size()) {
-        if (mode == UpdateSyncServices) {
-            QStringList homePaths = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
-            if (homePaths.count()) {
-                QString path = homePaths[0] + QDir::separator() + AccountUpdateMarkerFilename;
-                if (!QFile::remove(path)) {
-                    qWarning() << "sailfish-accounts-tool marker file:" << path << "doesn't exist, not removing";
-                }
+        if (runScheduledCommands) {
+            if (m_commands.isEmpty()) {
+                QFile::remove(markerFilePath());
+            } else {
+                // run the next command
+                start();
+                return;
             }
         }
         emit done();
@@ -173,6 +203,9 @@ void AccountModifier::next()
         break;
     case UpdateSyncServices:
         needsSync = applySyncUpdateChanges();
+        break;
+    case CreateProfiles:
+        needsSync = createProfiles();
         break;
     default:
         qWarning() << Q_FUNC_INFO << "Unhandled AccountModifier mode!";
@@ -302,11 +335,7 @@ bool AccountModifier::applySyncUpdateChanges()
             }
             m_currAccount->setEnabled(enableSyncServices);
 
-            // Create the profile. This can't use AccountSyncManager::createProfile() because this
-            // tool may be run without privileged permissions, so use SyncClientInterface to talk
-            // to msyncd to save the profiles instead of doing it in-process.
             Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, enableSyncServices);
-
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
@@ -319,20 +348,10 @@ bool AccountModifier::applySyncUpdateChanges()
                 profile->setSyncDirection(Buteo::SyncProfile::SYNC_DIRECTION_FROM_REMOTE);
             }
 
-            QString newProfileId = QStringLiteral("%1-%2").arg(templateProfile).arg(m_currAccount->id());
-
-            if (!m_buteoClient) {
-                m_buteoClient = new Buteo::SyncClientInterface;
-            }
-            if (!m_buteoClient->updateProfile(*profile)) {
-                qWarning() << "SyncClientInterface::updateProfile() failed for" << srv.name() << "!";
+            if (!saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile)) {
                 m_error = true;
                 return false;
             }
-
-            // save the profile name to the account
-            QString profileKey = QStringLiteral("%1/%2").arg(templateProfile).arg(Buteo::KEY_PROFILE_ID);
-            m_currAccount->setValue(profileKey, newProfileId);
 
             delete profile;
             madeChanges = true;
@@ -381,10 +400,103 @@ bool AccountModifier::applyProviderAvailabilityChanges()
     return true;
 }
 
+bool AccountModifier::createProfiles()
+{
+    bool created = false;
+    Q_FOREACH (const Accounts::Service &srv, m_currAccount->services()) {
+        m_currAccount->selectService(srv);
+        Q_FOREACH (const QString &templateProfile, accountSyncManager.defaultTemplateProfiles(m_currAccount, srv)) {
+            if (!accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
+                // Don't fail if any of the profiles cannot be created.
+                Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
+                if (!profile) {
+                    qWarning() << "Profile could not created for template:" << templateProfile;
+                } else {
+                    created = true;
+                    saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile);
+                }
+                delete profile;
+            }
+        }
+    }
+    return created;
+}
+
 void AccountModifier::error(Accounts::Error err)
 {
     qWarning() << Q_FUNC_INFO << "error during sync of account" << m_currAccount->id()
                << ":" << err.type() << err.message();
     m_error = true;
     emit done();
+}
+
+/*
+    Saves a profile out-of-process through Buteo::SyncClientInterface, rather than in-process through
+    Buteo::ProfileManager. This ensures the profile can be updated even when sailfish-accounts-tool
+    is run without privileged permissions.
+ */
+bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Accounts::Service &srv, Buteo::SyncProfile *profile, const QString &templateProfile)
+{
+    if (!m_buteoClient) {
+        m_buteoClient = new Buteo::SyncClientInterface;
+    }
+    if (!m_buteoClient->updateProfile(*profile)) {
+        qWarning() << "SyncClientInterface::updateProfile() failed for" << srv.name() << "!";
+        return false;
+    }
+
+    // save the profile name to the account
+    QString profileKey = QStringLiteral("%1/%2").arg(templateProfile).arg(Buteo::KEY_PROFILE_ID);
+    QString newProfileId = QStringLiteral("%1-%2").arg(templateProfile).arg(account->id());
+    Accounts::Service prevService = account->selectedService();
+    account->selectService(srv);
+    account->setValue(profileKey, newProfileId);
+    account->selectService(prevService);
+    return true;
+}
+
+void AccountModifier::addScheduledCommand(Mode command)
+{
+    QFile file(markerFilePath());
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning() << "Cannot open" << file.fileName() << "to schedule command!";
+        return;
+    }
+    QList<AccountModifier::Mode> cmds = loadScheduledCommands(&file);
+    if (!cmds.contains(command)) {
+        QString str = QString("%1,").arg(int(command));
+        file.write(str.toUtf8().constData());
+    }
+}
+
+QList<AccountModifier::Mode> AccountModifier::loadScheduledCommands(QFile *file)
+{
+    QList<AccountModifier::Mode> cmds;
+    if (!file) {
+        return cmds;
+    }
+    QByteArray ba = file->readAll();
+    if (!ba.isEmpty()) {
+        Q_FOREACH (const QString &cmd, QString::fromUtf8(ba.constData()).split(',')) {
+            if (cmd.isEmpty()) {
+                continue;
+            }
+            bool ok = false;
+            int cmdInt = cmd.toInt(&ok);
+            if (ok) {
+                cmds << Mode(cmdInt);
+            }
+        }
+    }
+    return cmds;
+}
+
+QString AccountModifier::markerFilePath()
+{
+    QStringList homePaths = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
+    if (homePaths.count()) {
+        return homePaths[0] + QDir::separator() + AccountToolMarkerFilename;
+    }
+    qWarning() << "Error: QStandardPaths cannot find HomeLocation!";
+    return QString();
 }
