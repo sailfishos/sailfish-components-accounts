@@ -7,14 +7,21 @@
 
 #include <QObject>
 #include <QString>
+#include <QMutex>
 
 #include <Accounts/Error>
 #include <Accounts/Account>
 #include <Accounts/Manager>
 
+#include <SignOn/Identity>
+#include <SignOn/IdentityInfo>
+#include <SignOn/SessionData>
+#include <SignOn/AuthSession>
+
 #include <buteosyncfw5/SyncClientInterface.h>
 
 #include "accountsyncmanager.h"
+#include "accountbackuprestorer_p.h"
 
 class QFile;
 
@@ -28,7 +35,10 @@ public:
         ModifyServiceSettings,
         UpdateSyncServices,
         UpdateProviderAvailability,
-        CreateProfiles
+        CreateProfiles,
+        BackupAccounts,
+        RestoreAccounts,
+        TriggerProfiles
     };
 
     QString providerName;
@@ -38,11 +48,12 @@ public:
     QString settingType;
     QString settingValue;
     QString serviceType;
+    QString backupFile;
     bool providerAvailable;
     bool scheduleCommandForNextBoot;
     bool runScheduledCommands;
+    bool runningMultipleCommands;
     Mode mode;
-    AccountSyncManager accountSyncManager;
 
     AccountModifier(QObject *parent = 0);
     ~AccountModifier();
@@ -69,6 +80,9 @@ private:
     bool createProfiles();
     void addScheduledCommand(Mode command);
     QList<Mode> loadScheduledCommands(QFile *file);
+    bool backupAccount(Accounts::Account *account);
+    bool restoreAccounts();
+    void triggerProfiles(Accounts::Account *account);
 
     static QString markerFilePath();
 
@@ -76,6 +90,8 @@ private:
     Accounts::AccountIdList m_allAccountIds;
     Accounts::Account *m_currAccount;
     Buteo::SyncClientInterface *m_buteoClient;
+    AccountSyncManager m_accountSyncManager;
+    AccountBackupRestorer m_accountBackupRestorer;
     QList<Mode> m_commands;
     int m_currAccountIdx;
     bool m_error;

@@ -60,6 +60,14 @@ int main(int argc, char *argv[])
             "Or, to schedule this command to be run on next boot:\n"
             "%1 --create-profiles-on-boot\n"
             "\n"
+            "To trigger all synchronization profiles of all accounts:\n"
+            "%1 --trigger-profiles\n"
+            "\n"
+            "To backup all account information to the specified output file:\n"
+            "%1 --backup-accounts <outfile>\n"
+            "To restore accounts which were previously backed up to the specified input file:\n"
+            "%1 --restore-accounts <infile>\n"
+            "\n"
             "To run all command scheduled for the next boot:\n"
             "%1 --run-scheduled-commands\n"
             "\n"
@@ -81,6 +89,14 @@ int main(int argc, char *argv[])
         am.scheduleCommandForNextBoot = scheduleForNextBoot;
     } else if (firstOption == QStringLiteral("--run-scheduled-commands")) {
         am.runScheduledCommands = true;
+    } else if (firstOption == QStringLiteral("--backup-accounts")) {
+        am.mode = AccountModifier::BackupAccounts;
+        am.backupFile = args.value(2);
+    } else if (firstOption == QStringLiteral("--restore-accounts")) {
+        am.mode = AccountModifier::RestoreAccounts;
+        am.backupFile = args.value(2);
+    } else if (firstOption == QStringLiteral("--trigger-profiles")) {
+        am.mode = AccountModifier::TriggerProfiles;
     } else {
         am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);
@@ -102,6 +118,9 @@ int main(int argc, char *argv[])
             ((am.modeSwitch == QString::fromLatin1("-r") && argc == 7) ||
              ((am.modeSwitch == QString::fromLatin1("-m") && argc == 9 &&
                      validSettingTypes.contains(am.settingType)))));
+    } else if (am.mode == AccountModifier::BackupAccounts ||
+               am.mode == AccountModifier::RestoreAccounts) {
+        validParams = !am.backupFile.isEmpty();
     }
 
     if (validParams) {
