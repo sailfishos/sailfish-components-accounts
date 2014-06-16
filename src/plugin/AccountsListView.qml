@@ -75,20 +75,20 @@ SilicaListView {
 
         }
 
-        onHighlightedChanged: {
-            // Set the icon.opacity value manually to ensure the icon opacity doesn't change before
-            // the label text colour change is applied (which is done when highlighted changes).
-            icon.opacity = model.accountEnabled ? 1.0 : 0.3
-        }
-
         ListView.onRemove: animateRemoval()
+
+        Binding {
+            target: icon
+            property: "opacity"
+            when: !delegateItem.highlighted // don't change the opacity while the context menu is open
+            value: model.accountEnabled && !syncIndicator.running ? 1.0 : 0.3
+        }
 
         AccountIcon {
             id: icon
             x: Theme.paddingLarge
             anchors.verticalCenter: parent.verticalCenter
             source: model.accountIcon
-            opacity: model.accountEnabled && !syncIndicator.running ? 1.0 : 0.3
         }
         BusyIndicator {
             id: syncIndicator
