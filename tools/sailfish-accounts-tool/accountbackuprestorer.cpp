@@ -1,0 +1,743 @@
+/*
+** Copyright (C) 2014 Jolla Ltd.
+*/
+
+#include "accountbackuprestorer_p.h"
+
+// libsailfishkeyprovider
+#include <sailfishkeyprovider.h>
+
+#include <QFile>
+#include <QTimer>
+#include <QDateTime>
+#include <QThread>
+#include <QMutexLocker>
+#include <QCoreApplication>
+#include <QtDebug>
+
+#define BACKUP_RESTORER_VERSION 1
+
+namespace {
+    QString skp_storedKey(const QString &provider, const QString &service, const QString &key)
+    {
+        QString retn;
+        char *value = NULL;
+        int success = SailfishKeyProvider_storedKey(provider.toLatin1(), service.toLatin1(), key.toLatin1(), &value);
+        if (value) {
+            if (success == 0) {
+                retn = QString::fromLatin1(value);
+            }
+            free(value);
+        }
+        return retn;
+    }
+}
+
+AccountBackupRestorer::AccountBackupRestorer(AccountSyncManager *syncManager,
+                                             Accounts::Manager *accountManager,
+                                             QObject *parent)
+    : QObject(parent)
+    , m_syncManager(syncManager)
+    , m_accountManager(accountManager)
+{
+}
+
+AccountBackupRestorer::~AccountBackupRestorer()
+{
+}
+
+bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QString &backupFile)
+{
+    // we write the account data to the backup file in .ini format
+    QSettings backupIni(backupFile, QSettings::IniFormat);
+    if (!backupIni.isWritable()) {
+        qWarning() << Q_FUNC_INFO << "backup file not writable";
+        return false;
+    }
+
+    if (!backupIni.childGroups().contains(QStringLiteral("metadata"))) {
+        // if the file has not yet been tagged with metadata, do so.
+        backupIni.beginGroup(QStringLiteral("metadata"));
+        backupIni.setValue(QStringLiteral("version"), BACKUP_RESTORER_VERSION);
+        backupIni.setValue(QStringLiteral("datetime"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+        backupIni.endGroup();
+    }
+
+    account->selectService(Accounts::Service());
+    Accounts::ServiceList accountServices(account->services());
+    QString providerName = account->providerName();
+    QString skpSrvName = providerName == QStringLiteral("jolla") ? QStringLiteral("jolla-store") : QString();
+    QString clientId = skp_storedKey(providerName, skpSrvName, QStringLiteral("client_id"));
+    QString clientSecret = skp_storedKey(providerName, skpSrvName, QStringLiteral("client_secret"));
+    QString consumerKey = skp_storedKey(providerName, skpSrvName, QStringLiteral("consumer_key"));
+    QString consumerSecret = skp_storedKey(providerName, skpSrvName, QStringLiteral("consumer_secret"));
+    QList<SignOnCredentials> requiredCredentials;
+
+    // New group for this account.
+    backupIni.beginGroup(QString::number(account->id()));
+    {
+        // Backup the global settings.
+        // note that they may be duplicated later when fetching the default service key/values.
+        backupIni.beginGroup(QStringLiteral("globalSettings"));
+        {
+            backupIni.setValue(QStringLiteral("providerName"), QVariant::fromValue<QString>(providerName));
+            backupIni.setValue(QStringLiteral("enabled"), QVariant::fromValue<bool>(account->enabled()));
+            backupIni.setValue(QStringLiteral("displayName"), QVariant::fromValue<QString>(account->displayName()));
+        }
+        backupIni.endGroup();
+
+        // Backup all service settings.
+        backupIni.beginGroup(QStringLiteral("serviceSettings"));
+        {
+            // Backup the default service settings
+            backupAccountServiceSettings(backupIni, accountServices, Accounts::Service(), account, requiredCredentials,
+                                         clientId, clientSecret, consumerKey, consumerSecret);
+
+            // Backup the real service settings
+            Q_FOREACH (const Accounts::Service &srv, accountServices) {
+                backupAccountServiceSettings(backupIni, accountServices, srv, account, requiredCredentials,
+                                             clientId, clientSecret, consumerKey, consumerSecret);
+            }
+        }
+        backupIni.endGroup();
+
+        // backup credentials settings
+        backupIni.beginGroup(QStringLiteral("credentialsSettings"));
+        {
+            Q_FOREACH(const SignOnCredentials &rsoc, requiredCredentials) {
+                // some ugliness to query the IdentityInfo data "synchronously"
+                QThread thread;
+                CredentialKeysQuery *query = new CredentialKeysQuery(rsoc.id, rsoc.method, rsoc.mechanism, rsoc.sessionData);
+                connect(&thread, SIGNAL(finished()), query, SLOT(deleteLater()));
+                query->moveToThread(&thread);
+                thread.start();
+                QTimer::singleShot(0, query, SLOT(queryCredentials()));
+                while (!query->finished()) {
+                    QCoreApplication::processEvents();
+                    QThread::msleep(100);
+                }
+                QVariantMap infoValues = query->infoValues();
+                QVariantMap methodMechanismSecrets = query->methodMechanismSecrets();
+                thread.quit();
+                thread.wait();
+
+                // we now have the IdentityInfo data and can back it up.
+                if (!infoValues.isEmpty()) {
+                    backupIni.beginGroup(QString::number(rsoc.id));
+
+                    backupIni.beginGroup(QStringLiteral("infoValues"));
+                    Q_FOREACH (const QString &key, infoValues.keys()) {
+                        backupIni.setValue(key, infoValues.value(key));
+                    }
+                    backupIni.endGroup();
+
+                    backupIni.beginGroup(QStringLiteral("methodMechanismSecrets"));
+                    Q_FOREACH (const QString &method, methodMechanismSecrets.keys()) {
+                        backupIni.beginGroup(method);
+                        QVariantMap mechanismSecrets = methodMechanismSecrets.value(method).toMap();
+                        Q_FOREACH (const QString &mechanism, mechanismSecrets.keys()) {
+                            backupIni.beginGroup(mechanism);
+                            QVariantMap secrets = mechanismSecrets.value(mechanism).toMap();
+                            Q_FOREACH (const QString &key, secrets.keys()) {
+                                backupIni.setValue(key, secrets.value(key));
+                            }
+                            backupIni.endGroup();
+                        }
+                        backupIni.endGroup();
+                    }
+                    backupIni.endGroup();
+
+                    backupIni.endGroup();
+                }
+            }
+        }
+        backupIni.endGroup();
+    }
+    backupIni.endGroup();
+
+    return true;
+}
+
+bool AccountBackupRestorer::restoreAccounts(const QString &backupFile)
+{
+    if (!QFile::exists(backupFile)) {
+        qWarning() << Q_FUNC_INFO << "backup file does not exist, cannot restore accounts";
+        return false;
+    }
+
+    QSettings backupIni(backupFile, QSettings::IniFormat);
+    QStringList oldAccountIds = backupIni.childGroups();
+    Q_FOREACH (const QString &oldAccountId, oldAccountIds) {
+        if (oldAccountId == QStringLiteral("metadata")) {
+            continue; // not a backed up account, but metadata about the backup file.
+        }
+
+        // we need to create a new account, and set its settings to match the backed up ones.
+        Accounts::Account *newAccount = NULL;
+        QString providerName;
+        QString displayName;
+        bool enabled = false;
+        QMap<QString, bool> servicesEnabled;
+
+        backupIni.beginGroup(oldAccountId);
+        {
+            backupIni.beginGroup(QStringLiteral("globalSettings"));
+            {
+                providerName = backupIni.value(QStringLiteral("providerName"), QVariant::fromValue<QString>(QString())).toString();
+                displayName = backupIni.value(QStringLiteral("displayName"), QVariant::fromValue<QString>(QString())).toString();
+                enabled = backupIni.value(QStringLiteral("enabled"), QVariant::fromValue<bool>(false)).toBool();
+            }
+            backupIni.endGroup();
+
+            if (providerName.isEmpty()) {
+                qWarning() << Q_FUNC_INFO << "no providerName specified for backed-up account" << oldAccountId << ", skipping";
+            } else {
+                newAccount = m_accountManager->createAccount(providerName);
+                newAccount->selectService(Accounts::Service());
+                newAccount->setDisplayName(displayName);
+                newAccount->setEnabled(enabled);
+                Accounts::ServiceList accountServices(newAccount->services());
+
+                // first we restore the credentials.  This allows us to create a mapping
+                // from the old credentials id to the new credentials id, which becomes
+                // important later when we restore the service settings.
+                QMap<quint32, quint32> oldToNewCredentialsIds;
+                QVariantMap allCredentialsSettings;
+                backupIni.beginGroup(QStringLiteral("credentialsSettings"));
+                {
+                    QStringList oldCredentialsIds = backupIni.childGroups();
+                    Q_FOREACH (const QString &oldCredIdStr, oldCredentialsIds) {
+                        backupIni.beginGroup(oldCredIdStr);
+
+                        // read the identity info values.  these shouldn't change across method/mechs
+                        QVariantMap infoValues;
+                        backupIni.beginGroup(QStringLiteral("infoValues"));
+                        Q_FOREACH (const QString &key, backupIni.allKeys()) {
+                            infoValues.insert(key, backupIni.value(key));
+                        }
+                        backupIni.endGroup();
+
+                        // read the secrets for this method/mechanism.  these can be different.
+                        QVariantMap methodMechanismSecrets;
+                        backupIni.beginGroup(QStringLiteral("methodMechanismSecrets"));
+                        Q_FOREACH (const QString &method, backupIni.childGroups()) {
+                            backupIni.beginGroup(method);
+                            QVariantMap mechanismSecrets;
+                            Q_FOREACH (const QString &mechanism, backupIni.childGroups()) {
+                                backupIni.beginGroup(mechanism);
+                                QVariantMap secrets;
+                                Q_FOREACH (const QString &key, backupIni.allKeys()) {
+                                    secrets.insert(key, backupIni.value(key));
+                                }
+                                mechanismSecrets.insert(mechanism, secrets);
+                                backupIni.endGroup();
+                            }
+                            methodMechanismSecrets.insert(method, mechanismSecrets);
+                            backupIni.endGroup();
+                        }
+                        backupIni.endGroup();
+
+                        // insert the information for this credential into our settings map
+                        QVariantMap credentialSettings;
+                        credentialSettings.insert(QStringLiteral("infoValues"), infoValues);
+                        credentialSettings.insert(QStringLiteral("methodMechanismSecrets"), methodMechanismSecrets);
+                        allCredentialsSettings.insert(oldCredIdStr, credentialSettings);
+
+                        // done with this credential.
+                        backupIni.endGroup();
+                    }
+
+                    // we now have the information required to create ALL backed-up credentials.
+                    oldToNewCredentialsIds = createCredentials(allCredentialsSettings);
+                }
+                backupIni.endGroup();
+
+                // now we can restore the service settings
+                backupIni.beginGroup(QStringLiteral("serviceSettings"));
+                {
+                    // restore the global service settings
+                    restoreAccountServiceSettings(backupIni, Accounts::Service(), newAccount,
+                                                  oldAccountId, oldToNewCredentialsIds, &servicesEnabled);
+
+                    // restore real service settings
+                    Q_FOREACH (const Accounts::Service &srv, accountServices) {
+                        restoreAccountServiceSettings(backupIni, srv, newAccount, oldAccountId,
+                                                      oldToNewCredentialsIds, &servicesEnabled);
+                    }
+                }
+                backupIni.endGroup();
+
+                // we have restored the account.  Write it to disk.
+                newAccount->syncAndBlock();
+
+                // now set the enablement statuses - we have to do this
+                // separately to the creation sync, for some reason.
+                Q_FOREACH (const QString &srvName, servicesEnabled.keys()) {
+                    newAccount->selectService(m_accountManager->service(srvName));
+                    newAccount->setEnabled(servicesEnabled.value(srvName));
+                }
+                newAccount->selectService(Accounts::Service());
+                newAccount->setEnabled(enabled);
+                newAccount->syncAndBlock();
+
+                // finished.
+                newAccount->deleteLater();
+            }
+        }
+        backupIni.endGroup();
+    }
+
+    return true;
+}
+
+void AccountBackupRestorer::backupAccountServiceSettings(QSettings &backupIni,
+                                                         const Accounts::ServiceList &accountServices,
+                                                         const Accounts::Service &srv,
+                                                         Accounts::Account *account,
+                                                         QList<SignOnCredentials> &requiredCredentials,
+                                                         const QString &clientId,
+                                                         const QString &clientSecret,
+                                                         const QString &consumerKey,
+                                                         const QString &consumerSecret)
+{
+    account->selectService(srv);
+    backupIni.beginGroup(srv.isValid() ? srv.name() : QStringLiteral("defaultService"));
+    Q_FOREACH (const QString &key, account->allKeys()) {
+        // Note: we ignore the per-account profile_id setting
+        // because the profile will have to be regenerated for
+        // the account anyway.
+        if (!key.endsWith(QStringLiteral("profile_id"))) {
+            backupIni.setValue(key, account->value(key, QVariant()));
+        }
+    }
+    backupIni.endGroup();
+
+    // If this is the default service, we need to find the default signon service
+    // for the account.  Its name should end in -signon or -sync.
+    int signonServiceIndex = -1;
+    if (!srv.isValid()) {
+        for (int i = 0; i < accountServices.size(); ++i) {
+            if (accountServices[i].name().toLower().endsWith(QStringLiteral("-signon")) ||
+                accountServices[i].name().toLower().endsWith(QStringLiteral("-sync"))) {
+                // found the default signon service.
+                signonServiceIndex = i;
+            }
+        }
+    }
+
+    // ensure that we backup the credentials needed for this account/service.
+    if (account->credentialsId() && (srv.isValid() || signonServiceIndex >= 0)) {
+        Accounts::AccountService accSrv(account, srv.isValid() ? srv : accountServices[signonServiceIndex]);
+        QVariantMap signonSessionData = accSrv.authData().parameters();
+        signonSessionData.insert("UiPolicy", SignOn::NoUserInteractionPolicy);
+        if (!clientId.isEmpty())     signonSessionData.insert("ClientId", clientId);
+        if (!clientSecret.isEmpty()) signonSessionData.insert("ClientSecret", clientSecret);
+        if (!consumerKey.isEmpty())    signonSessionData.insert("ConsumerKey", consumerKey);
+        if (!consumerSecret.isEmpty()) signonSessionData.insert("ConsumerSecret", consumerSecret);
+
+        SignOnCredentials soc;
+        soc.id = account->credentialsId();
+        soc.method = accSrv.authData().method();
+        soc.mechanism = accSrv.authData().mechanism();
+        soc.sessionData = signonSessionData;
+
+        // while theoretically there could be different credentials
+        // stored for different session data, we assume that if we
+        // have already retrieved the credentials for this combination
+        // of id/method/mechanism that we don't need to do so again.
+        bool found = false;
+        Q_FOREACH (const SignOnCredentials &rsoc, requiredCredentials) {
+            if (rsoc.id == soc.id && rsoc.method == soc.method && rsoc.mechanism == soc.mechanism) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            requiredCredentials.append(soc);
+        }
+    }
+}
+
+void AccountBackupRestorer::restoreAccountServiceSettings(QSettings &backupIni,
+                                                          const Accounts::Service &srv,
+                                                          Accounts::Account *account,
+                                                          const QString &oldAccountId,
+                                                          const QMap<quint32, quint32> &oldToNewCredentialsIds,
+                                                          QMap<QString, bool> *servicesEnabled)
+{
+    account->selectService(srv);
+    backupIni.beginGroup(srv.isValid() ? srv.name() : QStringLiteral("defaultService"));
+    Q_FOREACH (const QString &key, backupIni.allKeys()) {
+        if (key.contains(QLatin1String("CredentialsId")) ||
+            key.contains(QLatin1String("segregated_credentials"))) {
+            // update credentials id to the new one.
+            quint32 oldacid = backupIni.value(key).toUInt();
+            if (oldacid) {
+                if (oldToNewCredentialsIds.contains(oldacid)) {
+                    account->setValue(key, QVariant::fromValue<quint32>(oldToNewCredentialsIds.value(oldacid)));
+                } else {
+                    qWarning() << Q_FUNC_INFO << "unable to restore credentials" << oldacid
+                               << "for old account" << oldAccountId << "(" << account->id() << ")";
+                }
+            }
+        } else if (key == QLatin1String("enabled") && srv.isValid()) {
+            servicesEnabled->insert(srv.name(), backupIni.value(key).toBool());
+        } else {
+            account->setValue(key, backupIni.value(key));
+        }
+    }
+    backupIni.endGroup();
+}
+
+QMap<quint32, quint32> AccountBackupRestorer::createCredentials(const QVariantMap &allCredentialsSettings)
+{
+    QMap<quint32, quint32> oldToNewIds;
+
+    Q_FOREACH (const QString &oldCredIdStr, allCredentialsSettings.keys()) {
+        QVariantMap infoAndMethodMechSecrets = allCredentialsSettings.value(oldCredIdStr).toMap();
+        QVariantMap infoValues = infoAndMethodMechSecrets.value(QStringLiteral("infoValues")).toMap();
+        QVariantMap methodMechSecrets = infoAndMethodMechSecrets.value(QStringLiteral("methodMechanismSecrets")).toMap();
+
+        // some ugliness to create the credentials "synchronously"
+        QThread thread;
+        CredentialCreationRequest *request = new CredentialCreationRequest(infoValues, methodMechSecrets);
+        connect(&thread, SIGNAL(finished()), request, SLOT(deleteLater()));
+        request->moveToThread(&thread);
+        QTimer::singleShot(5, request, SLOT(createCredentials()));
+        thread.start();
+        while (!request->finished()) {
+            QCoreApplication::processEvents();
+            QThread::msleep(100);
+        }
+        if (!request->error()) {
+            quint32 newCredId = request->newCredentialsId();
+            oldToNewIds.insert(oldCredIdStr.toUInt(), newCredId);
+        }
+        thread.quit();
+        thread.wait();
+    }
+
+    return oldToNewIds;
+}
+
+
+//----- to turn asynchronous credentials info query into synchronous method call:
+CredentialKeysQuery::CredentialKeysQuery(int credentialsId,
+                                         const QString &method,
+                                         const QString &mechanism,
+                                         const QVariantMap &sessionData,
+                                         QObject *parent)
+    : QObject(parent)
+    , m_finished(false)
+    , m_error(false)
+    , m_credentialsId(credentialsId)
+    , m_method(method)
+    , m_mechanism(mechanism)
+    , m_sessionData(sessionData)
+    , m_identity(0)
+{
+}
+
+CredentialKeysQuery::~CredentialKeysQuery()
+{
+    delete m_identity;
+}
+
+bool CredentialKeysQuery::finished() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_finished;
+}
+
+bool CredentialKeysQuery::error() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_error;
+}
+
+QVariantMap CredentialKeysQuery::infoValues() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_infoValues;
+}
+
+QVariantMap CredentialKeysQuery::methodMechanismSecrets() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_methodMechanismSecrets;
+}
+
+void CredentialKeysQuery::queryCredentials()
+{
+    QMutexLocker locker(&m_mutex);
+    m_identity = SignOn::Identity::existingIdentity(m_credentialsId);
+    if (!m_identity) {
+        // not a valid identity.
+        m_error = true;
+        m_finished = true;
+    } else {
+        // step one, query the info from the credentials
+        connect(m_identity, SIGNAL(info(SignOn::IdentityInfo)), this, SLOT(credentialsInfo(SignOn::IdentityInfo)));
+        m_identity->queryInfo();
+    }
+}
+
+void CredentialKeysQuery::credentialsInfo(const SignOn::IdentityInfo &info)
+{
+    QMutexLocker locker(&m_mutex);
+    m_identity->disconnect(this);
+
+    QVariantMap methodMechanisms;
+    foreach (const QString &method, info.methods()) {
+        methodMechanisms.insert(method, info.mechanisms(method));
+    }
+
+    m_infoValues.insert(QStringLiteral("userName"), QVariant::fromValue<QString>(info.userName()));
+    m_infoValues.insert(QStringLiteral("caption"), QVariant::fromValue<QString>(info.caption()));
+    m_infoValues.insert(QStringLiteral("realms"), QVariant::fromValue<QStringList>(info.realms()));
+    m_infoValues.insert(QStringLiteral("owner"), QVariant::fromValue<QString>(info.owner()));
+    m_infoValues.insert(QStringLiteral("accessControlList"), QVariant::fromValue<QStringList>(info.accessControlList()));
+    m_infoValues.insert(QStringLiteral("methodMechanisms"), QVariant::fromValue<QVariantMap>(methodMechanisms));
+    m_infoValues.insert(QStringLiteral("type"), QVariant::fromValue<int>(static_cast<int>(info.type())));
+
+    // now we need to retrieve the secret / access tokens / whatever, for the current method/mechanism.
+    SignOn::AuthSession *session = m_identity->createSession(m_method);
+    if (!session) {
+        qWarning() << Q_FUNC_INFO << "unable to retrieve secrets for credentials" << m_credentialsId << "using method:" << m_method;
+        m_error = true;
+        m_finished = true;
+        return;
+    }
+
+    connect(session, SIGNAL(response(SignOn::SessionData)), this, SLOT(signOnResponse(SignOn::SessionData)));
+    connect(session, SIGNAL(error(SignOn::Error)), this, SLOT(signOnError(SignOn::Error)));
+    session->process(m_sessionData, m_mechanism);
+}
+
+void CredentialKeysQuery::signOnError(const SignOn::Error &error)
+{
+    QMutexLocker locker(&m_mutex);
+    SignOn::AuthSession *session = qobject_cast<SignOn::AuthSession*>(sender());
+    m_identity->destroySession(session);
+
+    qWarning() << Q_FUNC_INFO << "signon error while retrieving secrets for credentials" << m_credentialsId << ":" << error.message();
+    m_error = true;
+    m_finished = true;
+}
+
+void CredentialKeysQuery::signOnResponse(const SignOn::SessionData &responseData)
+{
+    QMutexLocker locker(&m_mutex);
+    SignOn::AuthSession *session = qobject_cast<SignOn::AuthSession*>(sender());
+    m_identity->destroySession(session);
+
+    QVariantMap mechanismSecrets;
+    QVariantMap secret;
+    Q_FOREACH (const QString &key, responseData.propertyNames()) {
+        secret.insert(key, responseData.getProperty(key));
+    }
+    QVariantMap providedTokensSessionData = m_sessionData;
+    providedTokensSessionData.insert(QStringLiteral("method"), m_method);
+    providedTokensSessionData.insert(QStringLiteral("mechanism"), m_mechanism);
+    secret.insert(QStringLiteral("sessionData"), providedTokensSessionData);
+    mechanismSecrets.insert(m_mechanism, secret);
+    m_methodMechanismSecrets.insert(m_method, mechanismSecrets);
+
+    m_error = false;
+    m_finished = true;
+}
+
+
+
+//----- to turn asynchronous credentials creation into synchronous method call:
+CredentialCreationRequest::CredentialCreationRequest(const QVariantMap &infoValues,
+                                                     const QVariantMap &methodMechSecrets,
+                                                     QObject *parent)
+    : QObject(parent)
+    , m_finished(false)
+    , m_error(false)
+    , m_credentialsId(0)
+    , m_infoValues(infoValues)
+    , m_methodMechSecrets(methodMechSecrets)
+    , m_identity(0)
+{
+}
+
+CredentialCreationRequest::~CredentialCreationRequest()
+{
+    delete m_identity;
+}
+
+void CredentialCreationRequest::createCredentials()
+{
+    QString userName = m_infoValues.value(QStringLiteral("userName")).toString();
+    QString caption = m_infoValues.value(QStringLiteral("caption")).toString();
+    QStringList realms = m_infoValues.value(QStringLiteral("realms")).toStringList();
+    QString owner = m_infoValues.value(QStringLiteral("owner")).toString();
+    QStringList accessControlList = m_infoValues.value(QStringLiteral("accessControlList")).toStringList();
+    QVariantMap methodMechanisms = m_infoValues.value(QStringLiteral("methodMechanisms")).toMap();
+    int type = m_infoValues.value(QStringLiteral("type")).toInt();
+
+    // here we scan for username and password information, and also provided tokens.
+    QString scannedUsername;
+    QString scannedSecret;
+    Q_FOREACH (const QString &method, m_methodMechSecrets.keys()) {
+        QVariantMap mechanismSecrets = m_methodMechSecrets.value(method).toMap();
+        Q_FOREACH (const QString &mechanism, mechanismSecrets.keys()) {
+            QVariantMap secrets = mechanismSecrets.value(mechanism).toMap();
+            QVariantMap providedTokens;
+            Q_FOREACH (const QString &key, secrets.keys()) {
+                // If the secrets map contains username/password information, store it.
+                if (key.toLower() == QStringLiteral("username")) {
+                    scannedUsername = secrets.value(key).toString().isEmpty() ? scannedUsername : secrets.value(key).toString();
+                } else if (key.toLower() == QStringLiteral("password")) {
+                    scannedSecret = secrets.value(key).toString().isEmpty()   ? scannedSecret   : secrets.value(key).toString();
+                } else if (key.toLower() == QStringLiteral("secret")) {
+                    scannedSecret = secrets.value(key).toString().isEmpty()   ? scannedSecret   : secrets.value(key).toString();
+                }
+
+                // If the secrets map contains tokens, cache them
+                if (key.toLower() != QStringLiteral("sessionData")) {
+                    providedTokens.insert(key, secrets.value(key));
+                }
+            }
+            // queue the provided tokens (along with session data) for OAuth2/OAuth1.0a credentials
+            if (secrets.contains(QStringLiteral("sessionData")) && method.toLower() != QStringLiteral("password")) {
+                m_providedTokensQueue.append(qMakePair(secrets.value(QStringLiteral("sessionData")).toMap(), providedTokens));
+            }
+        }
+    }
+
+    // fill out some variables required to create the identity info.
+    if (userName.isEmpty() && !scannedUsername.isEmpty()) {
+        userName = scannedUsername;
+    }
+
+    QMap<QString, QStringList> methodMechs;
+    Q_FOREACH (const QString &method, methodMechanisms.keys()) {
+        methodMechs.insert(method, methodMechanisms.value(method).toStringList());
+    }
+
+    // now we have enough information to create the identity info.
+    SignOn::IdentityInfo newInfo(caption, userName, methodMechs);
+    if (!scannedSecret.isEmpty()) {
+        newInfo.setSecret(scannedSecret, true);
+    }
+    newInfo.setRealms(realms);
+    newInfo.setOwner(owner);
+    newInfo.setAccessControlList(accessControlList);
+    newInfo.setType(static_cast<SignOn::IdentityInfo::CredentialsType>(type));
+
+    // and we can create the new identity based on the info.
+    m_identity = SignOn::Identity::newIdentity(newInfo);
+    connect(m_identity, SIGNAL(credentialsStored(quint32)), this, SLOT(credentialsStored(quint32)));
+    connect(m_identity, SIGNAL(error(SignOn::Error)), this, SLOT(credentialsError(SignOn::Error)));
+    m_identity->storeCredentials(newInfo);
+}
+
+bool CredentialCreationRequest::finished() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_finished;
+}
+
+bool CredentialCreationRequest::error() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_error;
+}
+
+quint32 CredentialCreationRequest::newCredentialsId() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_credentialsId;
+}
+
+void CredentialCreationRequest::storeProvidedTokens()
+{
+    QPair<QVariantMap, QVariantMap> sdpt = m_providedTokensQueue.takeFirst();
+    QVariantMap sessionData = sdpt.first;
+    QVariantMap providedTokens = sdpt.second;
+    QString method = sessionData.value(QStringLiteral("method")).toString();
+    QString mechanism = sessionData.value(QStringLiteral("mechanism")).toString();
+    sessionData.remove(QStringLiteral("method"));
+    sessionData.remove(QStringLiteral("mechanism"));
+    sessionData.insert(QStringLiteral("ProvidedTokens"), providedTokens);
+
+    if (method.isEmpty()) {
+        qWarning() << Q_FUNC_INFO << "no method associated with session data, cannot store tokens for credentials";
+        m_error = true;
+        m_finished = true;
+        return;
+    }
+
+    SignOn::AuthSession *session = m_identity->createSession(method);
+    if (!session) {
+        qWarning() << Q_FUNC_INFO << "failed to create session to store tokens for credentials";
+        m_error = true;
+        m_finished = true;
+        return;
+    }
+
+    connect(session, SIGNAL(response(SignOn::SessionData)), this, SLOT(signOnResponse(SignOn::SessionData)));
+    connect(session, SIGNAL(error(SignOn::Error)), this, SLOT(signOnError(SignOn::Error)));
+    session->process(sessionData, mechanism);
+}
+
+void CredentialCreationRequest::credentialsStored(quint32 id)
+{
+    QMutexLocker locker(&m_mutex);
+    m_credentialsId = id;
+
+    // check to see if we need to store any tokens via the provided tokens hook
+    if (!m_providedTokensQueue.isEmpty()) {
+        storeProvidedTokens();
+    } else {
+        // otherwise, we're finished
+        m_error = false;
+        m_finished = true;
+    }
+}
+
+void CredentialCreationRequest::credentialsError(const SignOn::Error &error)
+{
+    QMutexLocker locker(&m_mutex);
+    qWarning() << Q_FUNC_INFO << "error storing credentials:" << error.message();
+    m_error = true;
+    m_finished = true;
+}
+
+void CredentialCreationRequest::signOnResponse(const SignOn::SessionData &)
+{
+    QMutexLocker locker(&m_mutex);
+    SignOn::AuthSession *session = qobject_cast<SignOn::AuthSession*>(sender());
+    m_identity->destroySession(session);
+
+    // successfully stored the provided tokens.
+    // check to see if we need to store any (more) tokens via the provided tokens hook
+    if (!m_providedTokensQueue.isEmpty()) {
+        storeProvidedTokens();
+    } else {
+        // otherwise, we're finished
+        m_finished = true;
+    }
+}
+
+void CredentialCreationRequest::signOnError(const SignOn::Error &error)
+{
+    QMutexLocker locker(&m_mutex);
+    qWarning() << Q_FUNC_INFO << "error storing provided tokens:" << error.message();
+    SignOn::AuthSession *session = qobject_cast<SignOn::AuthSession*>(sender());
+    m_identity->destroySession(session);
+
+    // check to see if we need to store any (more) tokens via the provided tokens hook
+    if (!m_providedTokensQueue.isEmpty()) {
+        storeProvidedTokens();
+    } else {
+        // otherwise, we're finished
+        m_error = true;
+        m_finished = true;
+    }
+}
+
