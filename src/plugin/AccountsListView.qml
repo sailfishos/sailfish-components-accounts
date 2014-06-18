@@ -94,7 +94,7 @@ SilicaListView {
             id: syncIndicator
             anchors.centerIn: icon
             size: BusyIndicatorSize.Medium
-            running: model.performingInitialSync
+            running: model.performingInitialSync && model.accountError === AccountModel.NoAccountError
         }
         Label {
             id: accountName
