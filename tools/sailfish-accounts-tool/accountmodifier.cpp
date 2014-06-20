@@ -3,11 +3,13 @@
 */
 
 #include "accountmodifier_p.h"
-#include <Accounts/Manager>
-#include <Accounts/Account>
 
 // buteo-syncfw
 #include <ProfileEngineDefs.h>
+
+// libaccounts-qt
+#include <Accounts/Manager>
+#include <Accounts/Account>
 
 #include <QStandardPaths>
 #include <QFile>
@@ -23,10 +25,12 @@ AccountModifier::AccountModifier(QObject *parent)
     , providerAvailable(false)
     , scheduleCommandForNextBoot(false)
     , runScheduledCommands(false)
+    , runningMultipleCommands(false)
     , mode(UnknownMode)
     , m_accountManager(new Accounts::Manager)
     , m_currAccount(0)
     , m_buteoClient(0)
+    , m_accountBackupRestorer(&m_accountSyncManager, m_accountManager)
     , m_currAccountIdx(-1)
     , m_error(false)
 {
@@ -85,8 +89,35 @@ void AccountModifier::start()
         return;
     }
 
+    if (!m_accountManager) {
+        qWarning() << Q_FUNC_INFO << "could not instantiate account manager!";
+        m_error = true;
+        emit done();
+        return;
+    }
+
     if (runScheduledCommands) {
-        if (m_commands.isEmpty()) {
+        runningMultipleCommands = true;
+    } else if (mode == RestoreAccounts) {
+        // we do several things:
+        // 1) we restore the accounts + credentials from file
+        // 2) we update any service settings of those accounts
+        // 3) we generate sync profiles for the restored accounts
+        // 4) we trigger sync for all accounts
+        if (!restoreAccounts()) {
+            qWarning() << Q_FUNC_INFO << "could not restore accounts from" << backupFile;
+            m_error = true;
+            emit done();
+            return;
+        }
+        m_commands.append(UpdateSyncServices);
+        m_commands.append(CreateProfiles);
+        m_commands.append(TriggerProfiles);
+        runningMultipleCommands = true;
+    }
+
+    if (runningMultipleCommands) {
+        if (m_commands.isEmpty() && runScheduledCommands) {
             QFile file(markerFilePath());
             if (!file.open(QIODevice::ReadOnly)) {
                 qWarning() << "Cannot open" << file.fileName() << "to run commands!";
@@ -100,21 +131,16 @@ void AccountModifier::start()
                 return;
             }
             qWarning() << "AccountsModifier: running" << m_commands.count() << "scheduled commands";
+            runningMultipleCommands = true;
             mode = m_commands.takeFirst();
         } else {
+            Q_ASSERT(!m_commands.isEmpty());
             mode = m_commands.takeFirst();
         }
     }
 
     if (mode == UnknownMode) {
         qWarning() << Q_FUNC_INFO << "No mode set for AccountModifier!";
-        emit done();
-        return;
-    }
-
-    if (!m_accountManager) {
-        qWarning() << Q_FUNC_INFO << "could not instantiate account manager!";
-        m_error = true;
         emit done();
         return;
     }
@@ -172,14 +198,16 @@ void AccountModifier::next()
 
     m_currAccountIdx += 1;
     if (m_currAccountIdx >= m_allAccountIds.size()) {
-        if (runScheduledCommands) {
-            if (m_commands.isEmpty()) {
-                QFile::remove(markerFilePath());
-            } else {
+        // finished all accounts.  check to see if we need to run another command.
+        if (runningMultipleCommands) {
+            if (!m_commands.isEmpty()) {
                 // run the next command
                 start();
                 return;
-            }
+            } else if (runScheduledCommands) {
+                // no more commands to run, clean up our schedule file before emitting done().
+                QFile::remove(markerFilePath());
+            } // else RestoreAccounts mode, finished and don't need to cleanup anything.
         }
         emit done();
         return;
@@ -206,6 +234,14 @@ void AccountModifier::next()
         break;
     case CreateProfiles:
         needsSync = createProfiles();
+        break;
+    case BackupAccounts:
+        needsSync = false;
+        backupAccount(m_currAccount);
+        break;
+    case TriggerProfiles:
+        needsSync = false;
+        triggerProfiles(m_currAccount);
         break;
     default:
         qWarning() << Q_FUNC_INFO << "Unhandled AccountModifier mode!";
@@ -324,9 +360,9 @@ bool AccountModifier::applySyncUpdateChanges()
         }
 
         // ensure that the sync profiles are set up appropriately
-        QStringList templateProfiles = accountSyncManager.defaultTemplateProfiles(m_currAccount, srv);
+        QStringList templateProfiles = m_accountSyncManager.defaultTemplateProfiles(m_currAccount, srv);
         Q_FOREACH(const QString &templateProfile, templateProfiles) {
-            if (templateProfile.isEmpty() || accountSyncManager.hasProfile(m_currAccount, srv)) {
+            if (templateProfile.isEmpty() || m_accountSyncManager.hasProfile(m_currAccount, srv)) {
                 continue;
             }
             if (credentialsId != 0) {
@@ -335,7 +371,7 @@ bool AccountModifier::applySyncUpdateChanges()
             }
             m_currAccount->setEnabled(enableSyncServices);
 
-            Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, enableSyncServices);
+            Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, enableSyncServices);
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
@@ -405,10 +441,10 @@ bool AccountModifier::createProfiles()
     bool created = false;
     Q_FOREACH (const Accounts::Service &srv, m_currAccount->services()) {
         m_currAccount->selectService(srv);
-        Q_FOREACH (const QString &templateProfile, accountSyncManager.defaultTemplateProfiles(m_currAccount, srv)) {
-            if (!accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
+        Q_FOREACH (const QString &templateProfile, m_accountSyncManager.defaultTemplateProfiles(m_currAccount, srv)) {
+            if (!m_accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
                 // Don't fail if any of the profiles cannot be created.
-                Buteo::SyncProfile *profile = accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
+                Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
                 if (!profile) {
                     qWarning() << "Profile could not created for template:" << templateProfile;
                 } else {
@@ -500,3 +536,22 @@ QString AccountModifier::markerFilePath()
     qWarning() << "Error: QStandardPaths cannot find HomeLocation!";
     return QString();
 }
+
+bool AccountModifier::backupAccount(Accounts::Account *account)
+{
+    return m_accountBackupRestorer.backupAccount(account, backupFile);
+}
+
+bool AccountModifier::restoreAccounts()
+{
+    return m_accountBackupRestorer.restoreAccounts(backupFile);
+}
+
+void AccountModifier::triggerProfiles(Accounts::Account *account)
+{
+    QStringList profileIds = m_accountSyncManager.profileIds(account->id());
+    Q_FOREACH (const QString &profileId, profileIds) {
+        m_accountSyncManager.syncProfile(profileId);
+    }
+}
+
