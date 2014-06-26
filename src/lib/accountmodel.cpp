@@ -84,6 +84,46 @@ public:
         qDeleteAll(accountsList);
     }
 
+    QVariant getModelData(DisplayData *displayData, int role) const {
+        if (role == AccountIdRole) {
+            return QVariant::fromValue(displayData->account->id());
+        }
+        if (role == AccountDisplayNameRole) {
+            return QVariant::fromValue(displayData->account->displayName());
+        }
+        if (role == AccountIconRole) {
+            if (displayData->accountIcon.isNull()) {
+                displayData->accountIcon = displayData->account->provider().iconName();
+            }
+            return QVariant::fromValue(displayData->accountIcon);
+        }
+        if (role == ProviderNameRole) {
+            if (displayData->providerName.isEmpty()) {
+                displayData->providerName = displayData->account->providerName();
+            }
+            return QVariant::fromValue(displayData->providerName);
+        }
+        if (role == ProviderDisplayNameRole) {
+            if (displayData->providerDisplayName.isEmpty()) {
+                displayData->providerDisplayName = SailfishAccounts::translatedDisplayName(displayData->account->provider());
+            }
+            return QVariant::fromValue(displayData->providerDisplayName);
+        }
+        if (role == AccountEnabledRole) {
+            return QVariant::fromValue(displayData->account->enabled());
+        }
+        if (role == AccountErrorRole) {
+            if (displayData->account->value(AccountCredentialsNeedUpdateKey).toBool()) {
+                return AccountNotSignedInError;
+            }
+            return NoAccountError;
+        }
+        if (role == PerformingInitialSyncRole) {
+            return displayData->performingInitialSync;
+        }
+        return QVariant();
+    }
+
     QHash<int, QByteArray> headerData;
     Accounts::Manager *manager;
     AccountSyncManager *accountSyncManager;
@@ -235,6 +275,21 @@ void AccountModel::setAccountEnabled(int accountId, bool enabled)
     }
 }
 
+QVariantMap AccountModel::getByAccount(int accountId)
+{
+    Q_D(AccountModel);
+    QVariantMap ret;
+    for (int i=0; i<d->accountsList.count(); i++) {
+        if (d->accountsList[i]->account->id() == (uint)accountId) {
+            Q_FOREACH (int role, d->headerData.keys()) {
+                ret.insert(d->headerData[role], d->getModelData(d->accountsList[i], role));
+            }
+            break;
+        }
+    }
+    return ret;
+}
+
 void AccountModel::reload()
 {
     Q_D(AccountModel);
@@ -271,51 +326,7 @@ QVariant AccountModel::data(const QModelIndex &index, int role) const
     }
 
     DisplayData *data = d->filteredAccountsList[index.row()];
-    Accounts::Account *account = data->account;
-
-    if (role == AccountIdRole)
-        return QVariant::fromValue(account->id());
-
-    if (role == AccountDisplayNameRole)
-        return QVariant::fromValue(account->displayName());
-
-    if (role == AccountIconRole) {
-        if (data->accountIcon.isNull()) {
-            data->accountIcon = account->provider().iconName();
-        }
-        return QVariant::fromValue(data->accountIcon);
-    }
-
-    if (role == ProviderNameRole) {
-        if (data->providerName.isEmpty()) {
-            data->providerName = account->providerName();
-        }
-        return QVariant::fromValue(data->providerName);
-    }
-
-    if (role == ProviderDisplayNameRole) {
-        if (data->providerDisplayName.isEmpty()) {
-            data->providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
-        }
-        return QVariant::fromValue(data->providerDisplayName);
-    }
-
-    if (role == AccountEnabledRole) {
-        return QVariant::fromValue(account->enabled());
-    }
-
-    if (role == AccountErrorRole) {
-        if (account->value(AccountCredentialsNeedUpdateKey).toBool()) {
-            return AccountNotSignedInError;
-        }
-        return NoAccountError;
-    }
-
-    if (role == PerformingInitialSyncRole) {
-        return data->performingInitialSync;
-    }
-
-    return QVariant();
+    return d->getModelData(data, role);
 }
 
 void AccountModel::classBegin()
