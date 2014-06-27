@@ -61,6 +61,7 @@ public:
     void finalizeProfileCreation(Accounts::Account *account, const QHash<QString, QStringList> &multipleCreatedProfiles);
     bool startSync(const QString &profileId);
 
+    bool syncProfileFileExists(const QString &profileId) const;
     QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfileMatch = QString()) const;
 
     QList<ProfileCreationDetails> profilesUnderCreation;
@@ -123,6 +124,14 @@ bool AccountSyncProfileManagerPrivate::startSync(const QString &profileId)
     return true;
 }
 
+bool AccountSyncProfileManagerPrivate::syncProfileFileExists(const QString &profileId) const
+{
+    QString path = Sync::syncCacheDir()
+            + QDir::separator() + QStringLiteral("sync")
+            + QDir::separator() + profileId + QStringLiteral(".xml");
+    return QFile::exists(path);
+}
+
 QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfileMatch) const
 {
     if (!account || !srv.isValid()) {
@@ -137,7 +146,7 @@ QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *
             continue;
         }
         QString profileId = account->value(SyncProfileIdKey(syncProfileTemplate)).toString();
-        if (!profileId.isEmpty()) {
+        if (!profileId.isEmpty() && syncProfileFileExists(profileId)) {
             retn.append(profileId);
         }
     }
@@ -284,7 +293,7 @@ int AccountSyncManager::createAllProfiles(int accountId)
             account->selectService(srv);
             Q_FOREACH (const QString &templateProfile, defaultTemplateProfiles(account, srv)) {
                 QString savedProfileId = account->value(SyncProfileIdKey(templateProfile)).toString();
-                if (savedProfileId.isEmpty()) {
+                if (savedProfileId.isEmpty() || !d->syncProfileFileExists(savedProfileId)) {
                     savedProfileId = createProfile(templateProfile, account, srv, account->enabled());
                     createdProfiles[srv.name()].append(savedProfileId);
                     createdCount++;
