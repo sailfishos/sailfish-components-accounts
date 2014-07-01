@@ -12,8 +12,14 @@
 #include <QStringList>
 #include <QString>
 #include <QTimer>
+#include <QStandardPaths>
 
 #include "accountmodifier_p.h"
+
+static bool isInstalledApp(const QString &appName)
+{
+    return !QStandardPaths::locate(QStandardPaths::ApplicationsLocation, appName + QStringLiteral(".desktop")).isEmpty();
+}
 
 int main(int argc, char *argv[])
 {
@@ -51,8 +57,12 @@ int main(int argc, char *argv[])
             "%1 --update-sync-services-on-boot\n"
             "\n"
             "To update the provider-available and enabled status of all accounts of type <provider> with a particular service that is enabled:\n"
-            "%1 --provider-available false -p <provider> [-t <service-type>]\n"
+            "%1 --provider-available <true|false> -p <provider> [-t <service-type>]\n"
             "(For example, --provider-available false -p onlinesync -t caldav)\n"
+            "\n"
+            "To do as per the provider-available command, but set to to true/false depending on whether a specific app is installed:\n"
+            "%1 --provider-available -a <app-name> -p <provider> [-t <service-type>]\n"
+            "(For example, --provider-available -a jolla-calendar -p onlinesync -t caldav)\n"
             "\n"
             "To create profiles for all account services that require them: (i.e. services that specify profile templates but do not have the created profiles)\n"
             "%1 --create-profiles\n"
@@ -74,6 +84,7 @@ int main(int argc, char *argv[])
             "Valid setting types are: %2\n\n")
         .arg(appName).arg(validSettingTypes.join(','));
 
+    bool validParams = true;
     QString firstOption = args.value(1);
     bool scheduleForNextBoot = firstOption.endsWith(QStringLiteral("-on-boot"));
     if (firstOption.startsWith(QStringLiteral("--update-sync-services"))) {
@@ -81,9 +92,21 @@ int main(int argc, char *argv[])
         am.scheduleCommandForNextBoot = scheduleForNextBoot;
     } else if (firstOption == QStringLiteral("--provider-available")) {
         am.mode = AccountModifier::UpdateProviderAvailability;
-        am.providerAvailable = args.value(2) == QStringLiteral("true");
-        am.providerName = args.value(4);
-        am.serviceType = args.value(6);
+        QString appOrAvailableStatus = args.value(2);
+        int providerIndex = 0;
+        if (appOrAvailableStatus == QStringLiteral("-a")) {
+            am.providerAvailable = isInstalledApp(args.value(3));
+            providerIndex = 5;
+        } else {
+            am.providerAvailable = (appOrAvailableStatus.toLower() == QStringLiteral("true"));
+            providerIndex = 4;
+        }
+        validParams = args.value(providerIndex-1) == QStringLiteral("-p")
+                && (args.length() == providerIndex+1 || args.value(providerIndex+1) == QStringLiteral("-t"));
+        if (validParams) {
+            am.providerName = args.value(providerIndex);
+            am.serviceType = args.value(providerIndex + 2);
+        }
     } else if (firstOption.startsWith(QStringLiteral("--create-profiles"))) {
         am.mode = AccountModifier::CreateProfiles;
         am.scheduleCommandForNextBoot = scheduleForNextBoot;
@@ -107,11 +130,7 @@ int main(int argc, char *argv[])
         am.settingValue = args.value(8);
     }
 
-    bool validParams = true;
-    if (am.mode == AccountModifier::UpdateProviderAvailability) {
-        validParams = args.value(3) == QStringLiteral("-p")
-                && (args.length() == 5 || args.value(5) == QStringLiteral("-t"));
-    } else if (am.mode == AccountModifier::ModifyServiceSettings) {
+    if (am.mode == AccountModifier::ModifyServiceSettings) {
         validParams = ((providerSwitch == QString::fromLatin1("-p")) &&
             (serviceSwitch == QString::fromLatin1("-s")) &&
             (!am.settingName.isEmpty()) &&
