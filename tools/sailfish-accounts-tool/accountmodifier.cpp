@@ -368,7 +368,9 @@ bool AccountModifier::applySyncUpdateChanges()
             }
 
             // only enable the profile if the account service is enabled.
-            Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
+            Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
+                    templateProfile, m_currAccount, srv, m_currAccount->enabled(),
+                    m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile]);
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
@@ -441,7 +443,9 @@ bool AccountModifier::createProfiles()
         Q_FOREACH (const QString &templateProfile, m_accountSyncManager.defaultTemplateProfiles(m_currAccount, srv)) {
             if (!m_accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
                 // Don't fail if any of the profiles cannot be created.
-                Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
+                Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
+                        templateProfile, m_currAccount, srv, m_currAccount->enabled(),
+                        m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile]);
                 if (!profile) {
                     qWarning() << "Profile could not created for template:" << templateProfile;
                 } else {
@@ -541,7 +545,7 @@ bool AccountModifier::backupAccount(Accounts::Account *account)
 
 bool AccountModifier::restoreAccounts()
 {
-    return m_accountBackupRestorer.restoreAccounts(backupFile);
+    return m_accountBackupRestorer.restoreAccounts(backupFile, &m_restoredSyncProfileProperties);
 }
 
 void AccountModifier::triggerProfiles(Accounts::Account *account)

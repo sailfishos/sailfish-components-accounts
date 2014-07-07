@@ -54,6 +54,7 @@ public:
                           bool enableProfile,
                           const QVariantMap &properties = QVariantMap());
     bool updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
+    QMap<QString, QString> profileProperties(const QString &profileId);
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const;
