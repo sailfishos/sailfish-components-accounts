@@ -4,8 +4,13 @@
 
 #include "accountbackuprestorer_p.h"
 
+#include <accountsyncmanager.h>
+
 // libsailfishkeyprovider
 #include <sailfishkeyprovider.h>
+
+// buteo
+#include <ProfileEngineDefs.h>
 
 #include <QFile>
 #include <QTimer>
@@ -152,13 +157,32 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
             }
         }
         backupIni.endGroup();
+
+
+        // backup the sync profile settings
+        backupIni.beginGroup(QStringLiteral("syncSettings"));
+        {
+            Q_FOREACH (const Accounts::Service &srv, accountServices) {
+                account->selectService(srv);
+                Q_FOREACH (const QString &templateProfile, m_syncManager->defaultTemplateProfiles(account, srv)) {
+                    backupIni.beginGroup(templateProfile);
+                    QMap<QString, QString> settingsMap = syncProfileSettings(account, srv, templateProfile);
+                    Q_FOREACH (const QString &key, settingsMap.keys()) {
+                        backupIni.setValue(key, settingsMap.value(key));
+                    }
+                    backupIni.endGroup();
+                }
+            }
+            account->selectService(Accounts::Service());
+        }
+        backupIni.endGroup();
     }
     backupIni.endGroup();
 
     return true;
 }
 
-bool AccountBackupRestorer::restoreAccounts(const QString &backupFile)
+bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings)
 {
     if (!QFile::exists(backupFile)) {
         qWarning() << Q_FUNC_INFO << "backup file does not exist, cannot restore accounts";
@@ -279,6 +303,28 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile)
                 newAccount->selectService(Accounts::Service());
                 newAccount->setEnabled(enabled);
                 newAccount->syncAndBlock();
+
+                // now load the sync profile settings
+                // these will be set when createProfiles() step is run.
+                backupIni.beginGroup(QStringLiteral("syncSettings"));
+                {
+                    QMap<QString, QVariantMap> settingsMap;
+                    Q_FOREACH (const QString &templateProfileName, backupIni.childGroups()) {
+                        backupIni.beginGroup(templateProfileName);
+                        QVariantMap profileSettings;
+                        Q_FOREACH (const QString &key, backupIni.childKeys()) {
+                            if (key == Buteo::KEY_ACCOUNT_ID) {
+                                profileSettings.insert(key, QString::number(newAccount->id()));
+                            } else {
+                                profileSettings.insert(key, backupIni.value(key).toString());
+                            }
+                        }
+                        settingsMap.insert(templateProfileName, profileSettings);
+                        backupIni.endGroup();
+                    }
+                    syncProfileSettings->insert(newAccount->id(), settingsMap);
+                }
+                backupIni.endGroup();
 
                 // finished.
                 newAccount->deleteLater();
@@ -419,6 +465,21 @@ QMap<quint32, quint32> AccountBackupRestorer::createCredentials(const QVariantMa
     }
 
     return oldToNewIds;
+}
+
+QMap<QString, QString> AccountBackupRestorer::syncProfileSettings(Accounts::Account *account,
+                                                                  const Accounts::Service &srv,
+                                                                  const QString &templateProfileName)
+{
+    Q_FOREACH (const QString &profileId, m_syncManager->profileIds(account->id(), srv.name())) {
+        if (profileId.contains(templateProfileName)) {
+            // found the per-account profile for this template
+            // load its properties and return them.
+            return m_syncManager->profileProperties(profileId);
+        }
+    }
+
+    return QMap<QString, QString>();
 }
 
 

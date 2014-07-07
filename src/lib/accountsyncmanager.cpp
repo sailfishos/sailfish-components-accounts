@@ -454,6 +454,20 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
     return !savedProfileId.isEmpty();
 }
 
+QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId)
+{
+    if (profileId.isEmpty()) {
+        qWarning() << "Invalid profileId";
+        return QMap<QString, QString>();
+    }
+    Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
+    if (!profile) {
+        qWarning() << "Invalid profile id:" << profileId;
+        return QMap<QString, QString>();
+    }
+    return profile->allKeys();
+}
+
 bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv) const
 {
     return !d->syncProfileIds(account, srv, QString()).isEmpty();

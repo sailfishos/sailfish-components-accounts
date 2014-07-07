@@ -93,6 +93,7 @@ private:
     AccountSyncManager m_accountSyncManager;
     AccountBackupRestorer m_accountBackupRestorer;
     QList<Mode> m_commands;
+    QMap<int, QMap<QString, QVariantMap> > m_restoredSyncProfileProperties;
     int m_currAccountIdx;
     bool m_error;
 };
