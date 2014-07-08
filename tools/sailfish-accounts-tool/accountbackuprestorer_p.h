@@ -34,7 +34,7 @@ public:
     ~AccountBackupRestorer();
 
     bool backupAccount(Accounts::Account *account, const QString &backupFile);
-    bool restoreAccounts(const QString &backupFile);
+    bool restoreAccounts(const QString &backupFile, QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings);
 
 private:
     struct SignOnCredentials {
@@ -62,6 +62,10 @@ private:
                                        QMap<QString, bool> *servicesEnabled);
 
     QMap<quint32, quint32> createCredentials(const QVariantMap &allCredentialsSettings);
+
+    QMap<QString, QString> syncProfileSettings(Accounts::Account *account,
+                                               const Accounts::Service &srv,
+                                               const QString &templateProfileName);
 
     AccountSyncManager *m_syncManager;
     Accounts::Manager *m_accountManager;
