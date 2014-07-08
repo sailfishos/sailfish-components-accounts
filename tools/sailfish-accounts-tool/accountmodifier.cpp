@@ -298,7 +298,6 @@ bool AccountModifier::applySyncUpdateChanges()
 {
     Accounts::ServiceList allServices = m_currAccount->services();
 
-    bool enableSyncServices = false;
     bool shouldUpdateServices = false;
     uint credentialsId = 0;
 
@@ -308,7 +307,6 @@ bool AccountModifier::applySyncUpdateChanges()
             if (srv.name() == QStringLiteral("email")) {
                 m_currAccount->selectService(srv);
                 shouldUpdateServices = true;
-                enableSyncServices = m_currAccount->enabled();
                 break;
             }
         }
@@ -320,7 +318,6 @@ bool AccountModifier::applySyncUpdateChanges()
             if (isGenericSyncService) {
                 m_currAccount->selectService(srv);
                 shouldUpdateServices = true;
-                enableSyncServices = m_currAccount->enabled();
                 credentialsId = m_currAccount->credentialsId();
                 if (credentialsId == 0) {
                     qWarning() << "Cannot update sync services, the generic sync service doesn't have a valid credentialsId!";
@@ -366,12 +363,12 @@ bool AccountModifier::applySyncUpdateChanges()
                 continue;
             }
             if (credentialsId != 0) {
-                // copy credentials and set enabled status according to generic sync service
+                // copy credentials from generic sync service
                 m_currAccount->setCredentialsId(credentialsId);
             }
-            m_currAccount->setEnabled(enableSyncServices);
 
-            Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, enableSyncServices);
+            // only enable the profile if the account service is enabled.
+            Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(templateProfile, m_currAccount, srv, m_currAccount->enabled());
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
