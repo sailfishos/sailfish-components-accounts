@@ -69,6 +69,7 @@ public:
     void setFilter(const QString &filter);
 
     Q_INVOKABLE void setAccountEnabled(int index, bool enabled);
+    Q_INVOKABLE QVariantMap getByAccount(int accountId);
 
     int rowCount(const QModelIndex &index = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
