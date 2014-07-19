@@ -90,7 +90,6 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 %{_libdir}/qt5/qml/Sailfish/Accounts/libsailfishaccountsplugin.so
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountIcon.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPicker.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDialog.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
 %{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
 

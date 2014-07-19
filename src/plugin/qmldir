@@ -1,6 +1,5 @@
 module Sailfish.Accounts
 plugin sailfishaccountsplugin
 AccountProviderPicker 1.0 AccountProviderPicker.qml
-AccountProviderPickerDialog 1.0 AccountProviderPickerDialog.qml
 AccountsListView 1.0 AccountsListView.qml
 AccountIcon 1.0 AccountIcon.qml
