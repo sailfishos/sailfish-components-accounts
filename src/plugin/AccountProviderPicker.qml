@@ -8,21 +8,11 @@ SilicaListView {
     property alias serviceFilter: providerModel.serviceFilter
 
     signal providerSelected(int index, string providerName)
-    signal providerDeselected(int index, string providerName)
+    signal providerDeselected(int index, string providerName)   // deprecated
 
 
     property AccountManager _accountManager: AccountManager {}
     property bool _hasExistingJollaAccount
-
-    function _providerClicked(index, providerName) {
-        if (selectionModel.get(index).providerName === "") {
-            selectionModel.setProperty(index, "providerName", providerName)
-            providerSelected(index, providerName)
-        } else {
-            selectionModel.setProperty(index, "providerName", "")
-            providerDeselected(index, providerName)
-        }
-    }
 
     model: providerModel
 
@@ -30,20 +20,15 @@ SilicaListView {
         id: providerModel
     }
 
-    ListModel {
-        id: selectionModel
-    }
-
     delegate: ListItem {
         width: ListView.view.width
-        highlighted: down || (model.index < selectionModel.count && selectionModel.get(model.index).providerName !== "")
 
         // don't offer the chance to create multiple jolla accounts through the UI
         visible: model.providerName !== "jolla" || !root._hasExistingJollaAccount
         contentHeight: visible ? Theme.itemSizeSmall : 0
 
         onClicked: {
-            root._providerClicked(model.index, model.providerName)
+            root.providerSelected(model.index, model.providerName)
         }
 
         AccountIcon {
@@ -74,9 +59,6 @@ SilicaListView {
     }
 
     Component.onCompleted: {
-        for (var i=0; i<count; i++) {
-            selectionModel.append({"providerName": ""})
-        }
         root._hasExistingJollaAccount = (_accountManager.providerAccountIdentifiers("jolla").length > 0)
     }
 
