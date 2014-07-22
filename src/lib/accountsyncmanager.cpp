@@ -404,11 +404,6 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
     profile->setBoolKey(Buteo::KEY_USE_ACCOUNTS, true);
     profile->setEnabled(enableProfile);
 
-    // enable the profile schedule
-    Buteo::SyncSchedule schedule = profile->syncSchedule();
-    schedule.setScheduleEnabled(true);
-    profile->setSyncSchedule(schedule);
-
     // set custom properties; note this may override any properties already set
     Q_FOREACH (const QString &key, properties.keys()) {
         profile->setKey(key, properties[key].toString());
