@@ -34,6 +34,7 @@ SilicaListView {
 
             ContextMenu {
                 MenuItem {
+                    visible: model.providerName !== "jolla"
                     text: model.accountEnabled
                             //: Disables a user account
                             //% "Disable"
