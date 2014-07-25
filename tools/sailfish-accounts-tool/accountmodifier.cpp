@@ -449,8 +449,9 @@ bool AccountModifier::createProfiles()
                 if (!profile) {
                     qWarning() << "Profile could not created for template:" << templateProfile;
                 } else {
-                    created = true;
-                    saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile);
+                    if (saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile)) {
+                        created = true;
+                    }
                 }
                 delete profile;
             }
