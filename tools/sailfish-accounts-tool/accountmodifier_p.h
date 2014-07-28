@@ -83,6 +83,7 @@ private:
     bool backupAccount(Accounts::Account *account);
     bool restoreAccounts();
     void triggerProfiles(Accounts::Account *account);
+    bool profileDirReadable() const;
 
     static QString markerFilePath();
 

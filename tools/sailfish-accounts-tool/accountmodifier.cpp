@@ -6,6 +6,7 @@
 
 // buteo-syncfw
 #include <ProfileEngineDefs.h>
+#include <SyncCommonDefs.h>
 
 // libaccounts-qt
 #include <Accounts/Manager>
@@ -296,6 +297,11 @@ bool AccountModifier::applyServiceSettingChanges()
 
 bool AccountModifier::applySyncUpdateChanges()
 {
+    if (!profileDirReadable()) {
+        m_error = true;
+        return false;
+    }
+
     Accounts::ServiceList allServices = m_currAccount->services();
 
     bool shouldUpdateServices = false;
@@ -437,6 +443,11 @@ bool AccountModifier::applyProviderAvailabilityChanges()
 
 bool AccountModifier::createProfiles()
 {
+    if (!profileDirReadable()) {
+        m_error = true;
+        return false;
+    }
+
     bool created = false;
     Q_FOREACH (const Accounts::Service &srv, m_currAccount->services()) {
         m_currAccount->selectService(srv);
@@ -449,8 +460,9 @@ bool AccountModifier::createProfiles()
                 if (!profile) {
                     qWarning() << "Profile could not created for template:" << templateProfile;
                 } else {
-                    created = true;
-                    saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile);
+                    if (saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile)) {
+                        created = true;
+                    }
                 }
                 delete profile;
             }
@@ -465,6 +477,17 @@ void AccountModifier::error(Accounts::Error err)
                << ":" << err.type() << err.message();
     m_error = true;
     emit done();
+}
+
+bool AccountModifier::profileDirReadable() const
+{
+    // Ensure the sync dir is readable, else we may think a profile doesn't exist when it does
+    // and then overwrite it through msyncd.
+    if (!QDir(Sync::syncCacheDir()).isReadable()) {
+        qWarning() << "Don't have permission to read profiles from" << Sync::syncCacheDir();
+        return false;
+    }
+    return true;
 }
 
 /*
