@@ -113,6 +113,7 @@ public:
             return QVariant::fromValue(displayData->account->enabled());
         }
         if (role == AccountErrorRole) {
+            displayData->account->selectService(Accounts::Service());
             if (displayData->account->value(AccountCredentialsNeedUpdateKey).toBool()) {
                 return AccountNotSignedInError;
             }
