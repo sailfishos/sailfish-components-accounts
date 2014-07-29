@@ -94,6 +94,7 @@ public:
 
     // database sync
     Q_INVOKABLE void sync();
+    Q_INVOKABLE void blockingSync();
     Q_INVOKABLE void remove();
 
     // invokable api.

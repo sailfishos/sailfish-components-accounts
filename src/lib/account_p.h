@@ -59,6 +59,7 @@ public:
 
     void setAccount(Accounts::Account *acc, bool queryInfo);
     void setStatus(Account::Status newStatus);
+    bool prepareSync();
 
     void cancelCredentialsOperation(bool removeIdentity);
 
