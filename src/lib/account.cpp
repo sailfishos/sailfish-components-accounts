@@ -443,6 +443,130 @@ void AccountPrivate::updateStoreRepositories(bool enable)
     ssuInterface.call("updateRepos");
 }
 
+bool AccountPrivate::prepareSync()
+{
+    if (status == Account::Initializing) {
+        pendingSync = true;
+    }
+
+    if (status == Account::Invalid
+            || status == Account::SyncInProgress
+            || status == Account::Initializing) {
+        return false;
+    }
+
+    if (!account) { // initialization failed.
+        error = Account::InitializationFailedError;
+        emit q->errorChanged();
+        setStatus(Account::Invalid);
+        return false;
+    }
+
+    if (pendingInitModifications) {
+        // we have handled them by directly syncing.
+        // after this sync, we will once again allow
+        // change signals to cause modifications to the properties.
+        pendingInitModifications = false;
+        identifierPendingInit = false;
+        enabledPendingInit = false;
+        displayNamePendingInit = false;
+        configurationValuesPendingInit = false;
+    }
+
+    // set the user name
+    if (!defaultCredentialsUserName.isEmpty() && configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString().isEmpty()) {
+        account->setValue(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY, defaultCredentialsUserName);
+    }
+
+    // set the global configuration values.
+    account->selectService(Accounts::Service());
+    QStringList allKeys = account->allKeys();
+    QStringList setKeys = configurationValues.keys();
+    QStringList doneKeys;
+    foreach (const QString &key, allKeys) {
+        // overwrite existing keys
+        if (setKeys.contains(key)) {
+            doneKeys.append(key);
+            const QVariant &currValue = configurationValues.value(key);
+            if (currValue.isValid()) {
+                account->setValue(key, currValue);
+            } else {
+                account->remove(key);
+            }
+        } else {
+            // remove removed keys
+            // The CredentialsId key may have been added by Accounts::Account internally due to a
+            // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
+            if (key != ACCOUNTS_KEY_CREDENTIALS_ID && key != DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY) {
+                account->remove(key);
+            }
+        }
+    }
+    foreach (const QString &key, setKeys) {
+        // add new keys
+        if (!doneKeys.contains(key)) {
+            const QVariant &currValue = configurationValues.value(key);
+            account->setValue(key, currValue);
+        }
+    }
+
+    // and the service-specific configuration values and service-enabledness status
+    foreach (const QString &srvn, supportedServiceNames) {
+        Accounts::Service srv = manager->service(srvn);
+        if (srv.isValid()) {
+            account->selectService(srv);
+
+            // first, configuration values:
+            QVariantMap setSrvValues = serviceConfigurationValues.value(srvn);
+            QStringList srvKeys = account->allKeys();
+            QStringList doneSrvKeys;
+            foreach (const QString &key, srvKeys) {
+                // overwrite existing keys
+                if (setSrvValues.contains(key)) {
+                    doneSrvKeys.append(key);
+                    const QVariant &currValue = setSrvValues.value(key);
+                    if (currValue.isValid()) {
+                        account->setValue(key, currValue);
+                    } else {
+                        account->remove(key);
+                    }
+                } else {
+                    // remove removed keys
+                    // The CredentialsId key may have been added by Accounts::Account internally due to a
+                    // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
+                    if (key != ACCOUNTS_KEY_CREDENTIALS_ID) {
+                        account->remove(key);
+                    }
+                }
+            }
+            foreach (const QString &key, setSrvValues.keys()) {
+                // add new keys
+                if (!doneSrvKeys.contains(key)) {
+                    const QVariant &currValue = setSrvValues.value(key);
+                    account->setValue(key, currValue);
+                }
+            }
+
+            // If the saved enabled state was stored in the config values and thus updated above
+            // then we need to overwrite it here with the updated enabled state.
+            if (serviceEnabledChanges.contains(srvn)) {
+                account->setEnabled(serviceEnabledChanges[srvn]);
+            }
+        }
+    }
+
+    // enable or disable the global service
+    account->selectService(Accounts::Service());
+    account->setEnabled(enabled);
+
+    // set the display name
+    account->setDisplayName(displayName);
+
+    // and write to database.
+    setStatus(Account::SyncInProgress);
+
+    return true;
+}
 
 void AccountPrivate::handleSynced()
 {
@@ -1130,6 +1254,20 @@ Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *
 }
 
 /*!
+    \qmlmethod void Account::blockingSync()
+
+    This is the same as sync(), but the operation is guaranteed
+    to be synchronous.
+*/
+void Account::blockingSync()
+{
+    if (d->prepareSync()) {
+        d->account->syncAndBlock();
+        d->handleSynced();
+    }
+}
+
+/*!
     \qmlmethod void Account::sync()
 
     Writes any outstanding local modifications to the database.
@@ -1145,126 +1283,9 @@ Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *
 */
 void Account::sync()
 {
-    if (d->status == Account::Initializing) {
-        d->pendingSync = true;
+    if (d->prepareSync()) {
+        d->account->sync();
     }
-
-    if (d->status == Account::Invalid
-            || d->status == Account::SyncInProgress
-            || d->status == Account::Initializing) {
-        return;
-    }
-
-    if (!d->account) { // initialization failed.
-        d->error = Account::InitializationFailedError;
-        emit errorChanged();
-        d->setStatus(Account::Invalid);
-        return;
-    }
-
-    if (d->pendingInitModifications) {
-        // we have handled them by directly syncing.
-        // after this sync, we will once again allow
-        // change signals to cause modifications to the properties.
-        d->pendingInitModifications = false;
-        d->identifierPendingInit = false;
-        d->enabledPendingInit = false;
-        d->displayNamePendingInit = false;
-        d->configurationValuesPendingInit = false;
-    }
-
-    // set the user name
-    if (!d->defaultCredentialsUserName.isEmpty() && d->configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString().isEmpty()) {
-        d->account->setValue(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY, d->defaultCredentialsUserName);
-    }
-
-    // set the global configuration values.
-    d->account->selectService(Accounts::Service());
-    QStringList allKeys = d->account->allKeys();
-    QStringList setKeys = d->configurationValues.keys();
-    QStringList doneKeys;
-    foreach (const QString &key, allKeys) {
-        // overwrite existing keys
-        if (setKeys.contains(key)) {
-            doneKeys.append(key);
-            const QVariant &currValue = d->configurationValues.value(key);
-            if (currValue.isValid()) {
-                d->account->setValue(key, currValue);
-            } else {
-                d->account->remove(key);
-            }
-        } else {
-            // remove removed keys
-            // The CredentialsId key may have been added by Accounts::Account internally due to a
-            // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
-            if (key != ACCOUNTS_KEY_CREDENTIALS_ID && key != DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY) {
-                d->account->remove(key);
-            }
-        }
-    }
-    foreach (const QString &key, setKeys) {
-        // add new keys
-        if (!doneKeys.contains(key)) {
-            const QVariant &currValue = d->configurationValues.value(key);
-            d->account->setValue(key, currValue);
-        }
-    }
-
-    // and the service-specific configuration values and service-enabledness status
-    foreach (const QString &srvn, d->supportedServiceNames) {
-        Accounts::Service srv = d->manager->service(srvn);
-        if (srv.isValid()) {
-            d->account->selectService(srv);
-
-            // first, configuration values:
-            QVariantMap setSrvValues = d->serviceConfigurationValues.value(srvn);
-            QStringList srvKeys = d->account->allKeys();
-            QStringList doneSrvKeys;
-            foreach (const QString &key, srvKeys) {
-                // overwrite existing keys
-                if (setSrvValues.contains(key)) {
-                    doneSrvKeys.append(key);
-                    const QVariant &currValue = setSrvValues.value(key);
-                    if (currValue.isValid()) {
-                        d->account->setValue(key, currValue);
-                    } else {
-                        d->account->remove(key);
-                    }
-                } else {
-                    // remove removed keys
-                    // The CredentialsId key may have been added by Accounts::Account internally due to a
-                    // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
-                    if (key != ACCOUNTS_KEY_CREDENTIALS_ID) {
-                        d->account->remove(key);
-                    }
-                }
-            }
-            foreach (const QString &key, setSrvValues.keys()) {
-                // add new keys
-                if (!doneSrvKeys.contains(key)) {
-                    const QVariant &currValue = setSrvValues.value(key);
-                    d->account->setValue(key, currValue);
-                }
-            }
-
-            // If the saved enabled state was stored in the config values and thus updated above
-            // then we need to overwrite it here with the updated enabled state.
-            if (d->serviceEnabledChanges.contains(srvn)) {
-                d->account->setEnabled(d->serviceEnabledChanges[srvn]);
-            }
-        }
-    }
-
-    // enable or disable the global service
-    d->account->selectService(Accounts::Service());
-    d->account->setEnabled(d->enabled);
-
-    // set the display name
-    d->account->setDisplayName(d->displayName);
-
-    // and write to database.
-    d->setStatus(Account::SyncInProgress);
-    d->account->sync();
 }
 
 /*!
