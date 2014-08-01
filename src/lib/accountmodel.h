@@ -43,7 +43,8 @@ public:
         ProviderDisplayNameRole,
         AccountEnabledRole,
         AccountErrorRole,
-        PerformingInitialSyncRole
+        PerformingInitialSyncRole,
+        AccountUserNameRole
     };
 
     enum FilterType {

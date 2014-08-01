@@ -25,6 +25,7 @@
 
 
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
+static const QString AccountDefaultCredentialsUserName = QStringLiteral("default_credentials_username");
 
 struct DisplayData {
     DisplayData(Accounts::Account *acct)
@@ -52,6 +53,18 @@ struct DisplayData {
             return serviceTypes.contains(filter);
         }
         return false;
+    }
+
+    QString displayName() {
+        QString savedDisplayName = account->displayName();
+        account->selectService(Accounts::Service());
+        if (savedDisplayName.isEmpty() || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
+            if (providerDisplayName.isEmpty()) {
+                providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+            }
+            return providerDisplayName;
+        }
+        return savedDisplayName;
     }
 
     QHash<QString, int> profilesSyncStatus;
@@ -89,7 +102,7 @@ public:
             return QVariant::fromValue(displayData->account->id());
         }
         if (role == AccountDisplayNameRole) {
-            return QVariant::fromValue(displayData->account->displayName());
+            return QVariant::fromValue(displayData->displayName());
         }
         if (role == AccountIconRole) {
             if (displayData->accountIcon.isNull()) {
@@ -121,6 +134,10 @@ public:
         }
         if (role == PerformingInitialSyncRole) {
             return displayData->performingInitialSync;
+        }
+        if (role == AccountUserNameRole) {
+            displayData->account->selectService(Accounts::Service());
+            return displayData->account->value(AccountDefaultCredentialsUserName).toString();
         }
         return QVariant();
     }
@@ -203,6 +220,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountEnabledRole, "accountEnabled");
     d->headerData.insert(AccountErrorRole, "accountError");
     d->headerData.insert(PerformingInitialSyncRole, "performingInitialSync");
+    d->headerData.insert(AccountUserNameRole, "accountUserName");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),
