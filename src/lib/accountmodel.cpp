@@ -156,6 +156,25 @@ public:
 };
 
 namespace {
+    bool displayDataLessThan(const QString &thisDisplayName, const QString &thisProviderDisplayName, Accounts::Account *account, DisplayData *otherDisplayData)
+    {
+        QString otherProviderDisplayName = SailfishAccounts::translatedDisplayName(otherDisplayData->account->provider());
+        if (thisProviderDisplayName < otherProviderDisplayName) {
+            return true;
+        } else if (thisProviderDisplayName == otherProviderDisplayName) {
+            QString otherDisplayName = otherDisplayData->displayName();
+            if (thisDisplayName < otherDisplayName) {
+                return true;
+            } else if (thisDisplayName == otherDisplayName) {
+                account->selectService(Accounts::Service());
+                otherDisplayData->account->selectService(Accounts::Service());
+                if (account->value(AccountDefaultCredentialsUserName).toString() < otherDisplayData->account->value(AccountDefaultCredentialsUserName).toString()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     void insertAccountSorted(DisplayData *data,
                              Accounts::Account *account,
@@ -164,19 +183,16 @@ namespace {
     {
         // sort by provider display name then account display name
         bool addedAccount = false;
+        QString thisDisplayName = data->displayName();
+        QString thisProviderDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
         for (int j = 0; j < accountsList->size(); ++j) {
-            Accounts::Provider listAccountProvider = accountsList->at(j)->account->provider();
-            Accounts::Provider thisAccountProvider = account->provider();
-            if (SailfishAccounts::translatedDisplayName(thisAccountProvider) < SailfishAccounts::translatedDisplayName(listAccountProvider)
-                    || (SailfishAccounts::translatedDisplayName(thisAccountProvider) == SailfishAccounts::translatedDisplayName(listAccountProvider)
-                        && account->displayName() < accountsList->at(j)->account->displayName())) {
+            if (displayDataLessThan(thisDisplayName, thisProviderDisplayName, account, accountsList->at(j))) {
                 accountsList->insert(j, data);
                 filteredAccountsList->insert(j, data);
                 addedAccount = true;
                 break;
             }
         }
-
         if (!addedAccount) {
             accountsList->append(data);
             filteredAccountsList->append(data);
