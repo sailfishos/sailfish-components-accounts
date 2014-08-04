@@ -704,9 +704,7 @@ void maybeSetCredentialsIdForProvider(Accounts::Account *account,
 
     // if the method is password, and if no symmetricKey was specified,
     // we can do the same (as the application is saying "no need to
-    // keep these credentials application-specific") but only for the
-    // specified service name (associated with the SignInParameters)
-    // and the global service (if currently not set).
+    // keep these credentials application-specific").
 
     if (method.toLower() == QLatin1String("oauth2")) {
         // set for each service from the provider (that the account supports)
@@ -726,26 +724,19 @@ void maybeSetCredentialsIdForProvider(Accounts::Account *account,
         }
     } else if (method.toLower() == QLatin1String("password") && symmetricKey.isEmpty()) {
         // set for each service from the provider (that the account supports)
-        bool hasOtherServices = false;
         Accounts::ServiceList supportedServices = account->services();
         for (int i = 0; i < supportedServices.size(); ++i) {
             const Accounts::Service &currService(supportedServices.at(i));
-            if (currService.name() == serviceName) {
-                account->selectService(currService);
-                if (account->credentialsId() == 0) {
-                    account->setCredentialsId(identityId);
-                }
-            } else {
-                hasOtherServices = true;
+            account->selectService(currService);
+            if (account->credentialsId() == 0 || currService.name() == serviceName) {
+                account->setCredentialsId(identityId);
             }
         }
 
         account->selectService(Accounts::Service());
-        if (!hasOtherServices) {
-            // set the global account credentials to that id, if not already set.
-            if (account->credentialsId() == 0) {
-                account->setCredentialsId(identityId);
-            }
+        // set the global account credentials to that id, if not already set.
+        if (account->credentialsId() == 0) {
+            account->setCredentialsId(identityId);
         }
     }
 
