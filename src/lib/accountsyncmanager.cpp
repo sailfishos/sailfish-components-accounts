@@ -338,6 +338,29 @@ AccountSyncOptions *AccountSyncManager::accountSyncOptions(const QString &profil
     return AccountSyncOptionsPrivate::fromButeoProfile(*profile, this);
 }
 
+bool AccountSyncManager::templateProfilesAvailable(const QStringList &templateProfiles) const
+{
+    Q_FOREACH (const QString &profileName, templateProfiles) {
+        Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileName);
+        bool exists = (profile != 0);
+        delete profile;
+        if (!exists) {
+            return false;
+        }
+    }
+    return true;
+}
+
+QStringList AccountSyncManager::defaultTemplateProfiles(int accountId, const QString &serviceName) const
+{
+    Accounts::Service srv = d->m_accountManager->service(serviceName);
+    if (!srv.isValid()) {
+        qWarning() << "Cannot find service with name:" << serviceName;
+        return QStringList();
+    }
+    return defaultTemplateProfiles(d->m_accountManager->account(accountId), srv);
+}
+
 QString AccountSyncManager::createProfile(const QString &templateProfileName,
                                           Accounts::Account *account,
                                           const Accounts::Service &srv,
