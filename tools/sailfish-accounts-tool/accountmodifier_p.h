@@ -38,7 +38,12 @@ public:
         CreateProfiles,
         BackupAccounts,
         RestoreAccounts,
-        TriggerProfiles
+        TriggerProfiles,
+        CreateAndTriggerProfiles,
+        DeleteAccounts,
+        MigrateCalDavPerProvider,
+        MigrateCalDavPerProviderBackup,
+        MigrateCalDavPerProviderRestore
     };
 
     QString providerName;
@@ -77,7 +82,7 @@ private:
     bool applyServiceSettingChanges();
     bool applySyncUpdateChanges();
     bool applyProviderAvailabilityChanges();
-    bool createProfiles();
+    bool createProfiles(bool triggerSync);
     void addScheduledCommand(Mode command);
     QList<Mode> loadScheduledCommands(QFile *file);
     bool backupAccount(Accounts::Account *account);
@@ -91,11 +96,14 @@ private:
     Accounts::AccountIdList m_allAccountIds;
     Accounts::Account *m_currAccount;
     Buteo::SyncClientInterface *m_buteoClient;
+    QFile *m_tempBackupFile;
     AccountSyncManager m_accountSyncManager;
     AccountBackupRestorer m_accountBackupRestorer;
     QList<Mode> m_commands;
+    QList<uint> m_accountIdsToDelete;
     QMap<int, QMap<QString, QVariantMap> > m_restoredSyncProfileProperties;
     int m_currAccountIdx;
+    bool m_migratingCalDav;
     bool m_error;
 };
 

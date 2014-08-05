@@ -51,12 +51,66 @@ AccountBackupRestorer::~AccountBackupRestorer()
 {
 }
 
+QList<uint> AccountBackupRestorer::oldAccountIds() const
+{
+    return m_oldAccountIds;
+}
+
+QList<uint> AccountBackupRestorer::newAccountIds() const
+{
+    return m_newAccountIds;
+}
+
+// CalDAV accounts prior to Sailfish 1.1.0.x all used the same onlinesync.provider with services
+// like onlinesync-caldav_yahoo, onlinesync-caldav_generic, etc. These accounts need to be ported
+// to use separate providers like yahoo.provider with yahoo-caldav.service, or for the generic
+// CalDAV case, continue to use onlinesync.provider but use the onlinesync-caldav.service instead.
+void AccountBackupRestorer::getCalDavMigrationParameters(const QString &providerName,
+                                                         QSettings *backupIni,
+                                                         CalDavMigrationData *migrationData)
+{
+    if (providerName != QStringLiteral("onlinesync")) {
+        migrationData->migrationRequired = false;
+        return;
+    }
+
+    // find the legacy CalDAV service for this account
+    backupIni->beginGroup(QStringLiteral("serviceSettings"));
+    migrationData->oldCalDavServiceName.clear();
+    int newServiceNameStartIndex = -1;
+    Q_FOREACH (const QString &serviceName, backupIni->childGroups()) {
+        if (serviceName.startsWith(QStringLiteral("onlinesync-caldav_"))) {
+            backupIni->beginGroup(serviceName);
+            QStringList templateProfiles = backupIni->value(QStringLiteral("sync_profile_templates")).toStringList();
+            backupIni->endGroup();
+            if (!templateProfiles.isEmpty()) {
+                migrationData->oldCalDavServiceName = serviceName;
+                newServiceNameStartIndex = serviceName.indexOf('_') + 1;
+                break;
+            }
+        }
+    }
+    backupIni->endGroup();
+    if (migrationData->oldCalDavServiceName.isEmpty()) {
+        migrationData->migrationRequired = false;
+        return;
+    }
+
+    if (migrationData->oldCalDavServiceName == QStringLiteral("onlinesync-caldav_generic")) {
+        migrationData->providerName = providerName;
+    } else {
+        migrationData->providerName = migrationData->oldCalDavServiceName.mid(newServiceNameStartIndex);
+    }
+    migrationData->newCalDavServiceName = QString("%1-caldav").arg(migrationData->providerName);
+    migrationData->migrationRequired = true;
+}
+
 bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QString &backupFile)
 {
     // we write the account data to the backup file in .ini format
     QSettings backupIni(backupFile, QSettings::IniFormat);
     if (!backupIni.isWritable()) {
-        qWarning() << Q_FUNC_INFO << "backup file not writable";
+        qWarning() << Q_FUNC_INFO << "backup file not writable:" << backupFile;
         return false;
     }
 
@@ -189,6 +243,9 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int,
         return false;
     }
 
+    m_oldAccountIds.clear();
+    m_newAccountIds.clear();
+
     QSettings backupIni(backupFile, QSettings::IniFormat);
     QStringList oldAccountIds = backupIni.childGroups();
     Q_FOREACH (const QString &oldAccountId, oldAccountIds) {
@@ -212,6 +269,12 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int,
                 enabled = backupIni.value(QStringLiteral("enabled"), QVariant::fromValue<bool>(false)).toBool();
             }
             backupIni.endGroup();
+
+            CalDavMigrationData calDavMigrationData;
+            getCalDavMigrationParameters(providerName, &backupIni, &calDavMigrationData);
+            if (calDavMigrationData.migrationRequired) {
+                providerName = calDavMigrationData.providerName;
+            }
 
             if (providerName.isEmpty()) {
                 qWarning() << Q_FUNC_INFO << "no providerName specified for backed-up account" << oldAccountId << ", skipping";
@@ -285,8 +348,20 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int,
 
                     // restore real service settings
                     Q_FOREACH (const Accounts::Service &srv, accountServices) {
-                        restoreAccountServiceSettings(backupIni, srv, newAccount, oldAccountId,
-                                                      oldToNewCredentialsIds, &servicesEnabled);
+                        if (calDavMigrationData.migrationRequired) {
+                            if (srv.name() != calDavMigrationData.newCalDavServiceName) {
+                                // only the legacy service needs to be restored
+                                continue;
+                            } else {
+                                // move settings from the legacy service to the new one
+                                restoreAccountServiceSettings(backupIni, srv, newAccount, oldAccountId,
+                                                              oldToNewCredentialsIds, &servicesEnabled,
+                                                              calDavMigrationData.oldCalDavServiceName);
+                            }
+                        } else {
+                            restoreAccountServiceSettings(backupIni, srv, newAccount, oldAccountId,
+                                                          oldToNewCredentialsIds, &servicesEnabled);
+                        }
                     }
                 }
                 backupIni.endGroup();
@@ -327,6 +402,8 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int,
                 backupIni.endGroup();
 
                 // finished.
+                m_oldAccountIds.append(oldAccountId.toUInt());
+                m_newAccountIds.append(newAccount->id());
                 newAccount->deleteLater();
             }
         }
@@ -410,10 +487,13 @@ void AccountBackupRestorer::restoreAccountServiceSettings(QSettings &backupIni,
                                                           Accounts::Account *account,
                                                           const QString &oldAccountId,
                                                           const QMap<quint32, quint32> &oldToNewCredentialsIds,
-                                                          QMap<QString, bool> *servicesEnabled)
+                                                          QMap<QString, bool> *servicesEnabled,
+                                                          const QString &sourceServiceName)
 {
     account->selectService(srv);
-    backupIni.beginGroup(srv.isValid() ? srv.name() : QStringLiteral("defaultService"));
+    backupIni.beginGroup(!sourceServiceName.isEmpty()
+                         ? sourceServiceName
+                         : (srv.isValid() ? srv.name() : QStringLiteral("defaultService")));
     Q_FOREACH (const QString &key, backupIni.allKeys()) {
         if (key.contains(QLatin1String("CredentialsId")) ||
             key.contains(QLatin1String("segregated_credentials"))) {

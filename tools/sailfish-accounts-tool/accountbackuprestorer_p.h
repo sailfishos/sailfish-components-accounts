@@ -33,6 +33,9 @@ public:
     AccountBackupRestorer(AccountSyncManager *syncManager, Accounts::Manager *accountManager, QObject *parent = 0);
     ~AccountBackupRestorer();
 
+    QList<uint> oldAccountIds() const;
+    QList<uint> newAccountIds() const;
+
     bool backupAccount(Accounts::Account *account, const QString &backupFile);
     bool restoreAccounts(const QString &backupFile, QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings);
 
@@ -42,6 +45,13 @@ private:
         QString method;
         QString mechanism;
         QVariantMap sessionData;
+    };
+
+    struct CalDavMigrationData {
+        bool migrationRequired;
+        QString providerName;
+        QString oldCalDavServiceName;
+        QString newCalDavServiceName;
     };
 
     void backupAccountServiceSettings(QSettings &backupIni,
@@ -59,7 +69,8 @@ private:
                                        Accounts::Account *account,
                                        const QString &oldAccountId,
                                        const QMap<quint32, quint32> &oldToNewCredentialsIds,
-                                       QMap<QString, bool> *servicesEnabled);
+                                       QMap<QString, bool> *servicesEnabled,
+                                       const QString &sourceServiceName = QString());
 
     QMap<quint32, quint32> createCredentials(const QVariantMap &allCredentialsSettings);
 
@@ -67,8 +78,14 @@ private:
                                                const Accounts::Service &srv,
                                                const QString &templateProfileName);
 
+    void getCalDavMigrationParameters(const QString &providerName,
+                                      QSettings *backupIni,
+                                      CalDavMigrationData *calDavMigrationData);
+
     AccountSyncManager *m_syncManager;
     Accounts::Manager *m_accountManager;
+    QList<uint> m_oldAccountIds;
+    QList<uint> m_newAccountIds;
 };
 
 class CredentialKeysQuery : public QObject

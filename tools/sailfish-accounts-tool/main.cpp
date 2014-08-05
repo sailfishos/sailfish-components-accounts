@@ -13,6 +13,7 @@
 #include <QString>
 #include <QTimer>
 #include <QStandardPaths>
+#include <QDir>
 
 #include "accountmodifier_p.h"
 
@@ -73,10 +74,18 @@ int main(int argc, char *argv[])
             "To trigger all synchronization profiles of all accounts:\n"
             "%1 --trigger-profiles\n"
             "\n"
+            "Run --create-profiles, then for the profiles that were created, run --trigger-profiles:\n"
+            "Note: msyncd must be running for this command to work!\n"
+            "%1 --create-and-trigger-profiles\n"
+            "%1 --create-and-trigger-profiles-on-boot\n"
+            "\n"
             "To backup all account information to the specified output file:\n"
             "%1 --backup-accounts <outfile>\n"
             "To restore accounts which were previously backed up to the specified input file:\n"
             "%1 --restore-accounts <infile>\n"
+            "\n"
+            "To migrate CalDAV accounts away from the onlinesync-provider-only account structure to per-provider accounts:\n"
+            "%1 --migrate-caldav-per-provider\n"
             "\n"
             "To run all command scheduled for the next boot:\n"
             "%1 --run-scheduled-commands\n"
@@ -115,11 +124,17 @@ int main(int argc, char *argv[])
     } else if (firstOption == QStringLiteral("--backup-accounts")) {
         am.mode = AccountModifier::BackupAccounts;
         am.backupFile = args.value(2);
+        validParams = !am.backupFile.isEmpty();
     } else if (firstOption == QStringLiteral("--restore-accounts")) {
         am.mode = AccountModifier::RestoreAccounts;
         am.backupFile = args.value(2);
     } else if (firstOption == QStringLiteral("--trigger-profiles")) {
         am.mode = AccountModifier::TriggerProfiles;
+    } else if (firstOption.startsWith(QStringLiteral("--create-and-trigger-profiles"))) {
+        am.mode = AccountModifier::CreateAndTriggerProfiles;
+        am.scheduleCommandForNextBoot = scheduleForNextBoot;
+    } else if (firstOption == QStringLiteral("--migrate-caldav-per-provider")) {
+        am.mode = AccountModifier::MigrateCalDavPerProvider;
     } else {
         am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);
