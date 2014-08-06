@@ -48,6 +48,9 @@ public:
     Q_INVOKABLE QStringList profileIds(int accountId, const QString &serviceName = QString()) const;
     Q_INVOKABLE AccountSyncOptions *accountSyncOptions(const QString &profileId);
 
+    Q_INVOKABLE bool templateProfilesAvailable(const QStringList &templateProfiles) const;
+    Q_INVOKABLE QStringList defaultTemplateProfiles(int accountId, const QString &serviceName) const;
+
     QString createProfile(const QString &templateProfileName,
                           Accounts::Account *account,
                           const Accounts::Service &srv,
