@@ -2,7 +2,7 @@ import QtQuick 2.0
 import Sailfish.Silica 1.0
 import Sailfish.Accounts 1.0
 
-SilicaListView {
+Column {
     id: root
 
     property alias serviceFilter: providerModel.serviceFilter
@@ -10,40 +10,18 @@ SilicaListView {
     signal providerSelected(int index, string providerName)
     signal providerDeselected(int index, string providerName)   // deprecated
 
+    //--- end of public api
 
     property AccountManager _accountManager: AccountManager {}
     property bool _hasExistingJollaAccount
 
-    model: providerModel
-
-    ProviderModel {
-        id: providerModel
+    function _isOtherProvider(providerName) {
+        return providerName.indexOf("email") == 0
+            || providerName.indexOf("onlinesync") == 0
     }
 
-    delegate: ListItem {
-        width: ListView.view.width
-
-        // don't offer the chance to create multiple jolla accounts through the UI
-        visible: model.providerName !== "jolla" || !root._hasExistingJollaAccount
-        contentHeight: visible ? Theme.itemSizeSmall : 0
-
-        onClicked: {
-            root.providerSelected(model.index, model.providerName)
-        }
-
-        AccountIcon {
-            id: icon
-            x: Theme.paddingLarge
-            anchors.verticalCenter: parent.verticalCenter
-            source: model.providerIcon
-        }
-        Label {
-            anchors.left: icon.right
-            anchors.leftMargin: Theme.paddingLarge
-            anchors.verticalCenter: parent.verticalCenter
-            text: model.providerDisplayName
-            color: highlighted ? Theme.highlightColor : Theme.primaryColor
-        }
+    Component.onCompleted: {
+        root._hasExistingJollaAccount = (_accountManager.providerAccountIdentifiers("jolla").length > 0)
     }
 
     Connections {
@@ -58,9 +36,39 @@ SilicaListView {
         }
     }
 
-    Component.onCompleted: {
-        root._hasExistingJollaAccount = (_accountManager.providerAccountIdentifiers("jolla").length > 0)
+    ProviderModel {
+        id: providerModel
     }
 
-    VerticalScrollDecorator {}
+    Column {
+        width: root.width
+
+        Repeater {
+            model: providerModel
+            delegate: AccountProviderPickerDelegate {
+                width: root.width
+                // don't offer the chance to create multiple jolla accounts through the UI
+                visible: !root._isOtherProvider(model.providerName)
+                         && (model.providerName !== "jolla" || !root._hasExistingJollaAccount)
+            }
+        }
+    }
+
+    SectionHeader {
+        //: List of other types of account providers
+        //% "Other"
+        text: qsTrId("components_accounts-la-other")
+    }
+
+    Column {
+        width: root.width
+
+        Repeater {
+            model: providerModel
+            delegate: AccountProviderPickerDelegate {
+                width: root.width
+                visible: root._isOtherProvider(model.providerName)
+            }
+        }
+    }
 }
