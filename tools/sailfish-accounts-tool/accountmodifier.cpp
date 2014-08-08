@@ -172,8 +172,9 @@ void AccountModifier::start()
         }
         // restore was successful; now delete the old accounts to complete the migration
         qWarning() << "Migrated" << m_accountIdsToDelete.count() << "CalDAV accounts";
-        mode = DeleteAccounts;
-        Q_ASSERT(m_commands.isEmpty());
+        m_commands.append(DeleteAccounts);
+        m_commands.append(CreateAndTriggerProfiles);
+        mode = m_commands.takeFirst();
     }
 
     if (mode == UnknownMode) {

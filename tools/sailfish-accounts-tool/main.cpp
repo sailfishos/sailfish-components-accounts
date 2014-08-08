@@ -133,8 +133,9 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
     } else if (firstOption.startsWith(QStringLiteral("--create-and-trigger-profiles"))) {
         am.mode = AccountModifier::CreateAndTriggerProfiles;
         am.scheduleCommandForNextBoot = scheduleForNextBoot;
-    } else if (firstOption == QStringLiteral("--migrate-caldav-per-provider")) {
+    } else if (firstOption.startsWith(QStringLiteral("--migrate-caldav-per-provider"))) {
         am.mode = AccountModifier::MigrateCalDavPerProvider;
+        am.scheduleCommandForNextBoot = scheduleForNextBoot;
     } else {
         am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);
