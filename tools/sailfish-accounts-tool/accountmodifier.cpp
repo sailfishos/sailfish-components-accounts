@@ -13,8 +13,8 @@
 #include <Accounts/Account>
 
 #include <QStandardPaths>
+#include <QTemporaryFile>
 #include <QFile>
-#include <QDir>
 #include <QtDebug>
 
 static const QString AccountToolMarkerFilename = ".sailfish-accounts-tool";
@@ -31,8 +31,10 @@ AccountModifier::AccountModifier(QObject *parent)
     , m_accountManager(new Accounts::Manager)
     , m_currAccount(0)
     , m_buteoClient(0)
+    , m_tempBackupFile(0)
     , m_accountBackupRestorer(&m_accountSyncManager, m_accountManager)
     , m_currAccountIdx(-1)
+    , m_migratingCalDav(false)
     , m_error(false)
 {
 }
@@ -99,24 +101,7 @@ void AccountModifier::start()
 
     if (runScheduledCommands) {
         runningMultipleCommands = true;
-    } else if (mode == RestoreAccounts) {
-        // we do several things:
-        // 1) we restore the accounts + credentials from file
-        // 2) we update any service settings of those accounts
-        // 3) we generate sync profiles for the restored accounts
-        // 4) we trigger sync for all accounts
-        if (!restoreAccounts()) {
-            qWarning() << Q_FUNC_INFO << "could not restore accounts from" << backupFile;
-            m_error = true;
-            emit done();
-            return;
-        }
-        m_commands.append(UpdateSyncServices);
-        m_commands.append(CreateProfiles);
-        m_commands.append(TriggerProfiles);
-        runningMultipleCommands = true;
     }
-
     if (runningMultipleCommands) {
         if (m_commands.isEmpty() && runScheduledCommands) {
             QFile file(markerFilePath());
@@ -140,6 +125,57 @@ void AccountModifier::start()
         }
     }
 
+    if (mode == RestoreAccounts) {
+        // we do several things:
+        // 1) we restore the accounts + credentials from file
+        // 2) we update any service settings of those accounts
+        // 3) we generate sync profiles for the restored accounts
+        // 4) we trigger sync for all accounts
+        if (!restoreAccounts()) {
+            qWarning() << Q_FUNC_INFO << "could not restore accounts from" << backupFile;
+            m_error = true;
+            emit done();
+            return;
+        }
+        m_commands.append(UpdateSyncServices);
+        m_commands.append(CreateProfiles);
+        m_commands.append(TriggerProfiles);
+        runningMultipleCommands = true;
+        mode = m_commands.takeFirst();
+    } else if (mode == MigrateCalDavPerProvider) {
+        // we do several things:
+        // 1) we restore the caldav account + credential settings from file, to new accounts
+        // 2) once the new accounts are created, we delete the old accounts
+        m_tempBackupFile = new QTemporaryFile(this);
+        if (!m_tempBackupFile->open(QFile::WriteOnly)) {
+            qWarning() << "Unable to open temp file to migrate CalDAV accounts!";
+            m_error = true;
+            return;
+        }
+        m_tempBackupFile->close();
+        backupFile = m_tempBackupFile->fileName();
+        m_migratingCalDav = true;
+        m_commands.append(MigrateCalDavPerProviderBackup);
+        m_commands.append(MigrateCalDavPerProviderRestore);
+        runningMultipleCommands = true;
+        mode = m_commands.takeFirst();
+    } else if (mode == MigrateCalDavPerProviderRestore) {
+        if (!restoreAccounts()) {
+            emit done();
+            return;
+        }
+        m_accountIdsToDelete = m_accountBackupRestorer.oldAccountIds();
+        if (m_accountIdsToDelete.isEmpty()) {
+            qWarning() << "Done, no CalDAV accounts to be migrated from" << backupFile;
+            emit done();
+            return;
+        }
+        // restore was successful; now delete the old accounts to complete the migration
+        qWarning() << "Migrated" << m_accountIdsToDelete.count() << "CalDAV accounts";
+        mode = DeleteAccounts;
+        Q_ASSERT(m_commands.isEmpty());
+    }
+
     if (mode == UnknownMode) {
         qWarning() << Q_FUNC_INFO << "No mode set for AccountModifier!";
         emit done();
@@ -153,7 +189,8 @@ void AccountModifier::start()
         return;
     }
 
-    qWarning() << "Found" << m_allAccountIds.size() << "accounts in total";
+    qWarning() << "sailfish-accounts-tool running operation:" << mode
+                  << "for" << m_allAccountIds.size() << "accounts in total";
 
     if (mode == ModifyServiceSettings) {
         checkServiceSettingArgs();
@@ -208,7 +245,8 @@ void AccountModifier::next()
             } else if (runScheduledCommands) {
                 // no more commands to run, clean up our schedule file before emitting done().
                 QFile::remove(markerFilePath());
-            } // else RestoreAccounts mode, finished and don't need to cleanup anything.
+            } // ran multiple commands but didn't take them from the schedule file, so finished
+              // and don't need to cleanup anything.
         }
         emit done();
         return;
@@ -234,7 +272,7 @@ void AccountModifier::next()
         needsSync = applySyncUpdateChanges();
         break;
     case CreateProfiles:
-        needsSync = createProfiles();
+        needsSync = createProfiles(false);
         break;
     case BackupAccounts:
         needsSync = false;
@@ -243,6 +281,24 @@ void AccountModifier::next()
     case TriggerProfiles:
         needsSync = false;
         triggerProfiles(m_currAccount);
+        break;
+    case DeleteAccounts:
+        if (m_accountIdsToDelete.contains(m_currAccount->id())) {
+            m_currAccount->remove();
+            needsSync = true;
+        } else {
+            needsSync = false;
+        }
+        break;
+    case CreateAndTriggerProfiles:
+        needsSync = createProfiles(true);
+        break;
+    case MigrateCalDavPerProviderBackup:
+        needsSync = false;
+        if (m_currAccount->providerName() == QStringLiteral("onlinesync")
+                && backupAccount(m_currAccount)) {
+            qWarning() << "\tBacked up onlinesync account for migration:" << m_currAccount->id();
+        }
         break;
     default:
         qWarning() << Q_FUNC_INFO << "Unhandled AccountModifier mode!";
@@ -441,7 +497,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
     return true;
 }
 
-bool AccountModifier::createProfiles()
+bool AccountModifier::createProfiles(bool triggerSync)
 {
     if (!profileDirReadable()) {
         m_error = true;
@@ -461,6 +517,9 @@ bool AccountModifier::createProfiles()
                     qWarning() << "Profile could not created for template:" << templateProfile;
                 } else {
                     if (saveProfileViaMsyncd(m_currAccount, srv, profile, templateProfile)) {
+                        if (triggerSync) {
+                            m_accountSyncManager.syncProfile(profile->name());
+                        }
                         created = true;
                     }
                 }
