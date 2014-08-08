@@ -14,10 +14,7 @@ SOURCES += $$PWD/plugin.cpp
 
 OTHER_FILES += \
         $$PWD/qmldir \
-        $$PWD/AccountIcon.qml \
-        $$PWD/AccountProviderPicker.qml \
-        $$PWD/AccountProviderPickerDialog.qml \
-        $$PWD/AccountsListView.qml
+        $$PWD/*.qml
 
 TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
 EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
