@@ -81,9 +81,11 @@ void AccountBackupRestorer::getCalDavMigrationParameters(const QString &provider
     Q_FOREACH (const QString &serviceName, backupIni->childGroups()) {
         if (serviceName.startsWith(QStringLiteral("onlinesync-caldav_"))) {
             backupIni->beginGroup(serviceName);
-            QStringList templateProfiles = backupIni->value(QStringLiteral("sync_profile_templates")).toStringList();
+            QVariant enabled = backupIni->value(QStringLiteral("enabled"));
+            QVariant templateProfiles = backupIni->value(QStringLiteral("sync_profile_templates"));
             backupIni->endGroup();
-            if (!templateProfiles.isEmpty()) {
+            if (enabled.isValid() && enabled.toBool()
+                    && templateProfiles.isValid() && !templateProfiles.toStringList().isEmpty()) {
                 migrationData->oldCalDavServiceName = serviceName;
                 newServiceNameStartIndex = serviceName.indexOf('_') + 1;
                 break;
