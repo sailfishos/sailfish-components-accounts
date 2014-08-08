@@ -25,6 +25,7 @@
 
 
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
+static const QString AccountDefaultCredentialsUserName = QStringLiteral("default_credentials_username");
 
 struct DisplayData {
     DisplayData(Accounts::Account *acct)
@@ -52,6 +53,18 @@ struct DisplayData {
             return serviceTypes.contains(filter);
         }
         return false;
+    }
+
+    QString displayName() {
+        QString savedDisplayName = account->displayName();
+        account->selectService(Accounts::Service());
+        if (savedDisplayName.isEmpty() || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
+            if (providerDisplayName.isEmpty()) {
+                providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+            }
+            return providerDisplayName;
+        }
+        return savedDisplayName;
     }
 
     QHash<QString, int> profilesSyncStatus;
@@ -89,7 +102,7 @@ public:
             return QVariant::fromValue(displayData->account->id());
         }
         if (role == AccountDisplayNameRole) {
-            return QVariant::fromValue(displayData->account->displayName());
+            return QVariant::fromValue(displayData->displayName());
         }
         if (role == AccountIconRole) {
             if (displayData->accountIcon.isNull()) {
@@ -122,6 +135,10 @@ public:
         if (role == PerformingInitialSyncRole) {
             return displayData->performingInitialSync;
         }
+        if (role == AccountUserNameRole) {
+            displayData->account->selectService(Accounts::Service());
+            return displayData->account->value(AccountDefaultCredentialsUserName).toString();
+        }
         return QVariant();
     }
 
@@ -139,6 +156,25 @@ public:
 };
 
 namespace {
+    bool displayDataLessThan(const QString &thisDisplayName, const QString &thisProviderDisplayName, Accounts::Account *account, DisplayData *otherDisplayData)
+    {
+        QString otherProviderDisplayName = SailfishAccounts::translatedDisplayName(otherDisplayData->account->provider());
+        if (thisProviderDisplayName < otherProviderDisplayName) {
+            return true;
+        } else if (thisProviderDisplayName == otherProviderDisplayName) {
+            QString otherDisplayName = otherDisplayData->displayName();
+            if (thisDisplayName < otherDisplayName) {
+                return true;
+            } else if (thisDisplayName == otherDisplayName) {
+                account->selectService(Accounts::Service());
+                otherDisplayData->account->selectService(Accounts::Service());
+                if (account->value(AccountDefaultCredentialsUserName).toString() < otherDisplayData->account->value(AccountDefaultCredentialsUserName).toString()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     void insertAccountSorted(DisplayData *data,
                              Accounts::Account *account,
@@ -147,19 +183,16 @@ namespace {
     {
         // sort by provider display name then account display name
         bool addedAccount = false;
+        QString thisDisplayName = data->displayName();
+        QString thisProviderDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
         for (int j = 0; j < accountsList->size(); ++j) {
-            Accounts::Provider listAccountProvider = accountsList->at(j)->account->provider();
-            Accounts::Provider thisAccountProvider = account->provider();
-            if (SailfishAccounts::translatedDisplayName(thisAccountProvider) < SailfishAccounts::translatedDisplayName(listAccountProvider)
-                    || (SailfishAccounts::translatedDisplayName(thisAccountProvider) == SailfishAccounts::translatedDisplayName(listAccountProvider)
-                        && account->displayName() < accountsList->at(j)->account->displayName())) {
+            if (displayDataLessThan(thisDisplayName, thisProviderDisplayName, account, accountsList->at(j))) {
                 accountsList->insert(j, data);
                 filteredAccountsList->insert(j, data);
                 addedAccount = true;
                 break;
             }
         }
-
         if (!addedAccount) {
             accountsList->append(data);
             filteredAccountsList->append(data);
@@ -203,6 +236,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountEnabledRole, "accountEnabled");
     d->headerData.insert(AccountErrorRole, "accountError");
     d->headerData.insert(PerformingInitialSyncRole, "performingInitialSync");
+    d->headerData.insert(AccountUserNameRole, "accountUserName");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),

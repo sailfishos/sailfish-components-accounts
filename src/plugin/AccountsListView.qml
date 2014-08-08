@@ -107,10 +107,10 @@ SilicaListView {
                 right: parent.right
                 rightMargin: Theme.paddingLarge
                 verticalCenter: parent.verticalCenter
-                verticalCenterOffset: model.accountDisplayName === "" ? 0 : -implicitHeight/2
+                verticalCenterOffset: accountUserName.text === "" ? 0 : -implicitHeight/2
             }
             truncationMode: TruncationMode.Fade
-            text: model.providerDisplayName
+            text: model.accountDisplayName
             color: {
                 if (highlighted || model.accountError !== AccountModel.NoAccountError) {
                     return Theme.highlightColor
@@ -121,6 +121,7 @@ SilicaListView {
             }
         }
         Label {
+            id: accountUserName
             anchors {
                 left: icon.right
                 leftMargin: Theme.paddingLarge
@@ -140,7 +141,7 @@ SilicaListView {
                     //% "Setting up account..."
                     return qsTrId("component_accounts-la-setting_up_account")
                 }
-                return model.accountDisplayName
+                return model.accountUserName
             }
             color: {
                 if (highlighted || model.accountError !== AccountModel.NoAccountError) {
