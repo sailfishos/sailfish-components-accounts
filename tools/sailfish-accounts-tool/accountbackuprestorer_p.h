@@ -81,6 +81,7 @@ private:
     void getCalDavMigrationParameters(const QString &providerName,
                                       QSettings *backupIni,
                                       CalDavMigrationData *calDavMigrationData);
+    Accounts::Service findLegacyCalDavService(Accounts::Account *account) const;
 
     AccountSyncManager *m_syncManager;
     Accounts::Manager *m_accountManager;
