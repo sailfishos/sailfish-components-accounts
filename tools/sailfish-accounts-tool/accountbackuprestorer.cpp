@@ -268,13 +268,30 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
             account->selectService(Accounts::Service());
         }
         backupIni.endGroup();
+
+        // backup the sync schedule
+        backupIni.beginGroup(QStringLiteral("syncSchedule"));
+        {
+            Q_FOREACH (const Accounts::Service &srv, accountServices) {
+                account->selectService(srv);
+                Q_FOREACH (const QString &templateProfile, m_syncManager->defaultTemplateProfiles(account, srv)) {
+                    backupIni.beginGroup(templateProfile);
+                    backupIni.setValue(QStringLiteral("xml"), syncScheduleXml(account, srv, templateProfile));
+                    backupIni.endGroup();
+                }
+            }
+            account->selectService(Accounts::Service());
+        }
+        backupIni.endGroup();
     }
     backupIni.endGroup();
 
     return true;
 }
 
-bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings)
+bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
+                                            QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings,
+                                            QMap<int, QMap<QString, QString> > *syncScheduleXml)
 {
     if (!QFile::exists(backupFile)) {
         qWarning() << Q_FUNC_INFO << "backup file does not exist, cannot restore accounts";
@@ -439,6 +456,19 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile, QMap<int,
                 }
                 backupIni.endGroup();
 
+                // now load the sync schedule
+                backupIni.beginGroup(QStringLiteral("syncSchedule"));
+                {
+                    QMap<QString, QString> scheduleXmlMap;
+                    Q_FOREACH (const QString &templateProfileName, backupIni.childGroups()) {
+                        backupIni.beginGroup(templateProfileName);
+                        scheduleXmlMap.insert(templateProfileName, backupIni.value(QStringLiteral("xml")).toString());
+                        backupIni.endGroup();
+                    }
+                    syncScheduleXml->insert(newAccount->id(), scheduleXmlMap);
+                }
+                backupIni.endGroup();
+
                 // finished.
                 m_oldAccountIds.append(oldAccountId.toUInt());
                 m_newAccountIds.append(newAccount->id());
@@ -600,6 +630,19 @@ QMap<QString, QString> AccountBackupRestorer::syncProfileSettings(Accounts::Acco
     return QMap<QString, QString>();
 }
 
+QString AccountBackupRestorer::syncScheduleXml(Accounts::Account *account,
+                                               const Accounts::Service &srv,
+                                               const QString &templateProfileName)
+{
+    Q_FOREACH (const QString &profileId, m_syncManager->profileIds(account->id(), srv.name())) {
+        if (profileId.contains(templateProfileName)) {
+            // found the per-account profile for this template
+            // return the schedule xml
+            return m_syncManager->syncScheduleXml(profileId);
+        }
+    }
+    return QString();
+}
 
 //----- to turn asynchronous credentials info query into synchronous method call:
 CredentialKeysQuery::CredentialKeysQuery(int credentialsId,

@@ -102,6 +102,7 @@ private:
     QList<Mode> m_commands;
     QList<uint> m_accountIdsToDelete;
     QMap<int, QMap<QString, QVariantMap> > m_restoredSyncProfileProperties;
+    QMap<int, QMap<QString, QString> > m_restoredSyncScheduleXml;
     int m_currAccountIdx;
     bool m_migratingCalDav;
     bool m_error;
