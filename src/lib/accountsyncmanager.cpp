@@ -501,7 +501,7 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
     return !savedProfileId.isEmpty();
 }
 
-QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId)
+QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId) const
 {
     if (profileId.isEmpty()) {
         qWarning() << "Invalid profileId";
