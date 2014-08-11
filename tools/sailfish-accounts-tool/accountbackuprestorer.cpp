@@ -36,6 +36,15 @@ namespace {
         }
         return retn;
     }
+
+    QStringList legacyCalDavServices() {
+        QStringList serviceNames;
+        serviceNames << QStringLiteral("onlinesync-caldav_yahoo");
+        serviceNames << QStringLiteral("onlinesync-caldav_memotoo");
+        serviceNames << QStringLiteral("onlinesync-caldav_generic");
+        serviceNames << QStringLiteral("onlinesync-caldav_fruux");
+        return serviceNames;
+    }
 }
 
 AccountBackupRestorer::AccountBackupRestorer(AccountSyncManager *syncManager,
@@ -107,6 +116,27 @@ void AccountBackupRestorer::getCalDavMigrationParameters(const QString &provider
     migrationData->migrationRequired = true;
 }
 
+Accounts::Service AccountBackupRestorer::findLegacyCalDavService(Accounts::Account *account) const
+{
+    Accounts::Service prevService = account->selectedService();
+    Q_FOREACH (const QString &serviceName, legacyCalDavServices()) {
+        Accounts::Service srv = m_accountManager->service(serviceName);
+        if (!srv.isValid()) {
+            continue;
+        }
+        account->selectService(srv);
+        QVariant enabled = account->value(QStringLiteral("enabled"));
+        QVariant templateProfiles = account->value(QStringLiteral("sync_profile_templates"));
+        if (enabled.isValid() && enabled.toBool()
+                && templateProfiles.isValid() && !templateProfiles.toStringList().isEmpty()) {
+            account->selectService(prevService);
+            return srv;
+        }
+    }
+    account->selectService(prevService);
+    return Accounts::Service();
+}
+
 bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QString &backupFile)
 {
     // we write the account data to the backup file in .ini format
@@ -157,6 +187,12 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
             // Backup the real service settings
             Q_FOREACH (const Accounts::Service &srv, accountServices) {
                 backupAccountServiceSettings(backupIni, accountServices, srv, account, requiredCredentials,
+                                             clientId, clientSecret, consumerKey, consumerSecret);
+            }
+
+            Accounts::Service legacyCalDavService = findLegacyCalDavService(account);
+            if (legacyCalDavService.isValid()) {
+                backupAccountServiceSettings(backupIni, accountServices, legacyCalDavService, account, requiredCredentials,
                                              clientId, clientSecret, consumerKey, consumerSecret);
             }
         }
