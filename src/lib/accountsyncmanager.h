@@ -57,7 +57,8 @@ public:
                           bool enableProfile,
                           const QVariantMap &properties = QVariantMap());
     bool updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
-    QMap<QString, QString> profileProperties(const QString &profileId);
+    QMap<QString, QString> profileProperties(const QString &profileId) const;
+    QString syncScheduleXml(const QString &profileId) const;
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const;
@@ -68,6 +69,12 @@ public:
                                                const Accounts::Service &srv,
                                                bool enableProfile,
                                                const QVariantMap &properties = QVariantMap());
+    Buteo::SyncProfile *newProfileFromTemplate(const QString &templateProfileName,
+                                               Accounts::Account *account,
+                                               const Accounts::Service &srv,
+                                               bool enableProfile,
+                                               const QVariantMap &properties,
+                                               const QString &scheduleXml);
 
 signals:
     void profileCreated(const QString &profileId);

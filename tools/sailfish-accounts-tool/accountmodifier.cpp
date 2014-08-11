@@ -433,7 +433,8 @@ bool AccountModifier::applySyncUpdateChanges()
             // only enable the profile if the account service is enabled.
             Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
                     templateProfile, m_currAccount, srv, m_currAccount->enabled(),
-                    m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile]);
+                    m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
+                    m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
             if (!profile) {
                 qWarning() << "Profile could not created for template:" << templateProfile;
                 m_error = true;
@@ -513,7 +514,8 @@ bool AccountModifier::createProfiles(bool triggerSync)
                 // Don't fail if any of the profiles cannot be created.
                 Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
                         templateProfile, m_currAccount, srv, m_currAccount->enabled(),
-                        m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile]);
+                        m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
+                        m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
                 if (!profile) {
                     qWarning() << "Profile could not created for template:" << templateProfile;
                 } else {
@@ -632,7 +634,7 @@ bool AccountModifier::backupAccount(Accounts::Account *account)
 
 bool AccountModifier::restoreAccounts()
 {
-    return m_accountBackupRestorer.restoreAccounts(backupFile, &m_restoredSyncProfileProperties);
+    return m_accountBackupRestorer.restoreAccounts(backupFile, &m_restoredSyncProfileProperties, &m_restoredSyncScheduleXml);
 }
 
 void AccountModifier::triggerProfiles(Accounts::Account *account)

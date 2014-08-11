@@ -393,6 +393,21 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
                                                                bool enableProfile,
                                                                const QVariantMap &properties)
 {
+    return newProfileFromTemplate(templateProfileName,
+                                  account,
+                                  srv,
+                                  enableProfile,
+                                  properties,
+                                  QString());
+}
+
+Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &templateProfileName,
+                                           Accounts::Account *account,
+                                           const Accounts::Service &srv,
+                                           bool enableProfile,
+                                           const QVariantMap &properties,
+                                           const QString &scheduleXml)
+{
     if (!account || !srv.isValid()) {
         qWarning() << "Invalid account or service";
         return 0;
@@ -430,6 +445,20 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
     // set custom properties; note this may override any properties already set
     Q_FOREACH (const QString &key, properties.keys()) {
         profile->setKey(key, properties[key].toString());
+    }
+
+    if (!scheduleXml.isEmpty()) {
+        QDomDocument doc;
+        QString errorMsg;
+        int errLine = -1;
+        int errCol = -1;
+        if (doc.setContent(scheduleXml, &errorMsg, &errLine, &errCol)) {
+            Buteo::SyncSchedule schedule(doc.documentElement());
+            profile->setSyncSchedule(schedule);
+        } else {
+            qWarning() << "Unable to set sync schedule for" << profile->name() << "from" << scheduleXml
+                       << "Error at line" << errLine << "and column" << errCol << ":" << errorMsg;
+        }
     }
 
     account->selectService(prevService);
@@ -472,7 +501,7 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
     return !savedProfileId.isEmpty();
 }
 
-QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId)
+QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId) const
 {
     if (profileId.isEmpty()) {
         qWarning() << "Invalid profileId";
@@ -484,6 +513,20 @@ QMap<QString, QString> AccountSyncManager::profileProperties(const QString &prof
         return QMap<QString, QString>();
     }
     return profile->allKeys();
+}
+
+QString AccountSyncManager::syncScheduleXml(const QString &profileId) const
+{
+    if (profileId.isEmpty()) {
+        qWarning() << "Invalid profileId";
+        return QString();
+    }
+    Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
+    if (!profile) {
+        qWarning() << "Invalid profile id:" << profileId;
+        return QString();
+    }
+    return profile->syncSchedule().toString();
 }
 
 bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv) const

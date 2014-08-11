@@ -37,7 +37,9 @@ public:
     QList<uint> newAccountIds() const;
 
     bool backupAccount(Accounts::Account *account, const QString &backupFile);
-    bool restoreAccounts(const QString &backupFile, QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings);
+    bool restoreAccounts(const QString &backupFile,
+                         QMap<int, QMap<QString, QVariantMap> > *syncProfileSettings,
+                         QMap<int, QMap<QString, QString> > *syncScheduleXml);
 
 private:
     struct SignOnCredentials {
@@ -77,6 +79,9 @@ private:
     QMap<QString, QString> syncProfileSettings(Accounts::Account *account,
                                                const Accounts::Service &srv,
                                                const QString &templateProfileName);
+    QString syncScheduleXml(Accounts::Account *account,
+                            const Accounts::Service &srv,
+                            const QString &templateProfileName);
 
     void getCalDavMigrationParameters(const QString &providerName,
                                       QSettings *backupIni,
