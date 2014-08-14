@@ -59,7 +59,7 @@ SilicaListView {
                     //% "Sync"
                     text: qsTrId("components_accounts-me-sync")
                     visible: model.accountEnabled
-                            && (menu.providerName === "activesync" || accountSyncManager.profileIds(model.accountId).length > 0)
+                            && (model.providerName === "activesync" || accountSyncManager.profileIds(model.accountId).length > 0)
 
                     onClicked: {
                         root.accountSyncRequested(model.accountId)
