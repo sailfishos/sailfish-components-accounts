@@ -164,6 +164,13 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
     QString consumerSecret = skp_storedKey(providerName, skpSrvName, QStringLiteral("consumer_secret"));
     QList<SignOnCredentials> requiredCredentials;
 
+    // If the account has a legacy CalDAV service, back it up also, so that it can be created with
+    // the new CalDAV service type when the account is restored.
+    Accounts::Service legacyCalDavService = findLegacyCalDavService(account);
+    if (legacyCalDavService.isValid()) {
+        accountServices.append(legacyCalDavService);
+    }
+
     // New group for this account.
     backupIni.beginGroup(QString::number(account->id()));
     {
@@ -187,12 +194,6 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
             // Backup the real service settings
             Q_FOREACH (const Accounts::Service &srv, accountServices) {
                 backupAccountServiceSettings(backupIni, accountServices, srv, account, requiredCredentials,
-                                             clientId, clientSecret, consumerKey, consumerSecret);
-            }
-
-            Accounts::Service legacyCalDavService = findLegacyCalDavService(account);
-            if (legacyCalDavService.isValid()) {
-                backupAccountServiceSettings(backupIni, accountServices, legacyCalDavService, account, requiredCredentials,
                                              clientId, clientSecret, consumerKey, consumerSecret);
             }
         }
