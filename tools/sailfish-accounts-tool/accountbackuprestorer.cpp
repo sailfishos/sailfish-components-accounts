@@ -72,7 +72,7 @@ inline bool hasType(QVariant const &v, QMetaType::Type t)
 
 QRegExp re(QString const &cs)
 {
-	return QRegExp(cs, Qt::CaseSensitive, QRegExp::RegExp2);
+    return QRegExp(cs, Qt::CaseSensitive, QRegExp::RegExp2);
 };
 
 const std::vector<std::pair<QRegExp, QVariant::Type> > re_types
@@ -88,15 +88,15 @@ QVariant deduce(QVariant const& v)
     if (!hasType(v, QMetaType::QString))
         return v;
 
-	QVariant res = v;
+    QVariant res = v;
     QString s = v.toString();
-	for (auto const& re_type : re_types) {
-		if (re_type.first.exactMatch(s)) {
-			res.convert(re_type.second);
-			break;
-		}
-	}
-	return res;
+    for (auto const& re_type : re_types) {
+        if (re_type.first.exactMatch(s)) {
+            res.convert(re_type.second);
+            break;
+        }
+    }
+    return res;
 }
 
 QVariant deduce(QSettings const &v, QString const &key)
