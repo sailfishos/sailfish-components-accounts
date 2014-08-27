@@ -70,17 +70,22 @@ inline bool hasType(QVariant const &v, QMetaType::Type t)
     return static_cast<QMetaType::Type>(v.type()) == t;
 }
 
-QRegExp re(QString const &cs)
+QRegExp regexp(QString const &cs)
 {
     return QRegExp(cs, Qt::CaseSensitive, QRegExp::RegExp2);
 };
 
 const std::vector<std::pair<QRegExp, QVariant::Type> > re_types
-= {{re("[+-][0-9]+"), QVariant::Int}
-   , {re("[0-9]{11,}"), QVariant::String}
-   , {re("[0-9]+"), QVariant::UInt}
-   // , {re("[+-]?([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+)"), QVariant::Double}
-   , {re("true|false"), QVariant::Bool}
+= {{regexp("[+-][0-9]+"), QVariant::Int}
+   , {regexp("[0-9]{11,}"), QVariant::String}
+   , {regexp("[0-9]+"), QVariant::UInt}
+
+   // uncomment the following line if there will be any props with
+   // floating point. Do not forget to check conversion when different
+   // locales are active
+   // , {regexp("[+-]?([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+)"), QVariant::Double}
+
+   , {regexp("true|false"), QVariant::Bool}
 };
 
 QVariant deduce(QVariant const& v)
