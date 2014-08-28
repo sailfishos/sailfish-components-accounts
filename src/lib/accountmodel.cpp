@@ -456,17 +456,14 @@ void AccountModel::profileSyncStatusChanged(const QString &profileId, int status
                 || displayData->account->providerName() == QStringLiteral("activesync")) {
             continue;
         }
-        if (displayData->profilesSyncStatus.isEmpty()) {
-            Q_FOREACH(const QString &profileId, d->accountSyncManager->profileIds(displayData->account->id())) {
+
+        QStringList profileIds = d->accountSyncManager->profileIds(displayData->account->id());
+        if (profileIds.contains(profileId)) {
+            if (!displayData->profilesSyncStatus.contains(profileId)) {
+                // add to the list of monitored profiles and initialize
                 displayData->profilesSyncStatus[profileId] = AccountSyncManager::UnknownSyncStatus;
             }
-            if (displayData->profilesSyncStatus.isEmpty()) {
-                // no profiles to be monitored for this account
-                displayData->monitorInitialSync = false;
-                continue;
-            }
-        }
-        if (displayData->profilesSyncStatus.contains(profileId)) {
+
             bool wasSyncing = (displayData->profilesSyncStatus[profileId] == AccountSyncManager::SyncStarted);
             bool emitDataChanged = false;
             if (wasSyncing && !profileIsSyncing) {
