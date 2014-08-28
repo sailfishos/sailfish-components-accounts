@@ -1,7 +1,7 @@
 VERSION = 0.0.1
 PROJECT_NAME = sailfish-accounts-tool
 TEMPLATE = app
-CONFIG += hide_symbols
+CONFIG += hide_symbols c++11
 
 CONFIG += link_pkgconfig
 PKGCONFIG += accounts-qt5 libsignon-qt5 buteosyncfw5 libsailfishkeyprovider

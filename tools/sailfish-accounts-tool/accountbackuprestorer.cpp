@@ -19,6 +19,7 @@
 #include <QMutexLocker>
 #include <QCoreApplication>
 #include <QtDebug>
+#include <QRegExp>
 
 #define BACKUP_RESTORER_VERSION 1
 
@@ -45,6 +46,70 @@ namespace {
         serviceNames << QStringLiteral("onlinesync-caldav_fruux");
         return serviceNames;
     }
+
+template <typename To, typename From>
+QVariant convert(From const &src)
+{
+    return QVariant::fromValue<To>(src);
+}
+
+template <typename T>
+T value(QSettings const &settings, QString const &name, T const &defVal)
+{
+    return settings.value(name, convert<T>(defVal)).value<T>();
+}
+
+template <typename T>
+T value(QSettings const &settings, QString const &name)
+{
+    return settings.value(name).value<T>();
+}
+
+inline bool hasType(QVariant const &v, QMetaType::Type t)
+{
+    return static_cast<QMetaType::Type>(v.type()) == t;
+}
+
+QRegExp regexp(QString const &cs)
+{
+    return QRegExp(cs, Qt::CaseSensitive, QRegExp::RegExp2);
+};
+
+const std::vector<std::pair<QRegExp, QVariant::Type> > re_types
+= {{regexp("[+-][0-9]+"), QVariant::Int}
+   , {regexp("[0-9]{11,}"), QVariant::String}
+   , {regexp("[0-9]+"), QVariant::UInt}
+
+   // uncomment the following line if there will be any props with
+   // floating point. Do not forget to check conversion when different
+   // locales are active
+   // , {regexp("[+-]?([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+)"), QVariant::Double}
+
+   , {regexp("true|false"), QVariant::Bool}
+};
+
+QVariant deduce(QVariant const& v)
+{
+    if (!hasType(v, QMetaType::QString))
+        return v;
+
+    QVariant res = v;
+    QString s = v.toString();
+    for (auto const& re_type : re_types) {
+        if (re_type.first.exactMatch(s)) {
+            res.convert(re_type.second);
+            break;
+        }
+    }
+    return res;
+}
+
+QVariant deduce(QSettings const &v, QString const &key)
+{
+    auto res = deduce(v.value(key));
+    return res;
+}
+
 }
 
 AccountBackupRestorer::AccountBackupRestorer(AccountSyncManager *syncManager,
@@ -90,11 +155,10 @@ void AccountBackupRestorer::getCalDavMigrationParameters(const QString &provider
     Q_FOREACH (const QString &serviceName, backupIni->childGroups()) {
         if (serviceName.startsWith(QStringLiteral("onlinesync-caldav_"))) {
             backupIni->beginGroup(serviceName);
-            QVariant enabled = backupIni->value(QStringLiteral("enabled"));
             QVariant templateProfiles = backupIni->value(QStringLiteral("sync_profile_templates"));
+            bool enabled = value(*backupIni, QStringLiteral("enabled"), false);
             backupIni->endGroup();
-            if (enabled.isValid() && enabled.toBool()
-                    && templateProfiles.isValid() && !templateProfiles.toStringList().isEmpty()) {
+            if (enabled && templateProfiles.isValid() && !templateProfiles.toStringList().isEmpty()) {
                 migrationData->oldCalDavServiceName = serviceName;
                 newServiceNameStartIndex = serviceName.indexOf('_') + 1;
                 break;
@@ -356,7 +420,7 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
                         QVariantMap infoValues;
                         backupIni.beginGroup(QStringLiteral("infoValues"));
                         Q_FOREACH (const QString &key, backupIni.allKeys()) {
-                            infoValues.insert(key, backupIni.value(key));
+                            infoValues.insert(key, deduce(backupIni, key));
                         }
                         backupIni.endGroup();
 
@@ -370,7 +434,7 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
                                 backupIni.beginGroup(mechanism);
                                 QVariantMap secrets;
                                 Q_FOREACH (const QString &key, backupIni.allKeys()) {
-                                    secrets.insert(key, backupIni.value(key));
+                                    secrets.insert(key, deduce(backupIni, key));
                                 }
                                 mechanismSecrets.insert(mechanism, secrets);
                                 backupIni.endGroup();
@@ -447,7 +511,7 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
                             if (key == Buteo::KEY_ACCOUNT_ID) {
                                 profileSettings.insert(key, QString::number(newAccount->id()));
                             } else {
-                                profileSettings.insert(key, backupIni.value(key).toString());
+                                profileSettings.insert(key, deduce(backupIni, key));
                             }
                         }
                         settingsMap.insert(templateProfileName, profileSettings);
@@ -579,7 +643,7 @@ void AccountBackupRestorer::restoreAccountServiceSettings(QSettings &backupIni,
         } else if (key == QLatin1String("enabled") && srv.isValid()) {
             servicesEnabled->insert(srv.name(), backupIni.value(key).toBool());
         } else {
-            account->setValue(key, backupIni.value(key));
+            account->setValue(key, deduce(backupIni, key));
         }
     }
     backupIni.endGroup();
