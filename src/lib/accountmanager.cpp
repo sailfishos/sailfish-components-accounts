@@ -20,6 +20,8 @@
 //libaccounts-qt
 #include <Accounts/Manager>
 
+static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
+
 AccountManagerPrivate::AccountManagerPrivate(AccountManager *parent)
     : QObject(parent), q(parent), manager(globalAccountManager()), componentComplete(false), busy(false)
 {
@@ -322,3 +324,22 @@ Account *AccountManager::account(int accountIdentifier) const
     return newAcc;
 }
 
+/*!
+    \qmlmethod Account* AccountManager::credentialsNeedUpdate(int accountId)
+
+    Returns true if account's global service has CredentialsNeedUpadate flag and it is set.
+*/
+bool AccountManager::credentialsNeedUpdate(int accountId)
+{
+    Accounts::Account *account = d->manager->account(accountId);
+    if (!account) {
+        return false;
+    }
+
+    account->selectService(Accounts::Service());
+    if (account->contains(AccountCredentialsNeedUpdateKey)) {
+        return account->valueAsBool(AccountCredentialsNeedUpdateKey);
+    }
+
+    return false;
+}

@@ -45,6 +45,7 @@ public:
     Q_INVOKABLE Service *service(const QString &serviceName) const;
     Q_INVOKABLE Provider *provider(const QString &providerName) const;
     Q_INVOKABLE Account *account(int accountId) const;
+    Q_INVOKABLE bool credentialsNeedUpdate(int accountId);
 
     // property accessors and mutators.
     QStringList serviceTypeNames() const;
