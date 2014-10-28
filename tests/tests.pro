@@ -10,8 +10,7 @@ SUBDIRS = \
 
 tests_xml.target = tests.xml
 tests_xml.files = tests.xml
-equals(QT_MAJOR_VERSION, 4): tests_xml.path = /opt/tests/Sailfish/Accounts
-equals(QT_MAJOR_VERSION, 5): tests_xml.path = /opt/tests/Sailfish/Accounts/qt5
+tests_xml.path = /opt/tests/Sailfish/Accounts/qt5
 INSTALLS += tests_xml
 
 tests_provider.target = test-provider.provider

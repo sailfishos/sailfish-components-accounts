@@ -82,10 +82,8 @@ signals:
     void filterTypeChanged();
     void filterChanged();
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 protected:
     QHash<int, QByteArray> roleNames() const;
-#endif
 
 private slots:
     void accountCreated(Accounts::AccountId id);
@@ -109,7 +107,7 @@ private:
 private:
     AccountModelPrivate* d_ptr;
     Q_DISABLE_COPY(AccountModel)
-    Q_DECLARE_PRIVATE(AccountModel);
+    Q_DECLARE_PRIVATE(AccountModel)
 };
 Q_DECLARE_METATYPE(Accounts::Account *)
 
