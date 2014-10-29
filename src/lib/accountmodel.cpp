@@ -76,7 +76,7 @@ struct DisplayData {
     QStringList serviceTypes;
     bool performingInitialSync;
     bool monitorInitialSync;
-    Q_DISABLE_COPY(DisplayData);
+    Q_DISABLE_COPY(DisplayData)
 };
 
 class AccountModel::AccountModelPrivate
@@ -245,9 +245,6 @@ AccountModel::AccountModel(QObject* parent)
                      this, SLOT(accountUpdated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(enabledEvent(Accounts::AccountId)),
                      this, SLOT(accountUpdated(Accounts::AccountId)));
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    setRoleNames(d->headerData);
-#endif
     Accounts::AccountIdList idList = d->manager->accountList();
     foreach (Accounts::AccountId id, idList) {
         Accounts::Account *account = d->manager->account(id);
@@ -339,13 +336,11 @@ void AccountModel::reload()
     endResetModel();
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 QHash<int, QByteArray> AccountModel::roleNames() const
 {
     Q_D(const AccountModel);
     return d->headerData;
 }
-#endif
 
 int AccountModel::rowCount(const QModelIndex &) const
 {

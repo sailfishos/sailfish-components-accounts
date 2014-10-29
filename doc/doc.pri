@@ -1,5 +1,4 @@
-equals(QT_MAJOR_VERSION, 4): QDOC = qdoc3
-equals(QT_MAJOR_VERSION, 5): QDOC = qdoc
+QDOC = qdoc
 QHELPGENERATOR = qhelpgenerator
 QDOCCONF = config/sailfishaccounts.qdocconf
 QHELPFILE = html/sailfishaccounts.qhp
