@@ -22,6 +22,7 @@ class Q_DECL_EXPORT AccountSyncSchedule : public QObject
     Q_PROPERTY(QTime dailySyncTime READ dailySyncTime NOTIFY dailySyncTimeChanged)
     Q_PROPERTY(Interval interval READ interval NOTIFY intervalChanged)
     Q_PROPERTY(bool peakScheduleEnabled READ peakScheduleEnabled WRITE setPeakScheduleEnabled NOTIFY peakScheduleEnabledChanged)
+    Q_PROPERTY(bool syncExternallyDuringPeak READ syncExternallyDuringPeak WRITE setSyncExternallyDuringPeak NOTIFY syncExternallyDuringPeakChanged)
     Q_PROPERTY(QTime peakStartTime READ peakStartTime NOTIFY peakStartTimeChanged)
     Q_PROPERTY(QTime peakEndTime READ peakEndTime NOTIFY peakEndTimeChanged)
     Q_PROPERTY(Interval peakInterval READ peakInterval NOTIFY peakIntervalChanged)
@@ -62,6 +63,9 @@ public:
 
     void setPeakScheduleEnabled(bool enable);
     bool peakScheduleEnabled() const;
+    void setSyncExternallyDuringPeak(bool enable);
+    bool syncExternallyDuringPeak() const;
+
     Q_INVOKABLE void setPeakSchedule(const QTime &peakStart,
                                      const QTime &peakEnd,
                                      Interval peakInterval,
@@ -90,6 +94,7 @@ Q_SIGNALS:
     void peakIntervalChanged();
     void dailySyncTimeChanged();
     void peakScheduleEnabledChanged();
+    void syncExternallyDuringPeakChanged();
     void peakStartTimeChanged();
     void peakEndTimeChanged();
     void peakDaysChanged();
@@ -106,6 +111,7 @@ class Q_DECL_EXPORT AccountSyncOptions : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool automaticSyncEnabled READ automaticSyncEnabled WRITE setAutomaticSyncEnabled NOTIFY automaticSyncEnabledChanged)
+    Q_PROPERTY(bool syncExternallyEnabled READ syncExternallyEnabled WRITE setSyncExternallyEnabled NOTIFY syncExternallyEnabledChanged)
     Q_PROPERTY(PastSyncPeriod pastSyncPeriod READ pastSyncPeriod WRITE setPastSyncPeriod NOTIFY pastSyncPeriodChanged)
     Q_PROPERTY(Direction direction READ direction WRITE setDirection NOTIFY directionChanged)
     Q_PROPERTY(AccountSyncSchedule *schedule READ schedule WRITE setSchedule NOTIFY scheduleChanged)
@@ -135,6 +141,9 @@ public:
     void setAutomaticSyncEnabled(bool enabled);
     bool automaticSyncEnabled() const;
 
+    void setSyncExternallyEnabled(bool enabled);
+    bool syncExternallyEnabled() const;
+
     PastSyncPeriod pastSyncPeriod() const;
     void setPastSyncPeriod(PastSyncPeriod period);
 
@@ -146,6 +155,7 @@ public:
 
 Q_SIGNALS:
     void automaticSyncEnabledChanged();
+    void syncExternallyEnabledChanged();
     void pastSyncPeriodChanged();
     void directionChanged();
     void scheduleChanged();

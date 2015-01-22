@@ -40,6 +40,7 @@ AccountSyncSchedulePrivate::AccountSyncSchedulePrivate(AccountSyncSchedule *sche
     , m_modified(false)
     , m_peakEnabled(false)
     , m_enabled(false)
+    , m_externalPeakEnabled(false)
 {
 }
 
@@ -154,6 +155,7 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
         d->m_peakEnabled = false;
     }
     d->m_enabled = source.scheduleEnabled();
+    d->m_externalPeakEnabled = source.syncExternallyDuringRush();
     d->m_modified = false;
     return result;
 }
@@ -179,6 +181,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
     }
 
     result.setRushEnabled(d->m_peakEnabled);
+    result.setSyncExternallyDuringRush(d->m_externalPeakEnabled);
     result.setRushDays(daysToQtDaySet(d->m_peakDays));
     result.setRushTime(d->m_peakStartTime, d->m_peakEndTime);
     result.setRushInterval(intervalToMinutes(d->m_peakInterval));
@@ -273,12 +276,27 @@ void AccountSyncSchedule::setPeakScheduleEnabled(bool enable)
     if (d->m_peakEnabled != enable) {
         d->m_peakEnabled = enable;
         emit peakScheduleEnabledChanged();
+        d->setModified(true);
     }
 }
 
 bool AccountSyncSchedule::peakScheduleEnabled() const
 {
     return d->m_peakEnabled;
+}
+
+void AccountSyncSchedule::setSyncExternallyDuringPeak(bool enable)
+{
+    if (d->m_externalPeakEnabled != enable) {
+        d->m_externalPeakEnabled = enable;
+        emit syncExternallyDuringPeakChanged();
+        d->setModified(true);
+    }
+}
+
+bool AccountSyncSchedule::syncExternallyDuringPeak() const
+{
+    return d->m_externalPeakEnabled;
 }
 
 bool AccountSyncSchedule::modified() const
@@ -345,6 +363,8 @@ AccountSyncOptionsPrivate::AccountSyncOptionsPrivate(AccountSyncOptions *parent)
     , m_direction(DefaultDirection)
     , m_modified(false)
     , m_autoSync(DefaultAutomaticSync)
+    , m_syncExternallyEnabled(false)
+
 {
 }
 
@@ -375,6 +395,7 @@ AccountSyncOptions *AccountSyncOptionsPrivate::fromButeoProfile(const Buteo::Syn
         break;
     }
     d->m_autoSync = source.boolKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE, DefaultAutomaticSync);
+    d->m_syncExternallyEnabled = source.boolKey(Buteo::KEY_SYNC_EXTERNALLY, false);
     d->m_schedule = AccountSyncSchedulePrivate::fromButeoSchedule(source.syncSchedule(), options);
     QObject::connect(d->m_schedule, SIGNAL(modifiedChanged()), options, SIGNAL(modifiedChanged()));
     d->m_modified = false;
@@ -401,6 +422,7 @@ void AccountSyncOptionsPrivate::writeToButeoProfile(AccountSyncOptions *options,
     }
     profile->setSyncDirection(buteoDirection);
     profile->setKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE, (d->m_autoSync ? "true" : "false"));
+    profile->setKey(Buteo::KEY_SYNC_EXTERNALLY, (d->m_syncExternallyEnabled ? "true" : "false"));
     if (options->schedule()) {
         profile->setSyncSchedule(AccountSyncSchedulePrivate::toButeoSchedule(options->schedule()));
     }
@@ -476,6 +498,20 @@ void AccountSyncOptions::setAutomaticSyncEnabled(bool enabled)
 bool AccountSyncOptions::automaticSyncEnabled() const
 {
     return d->m_autoSync;
+}
+
+void AccountSyncOptions::setSyncExternallyEnabled(bool enabled)
+{
+    if (d->m_syncExternallyEnabled != enabled) {
+        d->m_syncExternallyEnabled = enabled;
+        emit syncExternallyEnabledChanged();
+        d->setModified(true);
+    }
+}
+
+bool AccountSyncOptions::syncExternallyEnabled() const
+{
+    return d->m_syncExternallyEnabled;
 }
 
 AccountSyncOptions::PastSyncPeriod AccountSyncOptions::pastSyncPeriod() const
