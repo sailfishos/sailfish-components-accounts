@@ -215,12 +215,11 @@ QList<int> AccountManager::providerAccountIdentifiers(const QString &providerNam
     QList<int> returnList;
     QList<quint32> accountIdList = d->manager->accountList();
     foreach (quint32 id, accountIdList) {
-        Accounts::Account *acc = d->manager->account(id);
+        Accounts::Account *acc = Accounts::Account::fromId(d->manager, id, this);
         if (acc != NULL) {
             if (providerName.isEmpty() || acc->providerName() == providerName) {
                 returnList.append(static_cast<int>(id));
             }
-            acc->deleteLater();
         }
     }
 
@@ -311,12 +310,12 @@ Provider *AccountManager::provider(const QString &providerName) const
 */    
 Account *AccountManager::account(int accountIdentifier) const
 {
-    Accounts::Account *existingAccount = d->manager->account(accountIdentifier);
+    AccountManager *parentPtr = const_cast<AccountManager*>(this);
+    Accounts::Account *existingAccount = Accounts::Account::fromId(d->manager, accountIdentifier, parentPtr);
     if (!existingAccount) {
         return NULL;
     }
 
-    AccountManager *parentPtr = const_cast<AccountManager*>(this);
     Account *newAcc = new Account(true, existingAccount, parentPtr);
     newAcc->classBegin();
     newAcc->setIdentifier(accountIdentifier);
@@ -331,7 +330,7 @@ Account *AccountManager::account(int accountIdentifier) const
 */
 bool AccountManager::credentialsNeedUpdate(int accountId)
 {
-    Accounts::Account *account = d->manager->account(accountId);
+    Accounts::Account *account = Accounts::Account::fromId(d->manager, accountId, this);
     if (!account) {
         return false;
     }

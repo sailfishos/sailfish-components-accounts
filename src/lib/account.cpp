@@ -1181,7 +1181,7 @@ void Account::componentComplete()
             d->setStatus(Account::Invalid); // Set to invalid even though already set to error!  Since no account.
         } else {
             // loading an existing account
-            Accounts::Account *existingAccount = d->manager->account(d->identifier);
+            Accounts::Account *existingAccount = Accounts::Account::fromId(d->manager, d->identifier, this);
             d->setAccount(existingAccount, true);
         }
     } else {
@@ -1313,7 +1313,6 @@ void Account::remove()
         d->account->remove();
         d->account->sync();
     } else {
-        d->account->deleteLater();
         d->invalidate();
     }
 }

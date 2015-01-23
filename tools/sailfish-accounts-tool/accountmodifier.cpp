@@ -254,7 +254,7 @@ void AccountModifier::next()
     }
 
     Accounts::AccountId currAccountId = m_allAccountIds.at(m_currAccountIdx);
-    m_currAccount = currAccountId > 0 ? m_accountManager->account(currAccountId) : 0;
+    m_currAccount = currAccountId > 0 ? Accounts::Account::fromId(m_accountManager, currAccountId, this) : 0;
     if (!m_currAccount) {
         qWarning() << Q_FUNC_INFO << "Unknown error: account could not be retrieved:" << currAccountId;
         next();
