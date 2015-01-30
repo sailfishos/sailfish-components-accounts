@@ -106,19 +106,19 @@ Account::ErrorType signOnErrorToErrorType(int signOnError)
 {
     Account::ErrorType errType = Account::SignInUnknownError;
     switch (signOnError) {
-        case SignOn::AuthSession::UserInteractionError:
+        case SignOn::Error::UserInteraction:
             // Credentials have expired / need updating, and the UiPolicy was NoUserInteractionPolicy
             errType = Account::SignInCredentialsExpiredError;
             break;
-        case SignOn::AuthSession::PermissionDeniedError:
+        case SignOn::Error::PermissionDenied:
             errType = Account::SignInPermissionDeniedError;
             break;
-        case SignOn::AuthSession::MissingDataError:
+        case SignOn::Error::MissingData:
             errType = Account::SignInMissingDataError;
             break;
-        case SignOn::AuthSession::NoConnectionError:
-        case SignOn::AuthSession::NetworkError:
-        case SignOn::AuthSession::SslError:
+        case SignOn::Error::NoConnection:
+        case SignOn::Error::Network:
+        case SignOn::Error::Ssl:
             errType = Account::SignInNetworkError;
             break;
         default:
