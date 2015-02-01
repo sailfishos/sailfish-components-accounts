@@ -42,6 +42,7 @@ public:
     bool m_modified;
     bool m_peakEnabled;
     bool m_enabled;
+    bool m_externalPeakEnabled;
 };
 
 class AccountSyncOptionsPrivate
@@ -64,6 +65,7 @@ public:
     AccountSyncOptions::Direction m_direction;
     bool m_modified;
     bool m_autoSync;
+    bool m_syncExternallyEnabled;
 };
 
 #endif
