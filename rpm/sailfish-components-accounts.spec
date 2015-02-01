@@ -1,6 +1,6 @@
 Name:       sailfish-components-accounts-qt5
 Summary:    Sailfish Accounts Components
-Version:    0.1.2
+Version:    0.1.3
 Release:    1
 Group:      System/Libraries
 License:    TBD
@@ -15,7 +15,7 @@ BuildRequires:  pkgconfig(Qt5DBus)
 BuildRequires:  pkgconfig(libsignon-qt5)
 BuildRequires:  pkgconfig(accounts-qt5)
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
-BuildRequires:  pkgconfig(buteosyncfw5) >= 0.6.33
+BuildRequires:  pkgconfig(buteosyncfw5) >= 0.7.14
 BuildRequires:  pkgconfig(qt5-boostable)
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools
