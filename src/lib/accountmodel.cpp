@@ -39,7 +39,7 @@ struct DisplayData {
             serviceTypes.append(service.serviceType());
         }
     }
-    ~DisplayData() { delete account; }
+    ~DisplayData() { } // note: pre-libaccounts-qt version 1.7, would need to delete account; here.
 
     bool matchesFilter(AccountModel::FilterType filterType, const QString &filter) const {
         switch (filterType) {
@@ -247,7 +247,7 @@ AccountModel::AccountModel(QObject* parent)
                      this, SLOT(accountUpdated(Accounts::AccountId)));
     Accounts::AccountIdList idList = d->manager->accountList();
     foreach (Accounts::AccountId id, idList) {
-        Accounts::Account *account = d->manager->account(id);
+        Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
         if (!account->provider().isValid()) {
             continue;
         }
@@ -376,7 +376,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
 {
     if (id) {
         Q_D(AccountModel);
-        Accounts::Account *account = d->manager->account(id);
+        Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
 
         if (account != 0) {
             addedAccount(account);

@@ -241,7 +241,7 @@ AccountSyncManager::~AccountSyncManager()
 
 void AccountSyncManager::createProfile(const QString &templateProfileName, int accountId, const QString &serviceName)
 {
-    Accounts::Account *account = d->m_accountManager->account(accountId);
+    Accounts::Account *account = Accounts::Account::fromId(d->m_accountManager, accountId, this);
     if (!account) {
         emit profileCreationError(accountId, serviceName, QString("Cannot find account with id: %1").arg(accountId));
         return;
@@ -287,7 +287,7 @@ int AccountSyncManager::createAllProfiles(int accountId)
 {
     int createdCount = 0;
     QHash<QString, QStringList> createdProfiles;
-    Accounts::Account *account = d->m_accountManager->account(accountId);
+    Accounts::Account *account = Accounts::Account::fromId(d->m_accountManager, accountId, this);
     if (account) {
         Q_FOREACH (const Accounts::Service &srv, account->services()) {
             account->selectService(srv);
@@ -309,7 +309,8 @@ int AccountSyncManager::createAllProfiles(int accountId)
 
 QStringList AccountSyncManager::profileIds(int accountId, const QString &serviceName) const
 {
-    Accounts::Account *account = d->m_accountManager->account(accountId);
+    AccountSyncManager *parentPtr = const_cast<AccountSyncManager*>(this);
+    Accounts::Account *account = Accounts::Account::fromId(d->m_accountManager, accountId, parentPtr);
     if (account) {
         if (serviceName.isEmpty()) {
             QStringList ret;
@@ -358,7 +359,8 @@ QStringList AccountSyncManager::defaultTemplateProfiles(int accountId, const QSt
         qWarning() << "Cannot find service with name:" << serviceName;
         return QStringList();
     }
-    return defaultTemplateProfiles(d->m_accountManager->account(accountId), srv);
+    AccountSyncManager *parentPtr = const_cast<AccountSyncManager*>(this);
+    return defaultTemplateProfiles(Accounts::Account::fromId(d->m_accountManager, accountId, parentPtr), srv);
 }
 
 QString AccountSyncManager::createProfile(const QString &templateProfileName,
