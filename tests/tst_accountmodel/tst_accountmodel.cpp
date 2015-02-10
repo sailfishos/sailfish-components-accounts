@@ -69,6 +69,7 @@ void tst_AccountModel::addAccount()
 {
     AccountModel model;
     int prevCount = model.rowCount();
+    int matchedIndex;
 
     Accounts::Manager manager;
     QScopedPointer<Accounts::Account> newA(manager.createAccount("test-provider"));
@@ -91,12 +92,16 @@ void tst_AccountModel::addAccount()
     Accounts::Manager m;
     Accounts::Provider provider = m.provider(account->providerName());
 
-    QCOMPARE(model.data(model.index(0), AccountModel::AccountIdRole).toInt(), account->identifier());
-    QCOMPARE(model.data(model.index(0), AccountModel::AccountDisplayNameRole).toString(), account->displayName());
-    QCOMPARE(model.data(model.index(0), AccountModel::AccountIconRole).toString(), provider.iconName());
-    QCOMPARE(model.data(model.index(0), AccountModel::ProviderNameRole).toString(), account->providerName());
-    QCOMPARE(model.data(model.index(0), AccountModel::ProviderDisplayNameRole).toString(), provider.displayName());
-
+    for (matchedIndex = 0; matchedIndex < model.rowCount(); matchedIndex++) {
+        if (model.data(model.index(matchedIndex), AccountModel::AccountIdRole).toInt() == account->identifier()) {
+            break;
+        }
+    }
+    QCOMPARE(model.data(model.index(matchedIndex), AccountModel::AccountIdRole).toInt(), account->identifier());
+    QCOMPARE(model.data(model.index(matchedIndex), AccountModel::AccountDisplayNameRole).toString(), account->displayName());
+    QCOMPARE(model.data(model.index(matchedIndex), AccountModel::AccountIconRole).toString(), provider.iconName());
+    QCOMPARE(model.data(model.index(matchedIndex), AccountModel::ProviderNameRole).toString(), account->providerName());
+    QCOMPARE(model.data(model.index(matchedIndex), AccountModel::ProviderDisplayNameRole).toString(), provider.displayName());
     account->remove();
 }
 
@@ -154,14 +159,17 @@ void tst_AccountModel::updateAccount()
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
     QTRY_COMPARE(spyDataChanged.count(), 1);
-    QCOMPARE(model.data(model.index(0), AccountModel::AccountDisplayNameRole).toString(), account->displayName());
+
+    QList<QVariant> arguments = spyDataChanged.takeFirst(); // take the signal
+
+    QCOMPARE(model.data(model.index(arguments.at(0).value<QModelIndex>().row()), AccountModel::AccountDisplayNameRole).toString(), account->displayName());
 
     QVERIFY(!account->enabled());
     account->setEnabled(true);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
-    QTRY_COMPARE(spyDataChanged.count(), 2);
-    QVERIFY(model.data(model.index(0), AccountModel::AccountEnabledRole).toBool());
+    QTRY_COMPARE(spyDataChanged.count(), 1);
+    QVERIFY(model.data(model.index(arguments.at(0).value<QModelIndex>().row()), AccountModel::AccountEnabledRole).toBool());
 
     account->remove();
 }

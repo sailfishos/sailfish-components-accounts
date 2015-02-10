@@ -525,6 +525,7 @@ void AccountModel::delayedIndexUpdate()
     Q_D(AccountModel);
     if (d->rowToUpdate >= 0) {
         emit dataChanged(index(d->rowToUpdate, 0), index(d->rowToUpdate, 0));
+        d->rowToUpdate = -1; // already emitted for this change
     }
 }
 
