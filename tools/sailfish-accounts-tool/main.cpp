@@ -33,7 +33,7 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
     QString serviceSwitch = args.value(3);
 
     QStringList validSettingTypes;
-    validSettingTypes << "bool" << "string" << "int" << "uint" << "longlong" << "ulonglong";
+    validSettingTypes << "bool" << "string" << "int" << "uint" << "longlong" << "ulonglong" << "stringlist";
 
     QString usageString = QString::fromLatin1(
             "Usage:\n"

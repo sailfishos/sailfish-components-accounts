@@ -74,6 +74,9 @@ QVariant convertSettingValue(const QString &settingName, const QString &settingT
     } else if (settingType == QString::fromLatin1("ulonglong")) {
         qulonglong ulonglongSettingValue = settingValue.toULongLong();
         variantSettingValue = QVariant::fromValue<qulonglong>(ulonglongSettingValue);
+    } else if (settingType == QString::fromLatin1("stringlist")) {
+        QStringList stringlistSettingValue = settingValue.split(QStringLiteral(","));
+        variantSettingValue = QVariant::fromValue<QStringList>(stringlistSettingValue);
     } else {
         // not a valid setting type, return invalid variant.
         qWarning() << Q_FUNC_INFO << "invalid setting type specified for" << settingName;
