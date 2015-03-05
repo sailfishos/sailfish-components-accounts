@@ -43,7 +43,8 @@ public:
         DeleteAccounts,
         MigrateCalDavPerProvider,
         MigrateCalDavPerProviderBackup,
-        MigrateCalDavPerProviderRestore
+        MigrateCalDavPerProviderRestore,
+        RemoveProfile
     };
 
     QString providerName;
@@ -54,6 +55,7 @@ public:
     QString settingValue;
     QString serviceType;
     QString backupFile;
+    QString profileName;
     bool providerAvailable;
     bool scheduleCommandForNextBoot;
     bool runScheduledCommands;
@@ -89,6 +91,7 @@ private:
     bool restoreAccounts();
     void triggerProfiles(Accounts::Account *account);
     bool profileDirReadable() const;
+    void removeProfile();
 
     static QString markerFilePath();
 
