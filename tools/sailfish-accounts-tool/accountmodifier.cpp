@@ -304,6 +304,9 @@ void AccountModifier::next()
             qWarning() << "\tBacked up onlinesync account for migration:" << m_currAccount->id();
         }
         break;
+    case RemoveProfile:
+        removeProfile();
+        break;
     default:
         qWarning() << Q_FUNC_INFO << "Unhandled AccountModifier mode!";
         emit done();
@@ -557,6 +560,27 @@ bool AccountModifier::profileDirReadable() const
         return false;
     }
     return true;
+}
+
+void AccountModifier::removeProfile()
+{
+    if (m_currAccount->providerName() != providerName) {
+        return;
+    }
+
+    if (!m_buteoClient) {
+        m_buteoClient = new Buteo::SyncClientInterface;
+    }
+
+    QString profileId = QStringLiteral("%1-%2").arg(profileName).arg(m_currAccount->id());
+    qWarning() << "Profile " << profileName << " will be removed from provider " << providerName;
+
+    // remove a profile out-of-process through Buteo::SyncClientInterface, rather than in-process through
+    // Buteo::ProfileManager. This ensures the profile can be updated even when sailfish-accounts-tool
+    // is run without privileged permissions.
+    if (!m_buteoClient->removeProfile(profileId)) {
+        qWarning() << "SyncClientInterface::removeProfile() failed for" << profileId;
+    }
 }
 
 /*

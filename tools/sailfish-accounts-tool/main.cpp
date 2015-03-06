@@ -79,6 +79,10 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
             "%1 --create-and-trigger-profiles\n"
             "%1 --create-and-trigger-profiles-on-boot\n"
             "\n"
+            "To remove a profile\n"
+            "Note: msyncd must be running for this command to work!\n"
+            "%1 --remove-profile -p <provider name> <profile name>\n"
+            "\n"
             "To backup all account information to the specified output file:\n"
             "%1 --backup-accounts <outfile>\n"
             "To restore accounts which were previously backed up to the specified input file:\n"
@@ -130,6 +134,10 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
         am.backupFile = args.value(2);
     } else if (firstOption == QStringLiteral("--trigger-profiles")) {
         am.mode = AccountModifier::TriggerProfiles;
+    } else if (firstOption == QStringLiteral("--remove-profile")) {
+        am.mode = AccountModifier::RemoveProfile;
+        am.providerName = args.value(3);
+        am.profileName = args.value(4);
     } else if (firstOption.startsWith(QStringLiteral("--create-and-trigger-profiles"))) {
         am.mode = AccountModifier::CreateAndTriggerProfiles;
         am.scheduleCommandForNextBoot = scheduleForNextBoot;
@@ -156,6 +164,10 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
     } else if (am.mode == AccountModifier::BackupAccounts ||
                am.mode == AccountModifier::RestoreAccounts) {
         validParams = !am.backupFile.isEmpty();
+    } else if (am.mode == AccountModifier::RemoveProfile) {
+        validParams = args.value(2) == QString::fromLatin1("-p")
+                        && !am.providerName.isEmpty()
+                        && !am.profileName.isEmpty();
     }
 
     if (validParams) {
