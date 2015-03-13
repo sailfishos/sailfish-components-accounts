@@ -25,6 +25,10 @@
 #include <QList>
 #include <QHash>
 
+#include <QStandardPaths>
+#include <QFileInfo>
+#include <QFile>
+
 static const QString SyncProfileTemplatesKey = QStringLiteral("sync_profile_templates");
 
 static QString SyncProfileIdKey(const QString &templateProfileName)
@@ -291,14 +295,17 @@ int AccountSyncManager::createAllProfiles(int accountId)
     if (account) {
         Q_FOREACH (const Accounts::Service &srv, account->services()) {
             account->selectService(srv);
-            Q_FOREACH (const QString &templateProfile, defaultTemplateProfiles(account, srv)) {
-                QString savedProfileId = account->value(SyncProfileIdKey(templateProfile)).toString();
-                if (savedProfileId.isEmpty() || !d->syncProfileFileExists(savedProfileId)) {
-                    savedProfileId = createProfile(templateProfile, account, srv, account->enabled());
-                    createdProfiles[srv.name()].append(savedProfileId);
-                    createdCount++;
+            if (account->enabled()) {
+                Q_FOREACH (const QString &templateProfile, defaultTemplateProfiles(account, srv)) {
+                    QString savedProfileId = account->value(SyncProfileIdKey(templateProfile)).toString();
+                    if (savedProfileId.isEmpty() || !d->syncProfileFileExists(savedProfileId)) {
+                        savedProfileId = createProfile(templateProfile, account, srv, account->enabled());
+                        createdProfiles[srv.name()].append(savedProfileId);
+                        createdCount++;
+                    }
                 }
             }
+            account->selectService();
         }
     }
     if (createdCount > 0) {
@@ -387,6 +394,47 @@ QString AccountSyncManager::createProfile(const QString &templateProfileName,
         account->selectService(prevService);
     }
     return profileId;
+}
+
+bool AccountSyncManager::checkProfile(const QString &templateProfileName,
+                                      Accounts::Account *account,
+                                      const Accounts::Service &srv)
+{
+    // check that the profile hasn't been corrupted.  returns true if it's ok.
+    if (!account) {
+        qWarning() << "Invalid account, cannot check profile";
+        return false;
+    }
+    if (!srv.isValid()) {
+        qWarning() << "Invalid service, cannot check profile";
+        return false;
+    }
+    QString expectedProfileName = QStringLiteral("%1-%2").arg(templateProfileName).arg(account->id());
+    QString fullPath = QStringLiteral("%1/.cache/msyncd/sync/%2.xml")
+            .arg(QStandardPaths::writableLocation(QStandardPaths::HomeLocation))
+            .arg(expectedProfileName);
+
+    if (!d->syncProfileFileExists(expectedProfileName)) {
+        // profile does not exist
+        qWarning() << "Profile does not exist:" << fullPath;
+        return false;
+    }
+
+    QFileInfo profileInfo(fullPath);
+    if (profileInfo.size() == 0) {
+        // profile is corrupted
+        if (!QFile::remove(fullPath)) {
+            qWarning() << "Profile is corrupted and cannot be removed:" << fullPath;
+        } else {
+            qWarning() << "Profile is corrupted:" << fullPath;
+        }
+        return false;
+    }
+
+    // TODO: more comprehensive corruption checks?  E.G. well-formed XML?
+
+    // profile exists and is not corrupted.
+    return true;
 }
 
 Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &templateProfileName,
