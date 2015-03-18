@@ -268,20 +268,24 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
         {
             Q_FOREACH(const SignOnCredentials &rsoc, requiredCredentials) {
                 // some ugliness to query the IdentityInfo data "synchronously"
-                QThread thread;
                 CredentialKeysQuery *query = new CredentialKeysQuery(rsoc.id, rsoc.method, rsoc.mechanism, rsoc.sessionData);
-                connect(&thread, SIGNAL(finished()), query, SLOT(deleteLater()));
-                query->moveToThread(&thread);
-                thread.start();
-                QTimer::singleShot(0, query, SLOT(queryCredentials()));
-                while (!query->finished()) {
+                query->queryCredentials();
+                int loop_timeout = 10000; // ten seconds
+                while (!query->finished() && loop_timeout > 0) {
                     QCoreApplication::processEvents();
                     QThread::msleep(100);
+                    loop_timeout -= 100;
+                }
+                if (!query->finished()) {
+                    qWarning() << Q_FUNC_INFO << "error: timeout while waiting for credentials info query";
+                    return false;
+                } else if (query->error()) {
+                    qWarning() << Q_FUNC_INFO << "error: failed to fetch credentials";
+                    return false;
                 }
                 QVariantMap infoValues = query->infoValues();
                 QVariantMap methodMechanismSecrets = query->methodMechanismSecrets();
-                thread.quit();
-                thread.wait();
+                query->deleteLater();
 
                 // we now have the IdentityInfo data and can back it up.
                 if (!infoValues.isEmpty()) {
@@ -659,22 +663,23 @@ QMap<quint32, quint32> AccountBackupRestorer::createCredentials(const QVariantMa
         QVariantMap methodMechSecrets = infoAndMethodMechSecrets.value(QStringLiteral("methodMechanismSecrets")).toMap();
 
         // some ugliness to create the credentials "synchronously"
-        QThread thread;
         CredentialCreationRequest *request = new CredentialCreationRequest(infoValues, methodMechSecrets);
-        connect(&thread, SIGNAL(finished()), request, SLOT(deleteLater()));
-        request->moveToThread(&thread);
-        QTimer::singleShot(5, request, SLOT(createCredentials()));
-        thread.start();
-        while (!request->finished()) {
+        request->createCredentials();
+        int loop_timeout = 10000; // ten seconds
+        while (!request->finished() && loop_timeout > 0) {
             QCoreApplication::processEvents();
             QThread::msleep(100);
+            loop_timeout -= 100;
         }
-        if (!request->error()) {
+        if (!request->finished()) {
+            qWarning() << Q_FUNC_INFO << "error: timeout while waiting for credentials creation query";
+        } else if (request->error()) {
+            qWarning() << Q_FUNC_INFO << "error: failed to create credentials";
+        } else {
             quint32 newCredId = request->newCredentialsId();
             oldToNewIds.insert(oldCredIdStr.toUInt(), newCredId);
         }
-        thread.quit();
-        thread.wait();
+        request->deleteLater();
     }
 
     return oldToNewIds;
