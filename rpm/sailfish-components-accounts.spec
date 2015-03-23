@@ -1,7 +1,7 @@
 Name:       sailfish-components-accounts-qt5
 Summary:    Sailfish Accounts Components
 Version:    0.1.8
-Release:    1
+Release:    2
 Group:      System/Libraries
 License:    TBD
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
