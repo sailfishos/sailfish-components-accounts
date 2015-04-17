@@ -170,9 +170,12 @@ void tst_Account::enabled()
     account->setEnabled(false);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced); // wait for sync.
+    // Note that at this point, the signal may be emitted for the account
+    // before the manager's cached copy has been updated, thus the
+    // following check needs to wait until the cached copy (a) updates.
 
     // ensure that it's globally disabled in the database.
-    QVERIFY(!a->enabled());
+    QTRY_VERIFY(!a->enabled());
 
     // cleanup.
     account->remove();
@@ -511,6 +514,11 @@ void tst_Account::configurationValues()
     a->sync();
     QSignalSpy aSyncedSpy(a, SIGNAL(synced()));
     QTRY_VERIFY(aSyncedSpy.count() > 0);
+    // The synced signal may be emitted from the account before the change propagates to other account instances
+    // including the manager's account cache.  We cannot listen to the accountUpdated() signal from the manager,
+    // since it doesn't emit unless constructed with a serviceType, and we're testing with the global service...
+    // So, we just have to wait until the change should have been propagated to the cached copy.
+    QTest::qWait(200);
 
     // account doesn't emit signals on configuration values changed...
     QScopedPointer<Account> existingAccount(new Account);
@@ -526,12 +534,13 @@ void tst_Account::configurationValues()
     QCOMPARE(account->status(), Account::Modified);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
-    QVariant expectString(QVariant::String);
-    a->value(testKey, expectString); // expectString is an in-out argument.
-    QCOMPARE(expectString, testStrValue);
+    // the synced signal may be emitted from the account before the change propagates to other account instances.
+    QTRY_COMPARE(a->valueAsString(testKey), testStrValue.toString());
     account->setConfigurationValue(QString(), testKey, testStrListValue);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
+    // the synced signal may be emitted from the account before the change propagates to other account instances.
+    QTest::qWait(300);
     QVariant expectStringList(QVariant::StringList);
     a->value(testKey, expectStringList); // expectStringList is an in-out argument.
     QCOMPARE(expectStringList, testStrListValue);
@@ -630,6 +639,11 @@ void tst_Account::serviceConfigurationValues()
     a->sync();
     QSignalSpy aSyncedSpy(a, SIGNAL(synced()));
     QTRY_VERIFY(aSyncedSpy.count() > 0);
+    // The synced signal may be emitted from the account before the change propagates to other account instances
+    // including the manager's account cache.  We cannot listen to the accountUpdated() signal from the manager,
+    // since it doesn't emit unless constructed with a serviceType, and we're testing with the global service...
+    // So, we just have to wait until the change should have been propagated to the cached copy.
+    QTest::qWait(200);
 
     // account doesn't emit signals on configuration values changed...
     // we really need a "refresh" function, similar to the one in Identity.
@@ -645,13 +659,14 @@ void tst_Account::serviceConfigurationValues()
     account->setConfigurationValue(testServiceName, testKey, testStrValue);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
-    QVariant expectString(QVariant::String);
-    a->value(testKey, expectString); // expectString is an in-out parameter.
-    QCOMPARE(expectString, testStrValue);
+    // the synced signal may be emitted from the account before the change propagates to other account instances.
+    QTRY_COMPARE(a->valueAsString(testKey), testStrValue.toString());
     account->setConfigurationValue(testServiceName, testKey, testStrListValue);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
     QVariant expectStringList(QVariant::StringList);
+    // the synced signal may be emitted from the account before the change propagates to other account instances.
+    QTest::qWait(300);
     a->value(testKey, expectStringList); // expectStringList is an in-out parameter.
     QCOMPARE(expectStringList, testStrListValue);
 
@@ -901,8 +916,9 @@ void tst_Account::credentialsFunctions()
 
     // ensure that it was set as default for the service
     newA->selectService(whichSrv);
+    // the synced signal may be emitted from the account before the change propagates to other account instances.
+    QTRY_VERIFY(newA->credentialsId() != nullCredentials);
     quint32 specifiedCredentials = newA->credentialsId();
-    QVERIFY(specifiedCredentials != nullCredentials);
     newA->selectService(Accounts::Service());
 
     // ensure that we can sign in via "normal" libsignon-qt Identity::process()
