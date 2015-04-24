@@ -185,6 +185,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     , constructedWithAccountPtr(false)
     , status(Account::Initializing)
     , error(Account::NoError)
+    , sessionState(SignOn::AuthSession::SessionNotStarted)
 {
     // initialize the signInCredentials struct
     signInCredentials.creatingSignInCredentials = false;
@@ -665,6 +666,8 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
             this, SLOT(handleResponse(SignOn::SessionData)), Qt::UniqueConnection);
     connect(signInCredentials.session, SIGNAL(error(SignOn::Error)),
             this, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
+    connect(signInCredentials.session, SIGNAL(stateChanged(SignOn::AuthSession::AuthSessionState,QString)),
+            this, SLOT(handleStateChanged(SignOn::AuthSession::AuthSessionState,QString)), Qt::UniqueConnection);
 
     signInCredentials.session->process(SignOn::SessionData(signInCredentials.sessionData), signInCredentials.mechanism);
 }
@@ -921,6 +924,11 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
     }
 }
 
+void AccountPrivate::handleStateChanged(SignOn::AuthSession::AuthSessionState state, const QString &message)
+{
+    sessionState = state;
+}
+
 void AccountPrivate::handleAccountError()
 {
     if (signInCredentials.creatingSignInCredentials) {
@@ -994,6 +1002,12 @@ void AccountPrivate::setStatus(Account::Status newStatus)
 
 void AccountPrivate::cancelCredentialsOperation(bool removeIdentity)
 {
+    if (signInCredentials.session
+            && sessionState != SignOn::AuthSession::SessionNotStarted
+            && sessionState != SignOn::AuthSession::ProcessCanceling
+            && sessionState != SignOn::AuthSession::ProcessDone) {
+        signInCredentials.session->cancel();
+    }
     signInCredentials.cleanup(removeIdentity);
     setStatus(Account::Synced);
 
@@ -2257,6 +2271,8 @@ void Account::signIn(const QString &applicationName,
             d, SLOT(handleResponse(SignOn::SessionData)), Qt::UniqueConnection);
     connect(d->signInCredentials.session, SIGNAL(error(SignOn::Error)),
             d, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
+    connect(d->signInCredentials.session, SIGNAL(stateChanged(SignOn::AuthSession::AuthSessionState,QString)),
+            d, SLOT(handleStateChanged(SignOn::AuthSession::AuthSessionState,QString)), Qt::UniqueConnection);
 
     d->setStatus(Account::SigningIn);
     d->signInCredentials.session->process(SignOn::SessionData(sipParams), parameters->mechanism());

@@ -93,6 +93,7 @@ public:
 
     Account::Status status;
     Account::ErrorType error;
+    SignOn::AuthSession::AuthSessionState sessionState;
     QString errorMessage;
 
 public:
@@ -117,6 +118,7 @@ public Q_SLOTS:
     void handleResponse(const SignOn::SessionData &data);
     void handleExpiryTimeout();
     void handleSignOnError(const SignOn::Error &err);
+    void handleStateChanged(SignOn::AuthSession::AuthSessionState state, const QString &message);
     void handleAccountError();
 };
 
