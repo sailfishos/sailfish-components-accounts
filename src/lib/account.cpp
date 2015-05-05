@@ -194,6 +194,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     signInCredentials.storingEncryptedTokens = false;
     signInCredentials.forcingCredentialsRefresh = false;
     signInCredentials.haveForcedCredentialsExpiry = false;
+    signInCredentials.canceling = false;
     signInCredentials.identity = NULL;
     signInCredentials.session = NULL;
 
@@ -906,6 +907,7 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
     //% "No cached credentials exist"
     QString noCachedCredentials = qtTrId("sailfish_accounts-account-no_cached_creds");
 
+    bool sessionWasRunning = (signInCredentials.session != NULL);
     if (signInCredentials.creatingSignInCredentials || signInCredentials.updatingSignInCredentials) {
         signInCredentials.cleanup(signInCredentials.creatingSignInCredentials); // delete identity if creating.
     } else {
@@ -919,6 +921,8 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
         emit q->signInError(networkConnectionFailure, Account::SignInNetworkError);
     } else if (errMess == QLatin1String("userActionFinished error: 10")) {
         emit q->signInError(noCachedCredentials, Account::SignInCredentialsExpiredError);
+    } else if (err.type() == SignOn::Error::SessionCanceled && (signInCredentials.canceling || !sessionWasRunning)) {
+        // ignore, cancelSignInOperation() was called and it would have already emitted signInError()
     } else {
         emit q->signInError(errMess, errType);
     }
@@ -1006,7 +1010,9 @@ void AccountPrivate::cancelCredentialsOperation(bool removeIdentity)
             && sessionState != SignOn::AuthSession::SessionNotStarted
             && sessionState != SignOn::AuthSession::ProcessCanceling
             && sessionState != SignOn::AuthSession::ProcessDone) {
+        signInCredentials.canceling = true;
         signInCredentials.session->cancel();
+        signInCredentials.canceling = false;
     }
     signInCredentials.cleanup(removeIdentity);
     setStatus(Account::Synced);

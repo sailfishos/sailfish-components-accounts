@@ -28,6 +28,7 @@ struct SignInCredentials {
     bool storingEncryptedTokens;
     bool forcingCredentialsRefresh;
     bool haveForcedCredentialsExpiry;
+    bool canceling;
 
     SignOn::Identity *identity;
     SignOn::AuthSession *session;
