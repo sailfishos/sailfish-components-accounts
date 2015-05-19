@@ -94,6 +94,8 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPicker.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDelegate.qml
 %{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListDelegate.qml
+%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsFlowView.qml
 %{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
 
 %files tests
