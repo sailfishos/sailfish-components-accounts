@@ -490,7 +490,8 @@ bool AccountModifier::applyProviderAvailabilityChanges()
         }
     }
     m_currAccount->selectService(Accounts::Service());
-    if (m_currAccount->value(KeyProviderAvailable).toBool() == providerAvailable) {
+    if (m_currAccount->value(KeyProviderAvailable).toBool() == providerAvailable
+            && m_currAccount->enabled() == providerAvailable) {
         return false;
     }
     if (providerAvailable) {
