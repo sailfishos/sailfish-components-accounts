@@ -253,7 +253,7 @@ void AccountSyncSchedule::setPeakSchedule(const QTime &peakStart,
     }
     if (d->m_peakInterval != peakInterval) {
         d->m_peakInterval = peakInterval;
-        emit intervalChanged();
+        emit peakIntervalChanged();
         d->setModified(true);
     }
     if (d->m_peakDays != peakDays) {
