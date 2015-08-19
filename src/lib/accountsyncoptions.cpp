@@ -112,7 +112,9 @@ AccountSyncSchedule::Interval AccountSyncSchedulePrivate::intervalFromMinutes(un
 {
     // roughly match the AccountSyncSchedule intervals if there is no exact match
     AccountSyncSchedule::Interval interval;
-    if (minutes > 0 && minutes <= 5) {
+    if (minutes <= 0) {
+        interval = AccountSyncSchedule::NoInterval;
+    } else if (minutes > 0 && minutes <= 5) {
         interval = AccountSyncSchedule::Every5Minutes;
     } else if (minutes <= 15) {
         interval = AccountSyncSchedule::Every15Minutes;
@@ -131,13 +133,13 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
     AccountSyncSchedule *result = new AccountSyncSchedule(parent);
     AccountSyncSchedulePrivate *d = result->d;
 
-    if (source.interval() == 0 && source.time().isValid()) {
+    if (source.time().isValid()) {
+        if (source.interval() > 0) {
+            qWarning() << "Buteo::SyncSchedule has both time and interval, the time will be used and the interval discarded";
+        }
         result->setDailySyncMode(source.time(), daysFromQtDaySet(source.days()));
-    } else if (source.interval() > 0) {
-        result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daysFromQtDaySet(source.days()));
     } else {
-        qWarning() << "Buteo::SyncSchedule has no valid sync time nor interval, setting default interval of 15 minutes";
-        result->setIntervalSyncMode(AccountSyncSchedule::Every15Minutes, daysFromQtDaySet(source.days()));
+        result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daysFromQtDaySet(source.days()));
     }
     if (source.rushEnabled()) {
         QTime peakStart = source.rushBegin();
