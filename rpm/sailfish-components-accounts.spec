@@ -17,6 +17,7 @@ BuildRequires:  pkgconfig(accounts-qt5) >= 1.13
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
 BuildRequires:  pkgconfig(buteosyncfw5) >= 0.7.14
 BuildRequires:  pkgconfig(qt5-boostable)
+BuildRequires:  pkgconfig(mlite5)
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools
 Requires:  mapplauncherd-qt5

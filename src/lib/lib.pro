@@ -5,7 +5,7 @@ TARGETPATH = $$[QT_INSTALL_LIBS]
 
 QT += qml dbus
 CONFIG += qt hide_symbols create_pc create_prl no_install_prl link_pkgconfig
-PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5 buteosyncfw5
+PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5 buteosyncfw5 mlite5
 
 SOURCES += \
     $$PWD/account.cpp \
@@ -20,7 +20,8 @@ SOURCES += \
     $$PWD/servicemodel.cpp \
     $$PWD/signinparameters.cpp \
     $$PWD/accountsyncmanager.cpp \
-    $$PWD/accountsyncoptions.cpp
+    $$PWD/accountsyncoptions.cpp \
+    $$PWD/cloudbackupsynctrigger.cpp
 
 HEADERS += \
     $$PWD/account.h \
@@ -42,7 +43,8 @@ HEADERS += \
     $$PWD/signinparameters.h \
     $$PWD/accountsyncmanager.h \
     $$PWD/accountsyncoptions.h \
-    $$PWD/accountsyncoptions_p.h
+    $$PWD/accountsyncoptions_p.h \
+    $$PWD/cloudbackupsynctrigger.h
 
 # We can use either QCA or OpenSSL-EVP for AES encryption of credentials
 CONFIG(qca_encryption) {
@@ -71,7 +73,8 @@ develheaders.files = \
     $$PWD/servicetype.h \
     $$PWD/signinparameters.h \
     $$PWD/accountsyncmanager.h \
-    $$PWD/accountsyncoptions.h
+    $$PWD/accountsyncoptions.h \
+    $$PWD/cloudbackupsynctrigger.h
 
 target.path = $$[QT_INSTALL_LIBS]
 pkgconfig.files = $$PWD/pkgconfig/sailfishaccounts.pc
