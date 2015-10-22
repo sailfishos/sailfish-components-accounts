@@ -296,6 +296,12 @@ void AccountModel::setFilter(const QString &filter)
     }
 }
 
+int AccountModel::count() const
+{
+    Q_D(const AccountModel);
+    return d->filteredAccountsList.count();
+}
+
 void AccountModel::setAccountEnabled(int accountId, bool enabled)
 {
     Q_D(AccountModel);
@@ -340,6 +346,7 @@ QVariantMap AccountModel::getByAccount(int accountId)
 void AccountModel::reload()
 {
     Q_D(AccountModel);
+    int prevCount = count();
     QList<DisplayData *> result;
     for (int i=0; i<d->accountsList.count(); i++) {
         if (d->accountsList[i]->matchesFilter(d->filterType, d->filter)) {
@@ -349,6 +356,9 @@ void AccountModel::reload()
     beginResetModel();
     d->filteredAccountsList = result;
     endResetModel();
+    if (prevCount != count()) {
+        emit countChanged();
+    }
 }
 
 QHash<int, QByteArray> AccountModel::roleNames() const
@@ -398,6 +408,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
             insertAccountSorted(new DisplayData(account), account, &d->accountsList, &d->filteredAccountsList);
             monitorSyncStatus(account);
             reload();
+            emit countChanged();
         }
     }
 }
@@ -515,6 +526,7 @@ void AccountModel::accountRemoved(Accounts::AccountId id)
         beginRemoveRows(QModelIndex(), filteredIndex, filteredIndex);
         d->filteredAccountsList.removeAt(filteredIndex);
         endRemoveRows();
+        emit countChanged();
     }
 
     DisplayData *data = d->accountsList.takeAt(index);

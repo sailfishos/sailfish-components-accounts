@@ -30,6 +30,7 @@ class Q_DECL_EXPORT AccountModel : public QAbstractListModel, public QQmlParserS
     Q_INTERFACES(QQmlParserStatus)
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
     Q_ENUMS(FilterType)
     Q_ENUMS(AccountError)
     class AccountModelPrivate;
@@ -69,6 +70,8 @@ public:
     QString filter() const;
     void setFilter(const QString &filter);
 
+    int count() const;
+
     Q_INVOKABLE void setAccountEnabled(int index, bool enabled);
     Q_INVOKABLE QVariantMap getByAccount(int accountId);
 
@@ -81,6 +84,7 @@ public:
 signals:
     void filterTypeChanged();
     void filterChanged();
+    void countChanged();
 
 protected:
     QHash<int, QByteArray> roleNames() const;
