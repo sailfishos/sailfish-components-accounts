@@ -24,6 +24,7 @@
 #include <Accounts/Provider>
 
 
+static const QString AccountUpdatedSignalTriggerDummyValueKey = QStringLiteral("dummy_value");
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 static const QString AccountDefaultCredentialsUserName = QStringLiteral("default_credentials_username");
 
@@ -300,7 +301,21 @@ void AccountModel::setAccountEnabled(int accountId, bool enabled)
     Q_D(AccountModel);
     for (int i=0; i<d->accountsList.count(); i++) {
         if (d->accountsList[i]->account->id() == (uint)accountId) {
+            // Disable the account globally.
             d->accountsList[i]->account->setEnabled(enabled);
+            // Also make a "fake" modification in every service of
+            // the account, to ensure that accounts&sso will emit
+            // the accountUpdated() signal to managers filtering
+            // on particular service types...
+            Q_FOREACH (const Accounts::Service &srv, d->accountsList[i]->account->services()) {
+                d->accountsList[i]->account->selectService(srv);
+                if (d->accountsList[i]->account->value(AccountUpdatedSignalTriggerDummyValueKey).toBool()) {
+                    d->accountsList[i]->account->setValue(AccountUpdatedSignalTriggerDummyValueKey, QVariant::fromValue<bool>(false));
+                } else {
+                    d->accountsList[i]->account->setValue(AccountUpdatedSignalTriggerDummyValueKey, QVariant::fromValue<bool>(true));
+                }
+            }
+            d->accountsList[i]->account->selectService(Accounts::Service());
             d->accountsList[i]->account->sync();
             break;
         }
