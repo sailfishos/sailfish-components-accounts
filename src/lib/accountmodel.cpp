@@ -343,6 +343,21 @@ QVariantMap AccountModel::getByAccount(int accountId)
     return ret;
 }
 
+QVariantMap AccountModel::get(int index)
+{
+    Q_D(const AccountModel);
+    if (index < 0 || index >= d->filteredAccountsList.length()) {
+        return QVariantMap();
+    }
+
+    DisplayData *data = d->filteredAccountsList[index];
+    QVariantMap ret;
+    Q_FOREACH (int role, d->headerData.keys()) {
+        ret.insert(d->headerData[role], d->getModelData(data, role));
+    }
+    return ret;
+}
+
 void AccountModel::reload()
 {
     Q_D(AccountModel);
