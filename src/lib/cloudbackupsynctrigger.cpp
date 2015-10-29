@@ -218,10 +218,20 @@ void CloudBackupSyncTrigger::handleProfileSyncStatusChanged(const QString &profi
             return;
         }
 
+        int accountId = 0;
+        int accountIdIndex = profileId.lastIndexOf('-');
+        if (accountIdIndex >= 0) {
+            accountId = profileId.mid(accountIdIndex + 1).toInt();
+            if (accountId == 0) {
+                qWarning() << "Unable to extract account id from profileId" << profileId;
+            }
+        }
+
         // re-emit with queued, to ensure that it happens after we return from the download/upload functions in error case.
         QMetaObject::invokeMethod(this,
                                   "cloudSyncProgress",
                                   Qt::QueuedConnection,
+                                  Q_ARG(int, accountId),
                                   Q_ARG(int, status),
                                   Q_ARG(QString, errorString));
     }
@@ -299,6 +309,7 @@ bool CloudBackupSyncTrigger::requestListing(int accountId, const QString &remote
     // set our status to busy, and perform signon to get AccessToken
     m_currentSyncProfileId = backupSyncProfile;
     session->process(SignOn::SessionData(signonSessionData), mechanism);
+    return true;
 }
 
 void CloudBackupSyncTrigger::signOnError(const SignOn::Error &error)
@@ -318,9 +329,9 @@ void CloudBackupSyncTrigger::signOnError(const SignOn::Error &error)
     // if the error is because credentials have expired, we
     // set the CredentialsNeedUpdate key.
     if (error.type() == SignOn::Error::UserInteraction) {
-        emit requestListingFailed(QStringLiteral("Credentials are invalid for account %1").arg(accountId));
+        emit requestListingFailed(accountId, QStringLiteral("Credentials are invalid for account %1").arg(accountId));
     } else {
-        emit requestListingFailed(QStringLiteral("Could not retrieve token for account %1: %2").arg(accountId).arg(error.message()));
+        emit requestListingFailed(accountId, QStringLiteral("Could not retrieve token for account %1: %2").arg(accountId).arg(error.message()));
     }
     m_currentSyncProfileId.clear();
 }
@@ -360,7 +371,7 @@ void CloudBackupSyncTrigger::signOnResponse(const SignOn::SessionData &responseD
             performListingRequest(accountId, accessToken, cloudName, remotePath);
         }
     } else {
-        emit requestListingFailed(QStringLiteral("No access token response in credentials for account %1").arg(accountId));
+        emit requestListingFailed(accountId, QStringLiteral("No access token response in credentials for account %1").arg(accountId));
         m_currentSyncProfileId.clear();
     }
 }
@@ -410,7 +421,7 @@ void CloudBackupSyncTrigger::handleListingResponse()
         Q_FOREACH (const QString &line, responseData.split('\n')) {
             qDebug() << line;
         }
-        emit requestListingFailed(QStringLiteral("Unable to parse directory listing from response for account %1").arg(accountId));
+        emit requestListingFailed(accountId, QStringLiteral("Unable to parse directory listing from response for account %1").arg(accountId));
         m_currentSyncProfileId.clear();
         return;
     }
@@ -446,6 +457,6 @@ void CloudBackupSyncTrigger::handleListingResponse()
         }
     }
 
-    emit requestedListing(listing);
+    emit requestedListing(accountId, listing);
     m_currentSyncProfileId.clear();
 }

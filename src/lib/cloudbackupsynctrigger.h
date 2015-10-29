@@ -39,9 +39,9 @@ public:
     Q_INVOKABLE void resetState();
 
 Q_SIGNALS:
-    void cloudSyncProgress(int status, const QString &errorString);
-    void requestedListing(const QVariantList &listing);
-    void requestListingFailed(const QString &message);
+    void cloudSyncProgress(int accountId, int status, const QString &errorString);
+    void requestedListing(int accountId, const QVariantList &listing);
+    void requestListingFailed(int accountId, const QString &message);
 
 private:
     bool syncWithCloud(int accountId, const QString &localDir, const QString &remotePath, const QString &remoteFile, const QString &direction);
