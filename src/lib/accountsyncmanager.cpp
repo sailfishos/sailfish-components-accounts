@@ -243,6 +243,11 @@ AccountSyncManager::~AccountSyncManager()
 {
 }
 
+Accounts::Manager *AccountSyncManager::accountManager() const
+{
+    return d->m_accountManager;
+}
+
 void AccountSyncManager::createProfile(const QString &templateProfileName, int accountId, const QString &serviceName)
 {
     Accounts::Account *account = Accounts::Account::fromId(d->m_accountManager, accountId, this);

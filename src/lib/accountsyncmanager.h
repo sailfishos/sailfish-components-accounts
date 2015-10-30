@@ -19,10 +19,12 @@ namespace Buteo {
 
 namespace Accounts {
     class Account;
+    class Manager;
 }
 
 class AccountSyncProfileManagerPrivate;
 class AccountSyncOptions;
+class CloudBackupSyncTrigger;
 
 class Q_DECL_EXPORT AccountSyncManager : public QObject
 {
@@ -90,7 +92,9 @@ signals:
     void allProfileCreationError(int accountId, const QString &errorString);
 
 private:
+    friend class CloudBackupSyncTrigger;
     AccountSyncProfileManagerPrivate *d;
+    Accounts::Manager *accountManager() const;
 };
 
 #endif
