@@ -1,6 +1,6 @@
 Name:       sailfish-components-accounts-qt5
 Summary:    Sailfish Accounts Components
-Version:    0.1.17
+Version:    0.1.19
 Release:    1
 Group:      System/Libraries
 License:    TBD
