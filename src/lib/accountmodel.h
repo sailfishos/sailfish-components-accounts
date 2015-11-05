@@ -75,6 +75,7 @@ public:
     Q_INVOKABLE void setAccountEnabled(int index, bool enabled);
     Q_INVOKABLE QVariantMap getByAccount(int accountId);
     Q_INVOKABLE QVariantMap get(int index);
+    Q_INVOKABLE bool accountHasServiceOfTypeEnabled(int accountId, const QString &serviceTypeName);
 
     int rowCount(const QModelIndex &index = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;

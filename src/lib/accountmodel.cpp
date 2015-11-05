@@ -358,6 +358,27 @@ QVariantMap AccountModel::get(int index)
     return ret;
 }
 
+bool AccountModel::accountHasServiceOfTypeEnabled(int accountId, const QString &serviceTypeName)
+{
+    Q_D(AccountModel);
+    int index = getAccountIndex(accountId);
+    if (index >= 0 && index < d->accountsList.count()) {
+        Accounts::Account *account = d->accountsList[index]->account;
+        Q_FOREACH (const Accounts::Service &srv, account->services(serviceTypeName)) {
+            if (srv.isValid()) {
+                account->selectService(srv);
+                bool result = account->enabled();
+                if (result) {
+                    account->selectService(Accounts::Service());
+                    return result;
+                }
+            }
+        }
+        account->selectService(Accounts::Service());
+    }
+    return false;
+}
+
 void AccountModel::reload()
 {
     Q_D(AccountModel);
