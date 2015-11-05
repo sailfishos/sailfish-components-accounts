@@ -367,7 +367,6 @@ bool AccountModifier::applySyncUpdateChanges()
 
     Accounts::ServiceList allServices = m_currAccount->services();
 
-    bool shouldUpdateServices = false;
     uint credentialsId = 0;
 
     // check if is a generic email account
@@ -375,34 +374,33 @@ bool AccountModifier::applySyncUpdateChanges()
         foreach (const Accounts::Service &srv, allServices) {
             if (srv.name() == QStringLiteral("email")) {
                 m_currAccount->selectService(srv);
-                shouldUpdateServices = true;
                 break;
             }
         }
     } else {
         // Find the generic sync service. This will be the one called "<provider>-sync".
+        bool foundSyncService = false;
+        uint fallbackCredentialsId = 0;
         foreach (const Accounts::Service &srv, allServices) {
             bool isGenericSyncService = srv.serviceType() == QStringLiteral("sync")
                     && srv.name() == (srv.provider() + "-sync");
-            if (isGenericSyncService) {
-                m_currAccount->selectService(srv);
-                shouldUpdateServices = true;
-                credentialsId = m_currAccount->credentialsId();
-                if (credentialsId == 0) {
-                    qWarning() << "Cannot update sync services, the generic sync service doesn't have a valid credentialsId!";
-                    m_error = true;
-                    return false;
-                }
-                break;
+            m_currAccount->selectService(srv);
+            if (m_currAccount->credentialsId()) {
+                fallbackCredentialsId = m_currAccount->credentialsId();
             }
+            if (isGenericSyncService && m_currAccount->credentialsId() != 0) {
+                foundSyncService = true;
+                credentialsId = m_currAccount->credentialsId();
+            }
+        }
+
+        // fall back to any service which has a credentialsId if no generic sync service credentials exists.
+        if (!foundSyncService) {
+            credentialsId = fallbackCredentialsId;
         }
     }
 
     m_currAccount->selectService(Accounts::Service());
-    if (!shouldUpdateServices) {
-        return false;
-    }
-
     bool madeChanges = false;
     foreach (const Accounts::Service &srv, allServices) {
         // ensure that the sync service settings are set up appropriately
@@ -434,6 +432,13 @@ bool AccountModifier::applySyncUpdateChanges()
             if (credentialsId != 0) {
                 // copy credentials from generic sync service
                 m_currAccount->setCredentialsId(credentialsId);
+            }
+
+            if (templateProfile == QStringLiteral("vk.Sharing")) {
+                // This profile does not actually exist, and can be ignored,
+                // we shouldn't attempt to create it.
+                madeChanges = true;
+                continue;
             }
 
             // only enable the profile if the account service is enabled.
@@ -517,6 +522,11 @@ bool AccountModifier::createProfiles(bool triggerSync)
     Q_FOREACH (const Accounts::Service &srv, m_currAccount->services()) {
         m_currAccount->selectService(srv);
         Q_FOREACH (const QString &templateProfile, m_accountSyncManager.defaultTemplateProfiles(m_currAccount, srv)) {
+            if (templateProfile == QStringLiteral("vk.Sharing")) {
+                // This profile does not actually exist, and can be ignored,
+                // we shouldn't attempt to create it.
+                continue;
+            }
             if (!m_accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
                 // Don't fail if any of the profiles cannot be created.
                 Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
