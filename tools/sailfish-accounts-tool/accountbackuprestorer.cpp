@@ -575,14 +575,26 @@ void AccountBackupRestorer::backupAccountServiceSettings(QSettings &backupIni,
     // If this is the default service, we need to find the default signon service
     // for the account.  Its name should end in -signon or -sync.
     int signonServiceIndex = -1;
+    int fallbackSignonServiceIndex = -1;
     if (!srv.isValid()) {
         for (int i = 0; i < accountServices.size(); ++i) {
             if (accountServices[i].name().toLower().endsWith(QStringLiteral("-signon")) ||
                 accountServices[i].name().toLower().endsWith(QStringLiteral("-sync"))) {
                 // found the default signon service.
                 signonServiceIndex = i;
+            } else {
+                // grab out any valid service for which this account has credentials as a fallback.
+                // this is because some accounts (like Dropbox) don't have a -sync or -signon service.
+                account->selectService(accountServices[i]);
+                if (account->credentialsId()) {
+                    fallbackSignonServiceIndex = i;
+                }
             }
         }
+    }
+    account->selectService(srv);
+    if (signonServiceIndex == -1) {
+        signonServiceIndex = fallbackSignonServiceIndex;
     }
 
     // ensure that we backup the credentials needed for this account/service.
