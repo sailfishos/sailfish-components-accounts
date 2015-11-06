@@ -6,6 +6,7 @@ TARGETPATH = $$[QT_INSTALL_LIBS]
 QT += qml dbus
 CONFIG += qt hide_symbols create_pc create_prl no_install_prl link_pkgconfig
 PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5 buteosyncfw5 mlite5
+LIBS += -lssu
 
 SOURCES += \
     $$PWD/account.cpp \

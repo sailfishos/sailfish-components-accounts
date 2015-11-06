@@ -21,9 +21,11 @@
 class Q_DECL_EXPORT CloudBackupSyncTrigger : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QString defaultRemoteBackupsDirectory READ defaultRemoteBackupsDirectory CONSTANT)
 
 private:
     QString m_currentSyncProfileId;
+    QString m_defaultRemoteBackupsDirectory;
     AccountSyncManager *m_accountSyncManager;
     QNetworkAccessManager *m_networkManager;
 
@@ -37,6 +39,9 @@ public:
 
     /* no signals for the previous operation will be emitted after calling this, but you can immediately start a new operation. */
     Q_INVOKABLE void resetState();
+
+    /* default remote dir for backups.  If empty, error occurred determining device ssu id. */
+    QString defaultRemoteBackupsDirectory() const;
 
 Q_SIGNALS:
     void cloudSyncProgress(int accountId, int status, const QString &errorString);
