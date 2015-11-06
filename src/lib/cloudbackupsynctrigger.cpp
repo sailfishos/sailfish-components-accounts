@@ -19,7 +19,11 @@
 #include <QJsonValue>
 #include <QVariantMap>
 #include <QVariantList>
+#include <QCryptographicHash>
 #include <QtDebug>
+
+// ssu
+#include <ssudeviceinfo.h>
 
 // mlite5
 #include <MGConfItem>
@@ -123,8 +127,18 @@ CloudBackupSyncTrigger::CloudBackupSyncTrigger(QObject *parent)
     , m_accountSyncManager(new AccountSyncManager(this))
     , m_networkManager(new QNetworkAccessManager(this))
 {
+    QString deviceId = SsuDeviceInfo().deviceUid();
+    QByteArray hashedDeviceId = QCryptographicHash::hash(deviceId.toUtf8(), QCryptographicHash::Sha256);
+    QString encodedDeviceId = QString::fromUtf8(hashedDeviceId.toBase64()).mid(0,12);
+    QString defaultRemotePath = QString::fromLatin1("Backups/%1").arg(encodedDeviceId);
+    m_defaultRemoteBackupsDirectory = deviceId.isEmpty() ? QString() : defaultRemotePath;
     connect(m_accountSyncManager, SIGNAL(profileSyncStatusChanged(QString,int,QString)),
             this, SLOT(handleProfileSyncStatusChanged(QString,int,QString)));
+}
+
+QString CloudBackupSyncTrigger::defaultRemoteBackupsDirectory() const
+{
+    return m_defaultRemoteBackupsDirectory;
 }
 
 bool CloudBackupSyncTrigger::syncWithCloud(int accountId, const QString &localDir, const QString &remotePath, const QString &remoteFile, const QString &direction)
@@ -379,16 +393,22 @@ void CloudBackupSyncTrigger::signOnResponse(const SignOn::SessionData &responseD
 void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString &accessToken, const QString &cloudName, const QString &remotePath)
 {
     // perform the appropriate REST call to get the directory listing
+    if (m_defaultRemoteBackupsDirectory.isEmpty()) {
+        emit requestListingFailed(accountId, QStringLiteral("Unable to determine device ssu id, cannot determine default backup directory!"));
+        m_currentSyncProfileId.clear();
+        return;
+    }
+
     QUrl url;
     if (cloudName == QStringLiteral("OneDrive")) {
-        url = QUrl(QStringLiteral("https://api.onedrive.com/v1.0/drive/special/approot:/%1:/").arg(remotePath.isEmpty() ? "backups" : remotePath));
+        url = QUrl(QStringLiteral("https://api.onedrive.com/v1.0/drive/special/approot:/%1:/").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
         QUrlQuery query(url);
         QList<QPair<QString, QString> > queryItems;
         queryItems.append(QPair<QString, QString>(QStringLiteral("expand"), QStringLiteral("children")));
         query.setQueryItems(queryItems);
         url.setQuery(query);
     } else { // cloudName == QStringLiteral("Dropbox")
-        url = QUrl(QStringLiteral("https://api.dropboxapi.com/1/metadata/auto/%1").arg(remotePath.isEmpty() ? "Backups" : remotePath));
+        url = QUrl(QStringLiteral("https://api.dropboxapi.com/1/metadata/auto/%1").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
     }
 
     QNetworkRequest req(url);
@@ -399,7 +419,7 @@ void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString 
     reply->setProperty("accountId", accountId);
     reply->setProperty("accessToken", accessToken);
     reply->setProperty("cloudName", cloudName);
-    reply->setProperty("remotePath", remotePath);
+    reply->setProperty("remotePath", remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath);
     connect(reply, SIGNAL(finished()), this, SLOT(handleListingResponse()));
 }
 
