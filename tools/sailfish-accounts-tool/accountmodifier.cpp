@@ -133,7 +133,6 @@ void AccountModifier::start()
         // 1) we restore the accounts + credentials from file
         // 2) we update any service settings of those accounts
         // 3) we generate sync profiles for the restored accounts
-        // 4) we trigger sync for all accounts
         if (!restoreAccounts()) {
             qWarning() << Q_FUNC_INFO << "could not restore accounts from" << backupFile;
             m_error = true;
@@ -142,7 +141,6 @@ void AccountModifier::start()
         }
         m_commands.append(UpdateSyncServices);
         m_commands.append(CreateProfiles);
-        m_commands.append(TriggerProfiles);
         runningMultipleCommands = true;
         mode = m_commands.takeFirst();
     } else if (mode == MigrateCalDavPerProvider) {
