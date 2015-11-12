@@ -426,6 +426,7 @@ void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString 
 void CloudBackupSyncTrigger::handleListingResponse()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     QByteArray data = reply->readAll();
     int accountId = reply->property("accountId").toInt();
     QString cloudName = reply->property("cloudName").toString();
@@ -437,13 +438,24 @@ void CloudBackupSyncTrigger::handleListingResponse()
     QJsonObject parsed = parseJsonObjectReplyData(data, &ok);
     if (!ok || (cloudName == QStringLiteral("Dropbox")  && !parsed.contains("contents"))
             || (cloudName == QStringLiteral("OneDrive") && !parsed.contains("children"))) {
-        qDebug() << "unable to parse directory listing from response for:" << cloudName << remotePath;
+        qDebug() << "unable to parse directory listing from response for:" << cloudName << remotePath << ", code:" << httpCode;
         Q_FOREACH (const QString &line, responseData.split('\n')) {
             qDebug() << line;
         }
-        emit requestListingFailed(accountId, QStringLiteral("Unable to parse directory listing from response for account %1").arg(accountId));
-        m_currentSyncProfileId.clear();
-        return;
+        QString errorMessage = parsed.value("error").toString();
+        if (httpCode == 404 || httpCode == 410 ||
+                (cloudName == QStringLiteral("Dropbox") &&
+                    (errorMessage.contains(QStringLiteral("User has removed their App folder"), Qt::CaseInsensitive) ||
+                        (errorMessage.contains(QStringLiteral("Path"), Qt::CaseInsensitive) &&
+                         errorMessage.contains(QStringLiteral("not found"), Qt::CaseInsensitive))))) {
+            // this is due to the App directory not yet existing.
+            // this can happen if the user has not yet created a backup.
+            // in this case, we emit success but with empty listing.
+        } else {
+            emit requestListingFailed(accountId, QStringLiteral("Unable to parse directory listing from response for account %1").arg(accountId));
+            m_currentSyncProfileId.clear();
+            return;
+        }
     }
 
     QVariantList listing;
