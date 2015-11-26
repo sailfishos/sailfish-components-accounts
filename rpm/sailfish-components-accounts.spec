@@ -3,7 +3,7 @@ Summary:    Sailfish Accounts Components
 Version:    0.1.24
 Release:    1
 Group:      System/Libraries
-License:    TBD
+License:    Proprietary
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
@@ -47,7 +47,6 @@ Development package which provides libsailfishaccounts (package config and heade
 
 %package ts-devel
 Summary:   Translation source for sailfish-components-accounts
-License:   TBD
 Group:     System/Libraries
 
 %description ts-devel
