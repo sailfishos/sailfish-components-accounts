@@ -14,6 +14,7 @@
 #include <QString>
 #include <QNetworkAccessManager>
 #include <QVariantList>
+#include <QStringList>
 
 #include <SignOn/SessionData>
 #include <SignOn/Error>
@@ -26,6 +27,8 @@ class Q_DECL_EXPORT CloudBackupSyncTrigger : public QObject
 private:
     QString m_currentSyncProfileId;
     QString m_defaultRemoteBackupsDirectory;
+    QStringList m_deviceDirectories;
+    QVariantList m_dirListing;
     AccountSyncManager *m_accountSyncManager;
     QNetworkAccessManager *m_networkManager;
 

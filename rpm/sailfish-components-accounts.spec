@@ -20,7 +20,6 @@ BuildRequires:  pkgconfig(qt5-boostable)
 BuildRequires:  pkgconfig(mlite5)
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools
-BuildRequires:  ssu-devel
 Requires:  mapplauncherd-qt5
 Requires:  sailfishsilica-qt5 >= 0.8.67
 

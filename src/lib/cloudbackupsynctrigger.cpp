@@ -19,11 +19,7 @@
 #include <QJsonValue>
 #include <QVariantMap>
 #include <QVariantList>
-#include <QCryptographicHash>
 #include <QtDebug>
-
-// ssu
-#include <ssudeviceinfo.h>
 
 // mlite5
 #include <MGConfItem>
@@ -125,13 +121,9 @@ namespace {
 CloudBackupSyncTrigger::CloudBackupSyncTrigger(QObject *parent)
     : QObject(parent)
     , m_accountSyncManager(new AccountSyncManager(this))
-    , m_networkManager(new QNetworkAccessManager(this))
+     , m_networkManager(new QNetworkAccessManager(this))
 {
-    QString deviceId = SsuDeviceInfo().deviceUid();
-    QByteArray hashedDeviceId = QCryptographicHash::hash(deviceId.toUtf8(), QCryptographicHash::Sha256);
-    QString encodedDeviceId = QString::fromUtf8(hashedDeviceId.toBase64()).mid(0,12);
-    QString defaultRemotePath = QString::fromLatin1("Backups/%1").arg(encodedDeviceId);
-    m_defaultRemoteBackupsDirectory = deviceId.isEmpty() ? QString() : defaultRemotePath;
+    m_defaultRemoteBackupsDirectory = QStringLiteral("Backups");
     connect(m_accountSyncManager, SIGNAL(profileSyncStatusChanged(QString,int,QString)),
             this, SLOT(handleProfileSyncStatusChanged(QString,int,QString)));
 }
@@ -382,6 +374,8 @@ void CloudBackupSyncTrigger::signOnResponse(const SignOn::SessionData &responseD
         } else {
             // finally perform the actual remote directory listing request
             qDebug() << "performing remote directory listing request:" << cloudName << remotePath;
+            m_deviceDirectories.clear();
+            m_dirListing.clear();
             performListingRequest(accountId, accessToken, cloudName, remotePath);
         }
     } else {
@@ -429,6 +423,7 @@ void CloudBackupSyncTrigger::handleListingResponse()
     int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     QByteArray data = reply->readAll();
     int accountId = reply->property("accountId").toInt();
+    QString accessToken = reply->property("accessToken").toString();
     QString cloudName = reply->property("cloudName").toString();
     QString remotePath = reply->property("remotePath").toString();
     reply->deleteLater();
@@ -436,6 +431,12 @@ void CloudBackupSyncTrigger::handleListingResponse()
     bool ok = false;
     QString responseData = QString::fromUtf8(data);
     QJsonObject parsed = parseJsonObjectReplyData(data, &ok);
+
+    if (m_currentSyncProfileId.isEmpty()) {
+        // we have terminated the sync already
+        return;
+    }
+
     if (!ok || (cloudName == QStringLiteral("Dropbox")  && !parsed.contains("contents"))
             || (cloudName == QStringLiteral("OneDrive") && !parsed.contains("children"))) {
         qDebug() << "unable to parse directory listing from response for:" << cloudName << remotePath << ", code:" << httpCode;
@@ -458,37 +459,65 @@ void CloudBackupSyncTrigger::handleListingResponse()
         }
     }
 
-    QVariantList listing;
+    bool fetchSubDirListing = m_deviceDirectories.isEmpty();
+
     if (cloudName == QStringLiteral("OneDrive")) {
         QJsonArray children = parsed.value("children").toArray();
         Q_FOREACH (const QJsonValue &child, children) {
-            QVariantMap entry;
             const QString childName = child.toObject().value("name").toString();
-            entry.insert("name", childName);
-            entry.insert("parent", remotePath);
-            if (child.toObject().keys().contains("folder")) {
-                entry.insert("is_dir", true);
+            const bool isDir = child.toObject().keys().contains("folder");
+            if (fetchSubDirListing) {
+                if (isDir) {
+                    QString childPath = remotePath + "/" + childName;
+                    m_deviceDirectories.append(childPath);
+                }
             } else {
-                entry.insert("is_dir", false);
+                QVariantMap entry;
+                entry.insert("name", childName);
+                entry.insert("parent", remotePath);
+                if (isDir) {
+                    entry.insert("is_dir", true);
+                } else {
+                    entry.insert("is_dir", false);
+                }
+                m_dirListing.append(entry);
             }
-            listing.append(entry);
         }
     } else { // cloudName == QStringLiteral("Dropbox")
         QJsonArray contents = parsed.value("contents").toArray();
         Q_FOREACH (const QJsonValue &child, contents) {
-            QVariantMap entry;
             const QString childPath = child.toObject().value("path").toString();
-            entry.insert("name", childPath.split('/').last());
-            entry.insert("parent", remotePath);
-            if (child.toObject().value("is_dir").toBool() == true) {
-                entry.insert("is_dir", true);
+            const bool isDir = child.toObject().value("is_dir").toBool() == true;
+            if (fetchSubDirListing) {
+                if (isDir) {
+                    m_deviceDirectories.append(childPath);
+                }
             } else {
-                entry.insert("is_dir", false);
+                QVariantMap entry;
+                entry.insert("name", childPath.split('/').last());
+                entry.insert("parent", remotePath);
+                if (isDir) {
+                    entry.insert("is_dir", true);
+                } else {
+                    entry.insert("is_dir", false);
+                }
+                m_dirListing.append(entry);
             }
-            listing.append(entry);
         }
     }
 
-    emit requestedListing(accountId, listing);
-    m_currentSyncProfileId.clear();
+    if (fetchSubDirListing) {
+        // Fetch the contents of each sub-directory, which should contain the backups for
+        // a particular device.
+        Q_FOREACH (const QString &deviceDir, m_deviceDirectories) {
+            performListingRequest(accountId, accessToken, cloudName, deviceDir);
+        }
+    } else {
+        // Check whether all sub-directories have been queried.
+        m_deviceDirectories.removeOne(remotePath);
+        if (m_deviceDirectories.isEmpty()) {
+            emit requestedListing(accountId, m_dirListing);
+            m_currentSyncProfileId.clear();
+        }
+    }
 }
