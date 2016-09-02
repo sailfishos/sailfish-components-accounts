@@ -78,8 +78,7 @@ ListItem {
     BusyIndicator {
         id: syncIndicator
         anchors.centerIn: icon
-        size: BusyIndicatorSize.Medium
-        width: sourceSize.width * .75
+        size: BusyIndicatorSize.Small
         height: width
         running: model.performingInitialSync && model.accountError === AccountModel.NoAccountError
     }
