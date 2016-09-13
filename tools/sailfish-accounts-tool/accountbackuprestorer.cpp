@@ -47,6 +47,15 @@ namespace {
         return serviceNames;
     }
 
+    // Note: don't restore credentials of the Jolla account.  If they have
+    // switched device and restored, the token won't match the device.
+    bool shouldRestoreCredentials(const QString &providerName)
+    {
+        if (providerName == QStringLiteral("jolla"))
+            return false;
+        return true;
+    }
+
 template <typename To, typename From>
 QVariant convert(From const &src)
 {
@@ -413,55 +422,57 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
                 // from the old credentials id to the new credentials id, which becomes
                 // important later when we restore the service settings.
                 QMap<quint32, quint32> oldToNewCredentialsIds;
-                QVariantMap allCredentialsSettings;
-                backupIni.beginGroup(QStringLiteral("credentialsSettings"));
-                {
-                    QStringList oldCredentialsIds = backupIni.childGroups();
-                    Q_FOREACH (const QString &oldCredIdStr, oldCredentialsIds) {
-                        backupIni.beginGroup(oldCredIdStr);
+                if (shouldRestoreCredentials(providerName)) {
+                    QVariantMap allCredentialsSettings;
+                    backupIni.beginGroup(QStringLiteral("credentialsSettings"));
+                    {
+                        QStringList oldCredentialsIds = backupIni.childGroups();
+                        Q_FOREACH (const QString &oldCredIdStr, oldCredentialsIds) {
+                            backupIni.beginGroup(oldCredIdStr);
 
-                        // read the identity info values.  these shouldn't change across method/mechs
-                        QVariantMap infoValues;
-                        backupIni.beginGroup(QStringLiteral("infoValues"));
-                        Q_FOREACH (const QString &key, backupIni.allKeys()) {
-                            infoValues.insert(key, deduce(backupIni, key));
-                        }
-                        backupIni.endGroup();
+                            // read the identity info values.  these shouldn't change across method/mechs
+                            QVariantMap infoValues;
+                            backupIni.beginGroup(QStringLiteral("infoValues"));
+                            Q_FOREACH (const QString &key, backupIni.allKeys()) {
+                                infoValues.insert(key, deduce(backupIni, key));
+                            }
+                            backupIni.endGroup();
 
-                        // read the secrets for this method/mechanism.  these can be different.
-                        QVariantMap methodMechanismSecrets;
-                        backupIni.beginGroup(QStringLiteral("methodMechanismSecrets"));
-                        Q_FOREACH (const QString &method, backupIni.childGroups()) {
-                            backupIni.beginGroup(method);
-                            QVariantMap mechanismSecrets;
-                            Q_FOREACH (const QString &mechanism, backupIni.childGroups()) {
-                                backupIni.beginGroup(mechanism);
-                                QVariantMap secrets;
-                                Q_FOREACH (const QString &key, backupIni.allKeys()) {
-                                    secrets.insert(key, deduce(backupIni, key));
+                            // read the secrets for this method/mechanism.  these can be different.
+                            QVariantMap methodMechanismSecrets;
+                            backupIni.beginGroup(QStringLiteral("methodMechanismSecrets"));
+                            Q_FOREACH (const QString &method, backupIni.childGroups()) {
+                                backupIni.beginGroup(method);
+                                QVariantMap mechanismSecrets;
+                                Q_FOREACH (const QString &mechanism, backupIni.childGroups()) {
+                                    backupIni.beginGroup(mechanism);
+                                    QVariantMap secrets;
+                                    Q_FOREACH (const QString &key, backupIni.allKeys()) {
+                                        secrets.insert(key, deduce(backupIni, key));
+                                    }
+                                    mechanismSecrets.insert(mechanism, secrets);
+                                    backupIni.endGroup();
                                 }
-                                mechanismSecrets.insert(mechanism, secrets);
+                                methodMechanismSecrets.insert(method, mechanismSecrets);
                                 backupIni.endGroup();
                             }
-                            methodMechanismSecrets.insert(method, mechanismSecrets);
+                            backupIni.endGroup();
+
+                            // insert the information for this credential into our settings map
+                            QVariantMap credentialSettings;
+                            credentialSettings.insert(QStringLiteral("infoValues"), infoValues);
+                            credentialSettings.insert(QStringLiteral("methodMechanismSecrets"), methodMechanismSecrets);
+                            allCredentialsSettings.insert(oldCredIdStr, credentialSettings);
+
+                            // done with this credential.
                             backupIni.endGroup();
                         }
-                        backupIni.endGroup();
 
-                        // insert the information for this credential into our settings map
-                        QVariantMap credentialSettings;
-                        credentialSettings.insert(QStringLiteral("infoValues"), infoValues);
-                        credentialSettings.insert(QStringLiteral("methodMechanismSecrets"), methodMechanismSecrets);
-                        allCredentialsSettings.insert(oldCredIdStr, credentialSettings);
-
-                        // done with this credential.
-                        backupIni.endGroup();
+                        // we now have the information required to create ALL backed-up credentials.
+                        oldToNewCredentialsIds = createCredentials(allCredentialsSettings);
                     }
-
-                    // we now have the information required to create ALL backed-up credentials.
-                    oldToNewCredentialsIds = createCredentials(allCredentialsSettings);
+                    backupIni.endGroup();
                 }
-                backupIni.endGroup();
 
                 // now we can restore the service settings
                 backupIni.beginGroup(QStringLiteral("serviceSettings"));
@@ -644,16 +655,19 @@ void AccountBackupRestorer::restoreAccountServiceSettings(QSettings &backupIni,
                          ? sourceServiceName
                          : (srv.isValid() ? srv.name() : QStringLiteral("defaultService")));
     Q_FOREACH (const QString &key, backupIni.allKeys()) {
+        // restore account credentials, special settings like enabled, and other settings.
         if (key.contains(QLatin1String("CredentialsId")) ||
             key.contains(QLatin1String("segregated_credentials"))) {
-            // update credentials id to the new one.
-            quint32 oldacid = backupIni.value(key).toUInt();
-            if (oldacid) {
-                if (oldToNewCredentialsIds.contains(oldacid)) {
-                    account->setValue(key, QVariant::fromValue<quint32>(oldToNewCredentialsIds.value(oldacid)));
-                } else {
-                    qWarning() << Q_FUNC_INFO << "unable to restore credentials" << oldacid
-                               << "for old account" << oldAccountId << "(" << account->id() << ")";
+            if (shouldRestoreCredentials(account->providerName())) {
+                // update credentials id to the new one.
+                quint32 oldacid = backupIni.value(key).toUInt();
+                if (oldacid) {
+                    if (oldToNewCredentialsIds.contains(oldacid)) {
+                        account->setValue(key, QVariant::fromValue<quint32>(oldToNewCredentialsIds.value(oldacid)));
+                    } else {
+                        qWarning() << Q_FUNC_INFO << "unable to restore credentials" << oldacid
+                                   << "for old account" << oldAccountId << "(" << account->id() << ")";
+                    }
                 }
             }
         } else if (key == QLatin1String("enabled") && srv.isValid()) {
