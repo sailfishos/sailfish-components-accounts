@@ -445,9 +445,11 @@ bool AccountModifier::applySyncUpdateChanges()
                     m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
                     m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
             if (!profile) {
-                qWarning() << "Profile could not created for template:" << templateProfile;
-                m_error = true;
-                return false;
+                // This might be the case if the user has uninstalled some component
+                // which provides this template (e.g., jolla-email app and syncemail.xml).
+                // So, emit a warning but don't fail the entire restore process.
+                qWarning() << "Profile could not be created for template:" << templateProfile << "for account" << m_currAccount->id();
+                continue;
             }
 
             // In version 1.0.5 and earlier, google-contacts were not synced by default, so updated
