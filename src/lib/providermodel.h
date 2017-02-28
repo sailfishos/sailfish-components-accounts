@@ -21,7 +21,7 @@ class Q_DECL_EXPORT ProviderModel : public QAbstractListModel, public QQmlParser
     Q_PROPERTY(QStringList serviceFilter READ serviceFilter WRITE setServiceFilter NOTIFY serviceFilterChanged)
 
 public:
-    enum Roles{
+    enum Role {
         ProviderNameRole = Qt::UserRole + 1,
         ProviderDisplayNameRole,
         ProviderDescriptionRole,
