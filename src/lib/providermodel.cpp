@@ -118,7 +118,7 @@ ProviderModel::ProviderModel(QObject* parent)
         d->providerList.append(provider);
     }
     std::sort(d->providerList.begin(), d->providerList.end(), [](const Accounts::Provider &a, const Accounts::Provider &b) {
-        return SailfishAccounts::translatedDisplayName(a) > SailfishAccounts::translatedDisplayName(b);
+        return SailfishAccounts::translatedDisplayName(a).localeAwareCompare(SailfishAccounts::translatedDisplayName(b)) < 0;
     });
     d->filteredProviderList = d->providerList;
 }
