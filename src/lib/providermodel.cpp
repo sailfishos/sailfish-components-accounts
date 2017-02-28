@@ -185,17 +185,17 @@ QVariant ProviderModel::data(const QModelIndex& index, int role) const
     if (!provider.isValid())
         return QVariant();
 
-    if (role == ProviderNameRole)
+    const Role modelRole = static_cast<Role>(role);
+    switch (modelRole) {
+    case ProviderNameRole:
         return provider.name();
-
-    if (role == ProviderDisplayNameRole)
+    case ProviderDisplayNameRole:
         return SailfishAccounts::translatedDisplayName(provider);
-
-    if (role == ProviderDescriptionRole)
+    case ProviderDescriptionRole:
         return retrieveDescription(provider);
-
-    if (role == ProviderIconRole)
+    case ProviderIconRole:
         return provider.iconName();
+    }
 
     return QVariant();
 }
