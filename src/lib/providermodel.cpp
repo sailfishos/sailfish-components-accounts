@@ -115,25 +115,11 @@ ProviderModel::ProviderModel(QObject* parent)
                 ++it;
             }
         }
+        d->providerList.append(provider);
     }
-
-    for (int i = 0; i < providers.size(); i++) {
-        QDomDocument domDocument = providers[i].domDocument();
-
-        // add it sorted by provider display name
-        bool addedProvider = false;
-        for (int j = 0; j < d->providerList.size(); ++j) {
-            if (SailfishAccounts::translatedDisplayName(providers[i]) < SailfishAccounts::translatedDisplayName(d->providerList[j])) {
-                d->providerList.insert(j, providers[i]);
-                addedProvider = true;
-                break;
-            }
-        }
-
-        if (!addedProvider) {
-            d->providerList << providers[i];
-        }
-    }
+    std::sort(d->providerList.begin(), d->providerList.end(), [](const Accounts::Provider &a, const Accounts::Provider &b) {
+        return SailfishAccounts::translatedDisplayName(a) > SailfishAccounts::translatedDisplayName(b);
+    });
     d->filteredProviderList = d->providerList;
 }
 
