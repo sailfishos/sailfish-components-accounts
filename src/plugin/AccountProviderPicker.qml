@@ -13,7 +13,6 @@ Column {
     //--- end of public api
 
     property AccountManager _accountManager: AccountManager {}
-    property bool _hasExistingJollaAccount
 
     function _isCloudStorageProvider(providerName) {
         var provider = _accountManager.provider(providerName)
@@ -34,22 +33,6 @@ Column {
             || providerName.indexOf("onlinesync") == 0
     }
 
-    Component.onCompleted: {
-        root._hasExistingJollaAccount = (_accountManager.providerAccountIdentifiers("jolla").length > 0)
-    }
-
-    Connections {
-        target: root._accountManager
-        onAccountCreated: {
-            if (!root._hasExistingJollaAccount) {
-                var account = _accountManager.account(accountId)
-                if (account && account.providerName === "jolla") {
-                    root._hasExistingJollaAccount = true
-                }
-            }
-        }
-    }
-
     ProviderModel {
         id: providerModel
     }
@@ -60,11 +43,23 @@ Column {
         Repeater {
             model: providerModel
             delegate: AccountProviderPickerDelegate {
+                id: providerDelegate
                 width: root.width
-                // don't offer the chance to create multiple jolla accounts through the UI
+                property int accountsCount: _accountManager.providerAccountIdentifiers(model.providerName).length
                 visible: !root._isOtherProvider(model.providerName)
                          && !root._isCloudStorageProvider(model.providerName)
-                         && (model.providerName !== "jolla" || !root._hasExistingJollaAccount)
+                         && (!model.providerIsSingleAccount || accountsCount < 1)
+
+                Connections {
+                    target: root._accountManager
+                    onAccountCreated: {
+                        var account = _accountManager.account(accountId)
+                        if (account.providerName !== model.providerName)
+                            return
+
+                        providerDelegate.accountsCount = _accountManager.providerAccountIdentifiers(model.providerName).length;
+                    }
+                }
             }
         }
     }
