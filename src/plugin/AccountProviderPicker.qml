@@ -43,23 +43,10 @@ Column {
         Repeater {
             model: providerModel
             delegate: AccountProviderPickerDelegate {
-                id: providerDelegate
                 width: root.width
-                property int accountsCount: _accountManager.providerAccountIdentifiers(model.providerName).length
                 visible: !root._isOtherProvider(model.providerName)
                          && !root._isCloudStorageProvider(model.providerName)
-                         && (!model.providerIsSingleAccount || accountsCount < 1)
-
-                Connections {
-                    target: root._accountManager
-                    onAccountCreated: {
-                        var account = _accountManager.account(accountId)
-                        if (account.providerName !== model.providerName)
-                            return
-
-                        providerDelegate.accountsCount = _accountManager.providerAccountIdentifiers(model.providerName).length;
-                    }
-                }
+                         && canCreateAccount
             }
         }
     }
@@ -81,7 +68,7 @@ Column {
             delegate: AccountProviderPickerDelegate {
                 id: csPickerDelegate
                 width: root.width
-                visible: root._isCloudStorageProvider(model.providerName)
+                visible: root._isCloudStorageProvider(model.providerName) && canCreateAccount
                 Component.onCompleted: {
                     if (root._isCloudStorageProvider(model.providerName)) {
                         cloudStorageRepeater.cloudProviderCount += 1
@@ -108,7 +95,7 @@ Column {
             delegate: AccountProviderPickerDelegate {
                 id: opPickerDelegate
                 width: root.width
-                visible: root._isOtherProvider(model.providerName)
+                visible: root._isOtherProvider(model.providerName) && canCreateAccount
                 Component.onCompleted: {
                     if (root._isOtherProvider(model.providerName)) {
                         otherRepeater.otherProviderCount += 1
