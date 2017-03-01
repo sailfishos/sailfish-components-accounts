@@ -100,6 +100,7 @@ ProviderModel::ProviderModel(QObject* parent)
     d->headerData.insert(ProviderDisplayNameRole, "providerDisplayName");
     d->headerData.insert(ProviderDescriptionRole, "providerDescription" );
     d->headerData.insert(ProviderIconRole, "providerIcon");
+    d->headerData.insert(ProviderIsSingleAccountRole, "providerIsSingleAccount");
 
     Accounts::Manager *m = globalAccountManager();
     Accounts::ServiceList allServices = m->serviceList(); // force reload of service files.
@@ -195,6 +196,8 @@ QVariant ProviderModel::data(const QModelIndex& index, int role) const
         return retrieveDescription(provider);
     case ProviderIconRole:
         return provider.iconName();
+    case ProviderIsSingleAccountRole:
+        return provider.isSingleAccount();
     }
 
     return QVariant();

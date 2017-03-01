@@ -25,7 +25,8 @@ public:
         ProviderNameRole = Qt::UserRole + 1,
         ProviderDisplayNameRole,
         ProviderDescriptionRole,
-        ProviderIconRole
+        ProviderIconRole,
+        ProviderIsSingleAccountRole
     };
 
     ProviderModel(QObject* parent = 0);
