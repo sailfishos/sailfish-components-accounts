@@ -71,6 +71,7 @@ void tst_Provider::properties()
         QCOMPARE(prv->displayName(), QString(QLatin1String("Provider(test)")));
         QCOMPARE(prv->iconName(), QString(QLatin1String("test-icon")));
         QVERIFY(prv->serviceNames().contains(QString(QLatin1String("test-service2"))));
+        QCOMPARE(prv->isSingleAccount(), false);
         pi = prv;
         QVERIFY(!pi.isNull());
     }
