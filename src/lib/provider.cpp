@@ -88,3 +88,13 @@ QStringList Provider::serviceNames() const
     return m_serviceNames;
 }
 
+/*!
+    \qmlproperty bool Provider::singleAccount
+    Whether the provider supports creating one account at most.
+*/
+
+bool Provider::isSingleAccount() const
+{
+    return m_provider.isSingleAccount();
+}
+
