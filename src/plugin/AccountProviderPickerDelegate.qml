@@ -7,6 +7,10 @@ ListItem {
     property int accountsCount: _accountManager.providerAccountIdentifiers(model.providerName).length
     property bool canCreateAccount: !model.providerIsSingleAccount || accountsCount < 1
 
+    onClicked: {
+        root.providerSelected(model.index, model.providerName)
+    }
+
     Connections {
         target: root._accountManager
         onAccountCreated: {
@@ -14,7 +18,7 @@ ListItem {
             if (account.providerName !== model.providerName)
                 return
 
-            providerDelegate.accountsCount = _accountManager.providerAccountIdentifiers(model.providerName).length;
+            providerDelegate.accountsCount = _accountManager.providerAccountIdentifiers(model.providerName).length
         }
     }
 
