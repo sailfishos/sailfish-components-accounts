@@ -393,23 +393,46 @@ void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString 
         return;
     }
 
-    QUrl url;
+    QNetworkReply *reply = Q_NULLPTR;
     if (cloudName == QStringLiteral("OneDrive")) {
-        url = QUrl(QStringLiteral("https://api.onedrive.com/v1.0/drive/special/approot:/%1:/").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
+        QUrl url(QStringLiteral("https://api.onedrive.com/v1.0/drive/special/approot:/%1:/").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
         QUrlQuery query(url);
         QList<QPair<QString, QString> > queryItems;
         queryItems.append(QPair<QString, QString>(QStringLiteral("expand"), QStringLiteral("children")));
         query.setQueryItems(queryItems);
         url.setQuery(query);
+
+        QNetworkRequest req(url);
+        req.setRawHeader(QString(QLatin1String("Authorization")).toUtf8(),
+                         QString(QLatin1String("Bearer ")).toUtf8() + accessToken.toUtf8());
+        reply = m_networkManager->get(req);
     } else { // cloudName == QStringLiteral("Dropbox")
-        url = QUrl(QStringLiteral("https://api.dropboxapi.com/1/metadata/auto/%1").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
+        QString dropboxPath; // path must be prefixed with / in dropbox v2 api
+        if (remotePath.isEmpty()) {
+            dropboxPath = m_defaultRemoteBackupsDirectory.startsWith(QLatin1String("/")) ? m_defaultRemoteBackupsDirectory : QStringLiteral("/%1").arg(m_defaultRemoteBackupsDirectory);
+        } else if (remotePath.startsWith(QLatin1String("/"))) {
+            dropboxPath = remotePath;
+        } else {
+            dropboxPath = QStringLiteral("/%1").arg(remotePath);
+        }
+
+        QJsonObject requestParameters;
+        requestParameters.insert("path", dropboxPath);
+        requestParameters.insert("include_media_info", true);
+        requestParameters.insert("include_deleted", false);
+        requestParameters.insert("include_has_explicit_shared_members", false);
+        QJsonDocument doc;
+        doc.setObject(requestParameters);
+        QByteArray postData = doc.toJson(QJsonDocument::Compact);
+
+        QNetworkRequest req(QUrl(QStringLiteral("https://api.dropboxapi.com/2/files/list_folder")));
+        req.setRawHeader(QString(QLatin1String("Authorization")).toUtf8(),
+                         QString(QLatin1String("Bearer ")).toUtf8() + accessToken.toUtf8());
+        req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        req.setHeader(QNetworkRequest::ContentLengthHeader, postData.size());
+        reply = m_networkManager->post(req, postData);
     }
 
-    QNetworkRequest req(url);
-    req.setRawHeader(QString(QLatin1String("Authorization")).toUtf8(),
-                     QString(QLatin1String("Bearer ")).toUtf8() + accessToken.toUtf8());
-
-    QNetworkReply *reply = m_networkManager->get(req);
     reply->setProperty("accountId", accountId);
     reply->setProperty("accessToken", accessToken);
     reply->setProperty("cloudName", cloudName);
@@ -437,13 +460,13 @@ void CloudBackupSyncTrigger::handleListingResponse()
         return;
     }
 
-    if (!ok || (cloudName == QStringLiteral("Dropbox")  && !parsed.contains("contents"))
+    if (!ok || (cloudName == QStringLiteral("Dropbox")  && !parsed.contains("entries"))
             || (cloudName == QStringLiteral("OneDrive") && !parsed.contains("children"))) {
         qDebug() << "unable to parse directory listing from response for:" << cloudName << remotePath << ", code:" << httpCode;
         Q_FOREACH (const QString &line, responseData.split('\n')) {
             qDebug() << line;
         }
-        QString errorMessage = parsed.value("error").toString();
+        QString errorMessage = cloudName == QStringLiteral("Dropbox") ? parsed.value("error_summary").toString() : parsed.value("error").toString();
         if (httpCode == 404 || httpCode == 410 ||
                 (cloudName == QStringLiteral("Dropbox") &&
                     (errorMessage.contains(QStringLiteral("User has removed their App folder"), Qt::CaseInsensitive) ||
@@ -484,10 +507,10 @@ void CloudBackupSyncTrigger::handleListingResponse()
             }
         }
     } else { // cloudName == QStringLiteral("Dropbox")
-        QJsonArray contents = parsed.value("contents").toArray();
+        QJsonArray contents = parsed.value("entries").toArray();
         Q_FOREACH (const QJsonValue &child, contents) {
-            const QString childPath = child.toObject().value("path").toString();
-            const bool isDir = child.toObject().value("is_dir").toBool() == true;
+            const QString childPath = child.toObject().value("path_display").toString();
+            const bool isDir = child.toObject().value(".tag").toString() == QStringLiteral("folder");
             if (fetchSubDirListing) {
                 if (isDir) {
                     m_deviceDirectories.append(childPath);
