@@ -27,14 +27,19 @@
 static const QString AccountUpdatedSignalTriggerDummyValueKey = QStringLiteral("dummy_value");
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 static const QString AccountDefaultCredentialsUserName = QStringLiteral("default_credentials_username");
+static const QString AccountReadOnlyKey = QStringLiteral("readonly");
+static const QString AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.
 
 struct DisplayData {
     DisplayData(Accounts::Account *acct)
         : account(acct)
         , performingInitialSync(false)
         , monitorInitialSync(false)
+        , provisioned(false)
     {
         Accounts::ServiceList services = account->services();
+        account->selectService(Accounts::Service());
+        provisioned = account->value(AccountProvisionedKey).toBool();
         foreach (const Accounts::Service &service, services) {
             serviceNames.append(service.name());
             serviceTypes.append(service.serviceType());
@@ -52,6 +57,8 @@ struct DisplayData {
             return serviceNames.contains(filter);
         case AccountModel::ServiceTypeFilter:
             return serviceTypes.contains(filter);
+        case AccountModel::ProvisionedFilter:
+            return provisioned == (filter.compare("true", Qt::CaseInsensitive) == 0);
         }
         return false;
     }
@@ -77,6 +84,7 @@ struct DisplayData {
     QStringList serviceTypes;
     bool performingInitialSync;
     bool monitorInitialSync;
+    bool provisioned;
     Q_DISABLE_COPY(DisplayData)
 };
 
@@ -139,6 +147,14 @@ public:
         if (role == AccountUserNameRole) {
             displayData->account->selectService(Accounts::Service());
             return displayData->account->value(AccountDefaultCredentialsUserName).toString();
+        }
+        if (role == AccountReadOnlyRole) {
+            displayData->account->selectService(Accounts::Service());
+            return displayData->account->value(AccountReadOnlyKey).toBool();
+        }
+        if (role == AccountProvisionedRole) {
+            displayData->account->selectService(Accounts::Service());
+            return displayData->account->value(AccountProvisionedKey).toBool();
         }
         return QVariant();
     }
@@ -238,6 +254,8 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountErrorRole, "accountError");
     d->headerData.insert(PerformingInitialSyncRole, "performingInitialSync");
     d->headerData.insert(AccountUserNameRole, "accountUserName");
+    d->headerData.insert(AccountReadOnlyRole, "accountReadOnly");
+    d->headerData.insert(AccountProvisionedRole, "accountProvisioned");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),

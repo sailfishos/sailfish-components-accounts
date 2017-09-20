@@ -45,14 +45,17 @@ public:
         AccountEnabledRole,
         AccountErrorRole,
         PerformingInitialSyncRole,
-        AccountUserNameRole
+        AccountUserNameRole,
+        AccountReadOnlyRole,
+        AccountProvisionedRole
     };
 
     enum FilterType {
         NoFilter,
         ProviderFilter,
         ServiceFilter,
-        ServiceTypeFilter
+        ServiceTypeFilter,
+        ProvisionedFilter
     };
 
     enum AccountError {
