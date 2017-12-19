@@ -87,6 +87,7 @@ private:
     bool createProfiles(bool triggerSync);
     void addScheduledCommand(Mode command);
     QList<Mode> loadScheduledCommands(QFile *file);
+    bool cdavAccountNeedsMigration(Accounts::Account *account);
     bool backupAccount(Accounts::Account *account);
     bool restoreAccounts();
     void triggerProfiles(Accounts::Account *account);

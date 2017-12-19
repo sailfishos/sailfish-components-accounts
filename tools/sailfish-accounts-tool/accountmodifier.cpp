@@ -11,6 +11,7 @@
 // libaccounts-qt
 #include <Accounts/Manager>
 #include <Accounts/Account>
+#include <Accounts/Service>
 
 #include <QStandardPaths>
 #include <QTemporaryFile>
@@ -298,6 +299,7 @@ void AccountModifier::next()
     case MigrateCalDavPerProviderBackup:
         needsSync = false;
         if (m_currAccount->providerName() == QStringLiteral("onlinesync")
+                && cdavAccountNeedsMigration(m_currAccount)
                 && backupAccount(m_currAccount)) {
             qWarning() << "\tBacked up onlinesync account for migration:" << m_currAccount->id();
         }
@@ -663,6 +665,22 @@ QString AccountModifier::markerFilePath()
     }
     qWarning() << "Error: QStandardPaths cannot find HomeLocation!";
     return QString();
+}
+
+bool AccountModifier::cdavAccountNeedsMigration(Accounts::Account *account)
+{
+    if (m_currAccount->providerName() != QStringLiteral("onlinesync")) {
+        return false; // not actually a cdav account
+    }
+
+    QList<Accounts::Service> srvs = account->services();
+    Q_FOREACH (const Accounts::Service &srv, srvs) {
+        if (srv.name().startsWith(QStringLiteral("onlinesync-caldav_"), Qt::CaseInsensitive)) {
+            return true; // old-style service, this account needs migration.
+        }
+    }
+
+    return false;
 }
 
 bool AccountModifier::backupAccount(Accounts::Account *account)
