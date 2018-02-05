@@ -930,6 +930,7 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
 
 void AccountPrivate::handleStateChanged(SignOn::AuthSession::AuthSessionState state, const QString &message)
 {
+    Q_UNUSED(message)
     sessionState = state;
 }
 
