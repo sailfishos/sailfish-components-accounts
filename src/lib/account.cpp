@@ -1390,13 +1390,13 @@ QVariantMap Account::configurationValues(const QString &serviceName) const
     The follow variant types are supported:
 
     \list
-    \o QVariant::Int
-    \o QVariant::UInt
-    \o QVariant::LongLong
-    \o QVariant::ULongLong
-    \o QVariant::String
-    \o QVariant::StringList
-    \o QVariant::List (in this case, the value will be converted to a QStringList)
+    \li QVariant::Int
+    \li QVariant::UInt
+    \li QVariant::LongLong
+    \li QVariant::ULongLong
+    \li QVariant::String
+    \li QVariant::StringList
+    \li QVariant::List (in this case, the value will be converted to a QStringList)
     \endlist
 
     If a variant in the given \a values uses a type outside of those listed above, it will not
