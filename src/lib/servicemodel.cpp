@@ -45,17 +45,6 @@ public:
     bool componentComplete;
 };
 
-static QString retrieveDescription(const Accounts::Provider &provider)
-{
-    QDomElement root = provider.domDocument().documentElement();
-    QDomElement descriptionElement = root.firstChildElement("description");
-    if (!descriptionElement.text().isEmpty()) {
-        return descriptionElement.text();
-    } else {
-        return QString();
-    }
-}
-
 /*!
     \qmltype ServiceModel
     \instantiates ServiceModel
