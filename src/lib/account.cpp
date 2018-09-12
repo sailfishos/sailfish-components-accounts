@@ -30,6 +30,7 @@
 #include <QTimer>
 #include <QDBusInterface>
 #include <QDBusConnection>
+#include <QJSValue>
 
 #define CREDENTIALS_GROUP QLatin1String("segregated_credentials")
 #define BUILD_CREDENTIALS_CONFIGURATION_KEY(appName, credName) QString(QLatin1String("%1/%2/%3")).arg(appName).arg(CREDENTIALS_GROUP).arg(credName)
@@ -1427,8 +1428,15 @@ void Account::setConfigurationValues(const QString &serviceName, const QVariantM
             validValues.insert(key, currValue);
         } else if (currValue.type() == QVariant::List) {
             validValues.insert(key, currValue.toStringList());
+        } else if (currValue.userType() == QMetaType::type("QJSValue")) {
+            QVariant convertedValue = currValue.value<QJSValue>().toVariant();
+            if (convertedValue.isValid()) {
+                validValues.insert(key, currValue.toStringList());
+            } else {
+                qWarning() << "Account::setConfigurationValues(): variant type QJSValue for key '" + key + "' cannot be converted, value will not be added";
+            }
         } else {
-            qWarning() << "Account::setConfigurationValues(): variant type " << currValue.type()
+            qWarning() << "Account::setConfigurationValues(): variant type " << currValue.typeName()
                        << "for key '" + key + "' not supported, value will not be added";
         }
     }
