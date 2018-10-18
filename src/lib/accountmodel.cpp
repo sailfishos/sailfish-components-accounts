@@ -30,6 +30,15 @@ static const QString AccountDefaultCredentialsUserName = QStringLiteral("default
 static const QString AccountReadOnlyKey = QStringLiteral("readonly");
 static const QString AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.
 
+namespace {
+    QString obsoleteAccountProviderDisplayName()
+    {
+        //: If the provider has been uninstalled, show 'Obsolete account' for the account's provider display name
+        //% "Obsolete account"
+        return qtTrId("sailfish_accounts-accountmodel-obsolete_account");
+    }
+}
+
 struct DisplayData {
     DisplayData(Accounts::Account *acct)
         : account(acct)
@@ -67,8 +76,12 @@ struct DisplayData {
         QString savedDisplayName = account->displayName();
         account->selectService(Accounts::Service());
         if (savedDisplayName.isEmpty() || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
-            if (providerDisplayName.isEmpty()) {
-                providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+            if (providerDisplayName.isEmpty()){
+                if (account->provider().isValid()) {
+                    providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+                } else {
+                    providerDisplayName = obsoleteAccountProviderDisplayName();
+                }
             }
             return providerDisplayName;
         }
@@ -115,7 +128,9 @@ public:
         }
         if (role == AccountIconRole) {
             if (displayData->accountIcon.isNull()) {
-                displayData->accountIcon = displayData->account->provider().iconName();
+                displayData->accountIcon = displayData->account->provider().isValid()
+                                         ? displayData->account->provider().iconName()
+                                         : QStringLiteral("image://theme/graphic-service-generic-mail");
             }
             return QVariant::fromValue(displayData->accountIcon);
         }
@@ -127,9 +142,16 @@ public:
         }
         if (role == ProviderDisplayNameRole) {
             if (displayData->providerDisplayName.isEmpty()) {
-                displayData->providerDisplayName = SailfishAccounts::translatedDisplayName(displayData->account->provider());
+                if (displayData->account->provider().isValid()) {
+                    displayData->providerDisplayName = SailfishAccounts::translatedDisplayName(displayData->account->provider());
+                } else {
+                    displayData->providerDisplayName = obsoleteAccountProviderDisplayName();
+                }
             }
             return QVariant::fromValue(displayData->providerDisplayName);
+        }
+        if (role == ProviderValidRole) {
+            return QVariant::fromValue(displayData->account->provider().isValid());
         }
         if (role == AccountEnabledRole) {
             return QVariant::fromValue(displayData->account->enabled());
@@ -146,7 +168,11 @@ public:
         }
         if (role == AccountUserNameRole) {
             displayData->account->selectService(Accounts::Service());
-            return displayData->account->value(AccountDefaultCredentialsUserName).toString();
+            if (displayData->account->provider().isValid()) {
+                return displayData->account->value(AccountDefaultCredentialsUserName).toString();
+            } else {
+                return obsoleteAccountProviderDisplayName();
+            }
         }
         if (role == AccountReadOnlyRole) {
             displayData->account->selectService(Accounts::Service());
@@ -175,7 +201,9 @@ public:
 namespace {
     bool displayDataLessThan(const QString &thisDisplayName, const QString &thisProviderDisplayName, Accounts::Account *account, DisplayData *otherDisplayData)
     {
-        QString otherProviderDisplayName = SailfishAccounts::translatedDisplayName(otherDisplayData->account->provider());
+        QString otherProviderDisplayName = otherDisplayData->account->provider().isValid()
+                                         ? SailfishAccounts::translatedDisplayName(otherDisplayData->account->provider())
+                                         : obsoleteAccountProviderDisplayName();
         if (thisProviderDisplayName < otherProviderDisplayName) {
             return true;
         } else if (thisProviderDisplayName == otherProviderDisplayName) {
@@ -201,7 +229,9 @@ namespace {
         // sort by provider display name then account display name
         bool addedAccount = false;
         QString thisDisplayName = data->displayName();
-        QString thisProviderDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+        QString thisProviderDisplayName = account->provider().isValid()
+                                        ? SailfishAccounts::translatedDisplayName(account->provider())
+                                        : obsoleteAccountProviderDisplayName();
         for (int j = 0; j < accountsList->size(); ++j) {
             if (displayDataLessThan(thisDisplayName, thisProviderDisplayName, account, accountsList->at(j))) {
                 accountsList->insert(j, data);
@@ -233,6 +263,7 @@ namespace {
     \li \c accountIcon
     \li \c providerName
     \li \c providerDisplayName
+    \li \c providerValid
     \li \c accountEnabled
     \li \c accountError
     \endlist
@@ -250,6 +281,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountIconRole, "accountIcon" );
     d->headerData.insert(ProviderNameRole, "providerName");
     d->headerData.insert(ProviderDisplayNameRole, "providerDisplayName");
+    d->headerData.insert(ProviderValidRole, "providerValid");
     d->headerData.insert(AccountEnabledRole, "accountEnabled");
     d->headerData.insert(AccountErrorRole, "accountError");
     d->headerData.insert(PerformingInitialSyncRole, "performingInitialSync");
@@ -264,16 +296,6 @@ AccountModel::AccountModel(QObject* parent)
                      this, SLOT(accountUpdated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(enabledEvent(Accounts::AccountId)),
                      this, SLOT(accountUpdated(Accounts::AccountId)));
-    Accounts::AccountIdList idList = d->manager->accountList();
-    foreach (Accounts::AccountId id, idList) {
-        Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
-        if (!account->provider().isValid()) {
-            continue;
-        }
-        addedAccount(account);
-        DisplayData *data = new DisplayData(account);
-        insertAccountSorted(data, account, &d->accountsList, &d->filteredAccountsList);
-    }
 }
 
 AccountModel::~AccountModel()
@@ -397,6 +419,22 @@ bool AccountModel::accountHasServiceOfTypeEnabled(int accountId, const QString &
     return false;
 }
 
+void AccountModel::populate()
+{
+    Q_D(AccountModel);
+    Accounts::AccountIdList idList = d->manager->accountList();
+    foreach (Accounts::AccountId id, idList) {
+        Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
+        addedAccount(account);
+        DisplayData *data = new DisplayData(account);
+        insertAccountSorted(data, account, &d->accountsList, &d->filteredAccountsList);
+    }
+
+    if (count() > 0) {
+        emit countChanged();
+    }
+}
+
 void AccountModel::reload()
 {
     Q_D(AccountModel);
@@ -445,6 +483,7 @@ void AccountModel::classBegin()
 void AccountModel::componentComplete()
 {
     Q_D(AccountModel);
+    populate();
     if (d->filterType != NoFilter && !d->filter.isEmpty()) {
         reload();
     }
