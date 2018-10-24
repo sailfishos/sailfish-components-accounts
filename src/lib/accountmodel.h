@@ -42,6 +42,7 @@ public:
         AccountIconRole,
         ProviderNameRole,
         ProviderDisplayNameRole,
+        ProviderValidRole,
         AccountEnabledRole,
         AccountErrorRole,
         PerformingInitialSyncRole,
@@ -110,6 +111,7 @@ private:
     int getFilteredAccountsIndex(Accounts::AccountId id) const;
     void addedAccount(Accounts::Account *account);
     void removedAccount(Accounts::Account *account);
+    void populate();
     void reload();
     void monitorSyncStatus(Accounts::Account *account);
 

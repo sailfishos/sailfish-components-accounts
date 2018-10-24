@@ -19,8 +19,8 @@ OTHER_FILES += \
 TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
 EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
 
-translations.commands += lupdate $$PWD -ts $$TS_FILE
-translations.depends = $$PWD/*.qml
+translations.commands += lupdate $$PWD $$PWD/../lib/accountmodel.cpp -ts $$TS_FILE
+translations.depends = $$PWD/*.qml $$PWD/../lib/accountmodel.cpp
 translations.CONFIG += no_check_exist no_link
 translations.output = $$TS_FILE
 translations.input = .

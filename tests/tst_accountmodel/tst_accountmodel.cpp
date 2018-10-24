@@ -102,6 +102,7 @@ void tst_AccountModel::addAccount()
     QCOMPARE(model.data(model.index(matchedIndex), AccountModel::AccountIconRole).toString(), provider.iconName());
     QCOMPARE(model.data(model.index(matchedIndex), AccountModel::ProviderNameRole).toString(), account->providerName());
     QCOMPARE(model.data(model.index(matchedIndex), AccountModel::ProviderDisplayNameRole).toString(), provider.displayName());
+    QCOMPARE(model.data(model.index(matchedIndex), AccountModel::ProviderValidRole).toBool(), true);
     account->remove();
 }
 
