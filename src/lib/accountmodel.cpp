@@ -168,10 +168,11 @@ public:
         }
         if (role == AccountUserNameRole) {
             displayData->account->selectService(Accounts::Service());
-            if (displayData->account->provider().isValid()) {
-                return displayData->account->value(AccountDefaultCredentialsUserName).toString();
-            } else {
+            const QString userName = displayData->account->value(AccountDefaultCredentialsUserName).toString();
+            if (userName.isEmpty() && !displayData->account->provider().isValid()) {
                 return obsoleteAccountProviderDisplayName();
+            } else {
+                return userName;
             }
         }
         if (role == AccountReadOnlyRole) {
