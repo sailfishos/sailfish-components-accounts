@@ -312,10 +312,12 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
                         QVariantMap mechanismSecrets = methodMechanismSecrets.value(method).toMap();
                         Q_FOREACH (const QString &mechanism, mechanismSecrets.keys()) {
                             backupIni.beginGroup(mechanism);
+#ifdef BACKUP_ACCOUNT_CREDENTIALS_SECRETS
                             QVariantMap secrets = mechanismSecrets.value(mechanism).toMap();
                             Q_FOREACH (const QString &key, secrets.keys()) {
                                 backupIni.setValue(key, secrets.value(key));
                             }
+#endif // BACKUP_ACCOUNT_CREDENTIALS_SECRETS
                             backupIni.endGroup();
                         }
                         backupIni.endGroup();
