@@ -389,13 +389,6 @@ void CloudBackupSyncTrigger::signOnResponse(const SignOn::SessionData &responseD
 
 void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString &accessToken, const QString &cloudName, const QString &remotePath)
 {
-    // perform the appropriate REST call to get the directory listing
-    if (m_defaultRemoteBackupsDirectory.isEmpty()) {
-        emit requestListingFailed(accountId, QStringLiteral("Unable to determine device ssu id, cannot determine default backup directory!"));
-        m_currentSyncProfileId.clear();
-        return;
-    }
-
     QNetworkReply *reply = Q_NULLPTR;
     if (cloudName == OneDriveAccount) {
         QUrl url(QStringLiteral("https://api.onedrive.com/v1.0/drive/special/approot:/%1:/").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
@@ -412,7 +405,7 @@ void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString 
     } else { // cloudName == DropboxAccount
         QString dropboxPath; // path must be prefixed with / in dropbox v2 api
         if (remotePath.isEmpty()) {
-            dropboxPath = m_defaultRemoteBackupsDirectory.startsWith(QLatin1String("/")) ? m_defaultRemoteBackupsDirectory : QStringLiteral("/%1").arg(m_defaultRemoteBackupsDirectory);
+            dropboxPath = QStringLiteral("/%1").arg(m_defaultRemoteBackupsDirectory);
         } else if (remotePath.startsWith(QLatin1String("/"))) {
             dropboxPath = remotePath;
         } else {
@@ -463,33 +456,46 @@ void CloudBackupSyncTrigger::handleListingResponse()
         return;
     }
 
-    if (!ok || (cloudName == DropboxAccount  && !parsed.contains("entries"))
-            || (cloudName == OneDriveAccount && !parsed.contains("children"))) {
-        qDebug() << "unable to parse directory listing from response for:" << cloudName << remotePath << ", code:" << httpCode;
-        Q_FOREACH (const QString &line, responseData.split('\n')) {
-            qDebug() << line;
-        }
+    QJsonArray dirEntries = cloudName == OneDriveAccount
+            ? parsed.value("children").toArray()
+            : parsed.value("entries").toArray();
+
+    if (!ok || dirEntries.isEmpty()) {
+        qWarning() << cloudName
+                 << (ok ? "No directory contents found at remote path" : "Unable to parse directory listing for remote path")
+                 << remotePath
+                 << ", HTTP code:" << httpCode
+                 << ", Response:" << responseData;
         QString errorMessage = cloudName == DropboxAccount ? parsed.value("error_summary").toString() : parsed.value("error").toString();
-        if (httpCode == 404 || httpCode == 410 ||
-                (cloudName == DropboxAccount &&
-                    (errorMessage.contains(QStringLiteral("User has removed their App folder"), Qt::CaseInsensitive) ||
-                        (errorMessage.contains(QStringLiteral("Path"), Qt::CaseInsensitive) &&
-                         errorMessage.contains(QStringLiteral("not found"), Qt::CaseInsensitive))))) {
-            // this is due to the App directory not yet existing.
-            // this can happen if the user has not yet created a backup.
-            // in this case, we emit success but with empty listing.
-        } else {
-            emit requestListingFailed(accountId, QStringLiteral("Unable to parse directory listing from response for account %1").arg(accountId));
-            m_currentSyncProfileId.clear();
-            return;
+        if (!errorMessage.isEmpty()) {
+            qWarning() << cloudName << "error:" << errorMessage;
         }
+
+        // Directory may be not found or be empty if user has deleted backups. Only emit the error
+        // signal if parsing failed or there was an unexpected error code.
+        errorMessage.clear();
+        if (!ok) {
+            errorMessage = QStringLiteral("Failed to parse directory listing from %1 response for account %2").arg(cloudName).arg(accountId);
+        } else if (httpCode != 200
+                   && httpCode != 404
+                   && httpCode != 409   // Dropbox error when requested path is not found
+                   && httpCode != 410) {
+            errorMessage = QStringLiteral("Directory listing request from %1 for account %2 failed").arg(cloudName).arg(accountId);
+        }
+
+        if (errorMessage.isEmpty()) {
+            emit requestedListing(accountId, QVariantList());
+        } else {
+            emit requestListingFailed(accountId, errorMessage);
+        }
+        m_currentSyncProfileId.clear();
+        return;
     }
 
     bool fetchSubDirListing = m_deviceDirectories.isEmpty();
 
     if (cloudName == OneDriveAccount) {
-        QJsonArray children = parsed.value("children").toArray();
-        Q_FOREACH (const QJsonValue &child, children) {
+        Q_FOREACH (const QJsonValue &child, dirEntries) {
             const QString childName = child.toObject().value("name").toString();
             const bool isDir = child.toObject().keys().contains("folder");
             if (fetchSubDirListing) {
@@ -510,8 +516,7 @@ void CloudBackupSyncTrigger::handleListingResponse()
             }
         }
     } else { // cloudName == DropboxAccount
-        QJsonArray contents = parsed.value("entries").toArray();
-        Q_FOREACH (const QJsonValue &child, contents) {
+        Q_FOREACH (const QJsonValue &child, dirEntries) {
             const QString childPath = child.toObject().value("path_display").toString();
             const bool isDir = child.toObject().value(".tag").toString() == QStringLiteral("folder");
             if (fetchSubDirListing) {
