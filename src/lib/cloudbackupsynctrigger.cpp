@@ -42,15 +42,18 @@
 #include <sailfishkeyprovider.h>
 
 namespace {
+    const QString OneDriveAccount = QStringLiteral("OneDrive");
+    const QString DropboxAccount = QStringLiteral("Dropbox");
+
     QString cloudServiceName(const QStringList &accountSyncProfileIds, QString *backupSyncProfile) {
         Q_FOREACH (const QString &profileId, accountSyncProfileIds) {
             if (profileId.contains("backup", Qt::CaseInsensitive)) {
                 // have valid backup sync profile
                 *backupSyncProfile = profileId;
                 if (backupSyncProfile->contains("onedrive", Qt::CaseInsensitive)) {
-                    return QStringLiteral("OneDrive");
+                    return OneDriveAccount;
                 } else if (backupSyncProfile->contains("dropbox", Qt::CaseInsensitive)) {
-                    return QStringLiteral("Dropbox");
+                    return DropboxAccount;
                 }
                 qDebug() << "Have unknown backup sync profile:" << profileId << ", ignoring.";
             }
@@ -63,7 +66,7 @@ namespace {
         QPair<QString,QString> retn;
         char *cClientId = NULL;
         char *cClientSecret = NULL;
-        bool isOneDrive = cloudName == QStringLiteral("OneDrive");
+        bool isOneDrive = cloudName == OneDriveAccount;
 
         int cSuccess = SailfishKeyProvider_storedKey(isOneDrive ? "onedrive" : "dropbox",
                                                      isOneDrive ? "onedrive-sync" : "dropbox-sync",
@@ -263,13 +266,13 @@ bool CloudBackupSyncTrigger::requestListing(int accountId, const QString &remote
 
     // Fetch consumer key and secret from keyprovider
     QPair<QString,QString> appKeys = clientIdAndSecret(cloudName);
-    if (appKeys.first.isEmpty() || (cloudName == QStringLiteral("OneDrive") && appKeys.second.isEmpty())) {
+    if (appKeys.first.isEmpty() || (cloudName == OneDriveAccount && appKeys.second.isEmpty())) {
         qDebug() << "Could not retrieve application keys for cloud provider:" << cloudName;
         return false;
     }
 
     // grab out a valid identity for the sync service.
-    QString serviceName = cloudName == QStringLiteral("OneDrive") ? QStringLiteral("onedrive-backup") : QStringLiteral("dropbox-backup");
+    QString serviceName = cloudName == OneDriveAccount ? QStringLiteral("onedrive-backup") : QStringLiteral("dropbox-backup");
     Accounts::Service srv(m_accountSyncManager->accountManager()->service(serviceName));
     if (!srv.isValid()) {
         qDebug() << "Invalid account service specified:" << serviceName << "for cloud provider:" << cloudName;
@@ -394,7 +397,7 @@ void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString 
     }
 
     QNetworkReply *reply = Q_NULLPTR;
-    if (cloudName == QStringLiteral("OneDrive")) {
+    if (cloudName == OneDriveAccount) {
         QUrl url(QStringLiteral("https://api.onedrive.com/v1.0/drive/special/approot:/%1:/").arg(remotePath.isEmpty() ? m_defaultRemoteBackupsDirectory : remotePath));
         QUrlQuery query(url);
         QList<QPair<QString, QString> > queryItems;
@@ -406,7 +409,7 @@ void CloudBackupSyncTrigger::performListingRequest(int accountId, const QString 
         req.setRawHeader(QString(QLatin1String("Authorization")).toUtf8(),
                          QString(QLatin1String("Bearer ")).toUtf8() + accessToken.toUtf8());
         reply = m_networkManager->get(req);
-    } else { // cloudName == QStringLiteral("Dropbox")
+    } else { // cloudName == DropboxAccount
         QString dropboxPath; // path must be prefixed with / in dropbox v2 api
         if (remotePath.isEmpty()) {
             dropboxPath = m_defaultRemoteBackupsDirectory.startsWith(QLatin1String("/")) ? m_defaultRemoteBackupsDirectory : QStringLiteral("/%1").arg(m_defaultRemoteBackupsDirectory);
@@ -460,15 +463,15 @@ void CloudBackupSyncTrigger::handleListingResponse()
         return;
     }
 
-    if (!ok || (cloudName == QStringLiteral("Dropbox")  && !parsed.contains("entries"))
-            || (cloudName == QStringLiteral("OneDrive") && !parsed.contains("children"))) {
+    if (!ok || (cloudName == DropboxAccount  && !parsed.contains("entries"))
+            || (cloudName == OneDriveAccount && !parsed.contains("children"))) {
         qDebug() << "unable to parse directory listing from response for:" << cloudName << remotePath << ", code:" << httpCode;
         Q_FOREACH (const QString &line, responseData.split('\n')) {
             qDebug() << line;
         }
-        QString errorMessage = cloudName == QStringLiteral("Dropbox") ? parsed.value("error_summary").toString() : parsed.value("error").toString();
+        QString errorMessage = cloudName == DropboxAccount ? parsed.value("error_summary").toString() : parsed.value("error").toString();
         if (httpCode == 404 || httpCode == 410 ||
-                (cloudName == QStringLiteral("Dropbox") &&
+                (cloudName == DropboxAccount &&
                     (errorMessage.contains(QStringLiteral("User has removed their App folder"), Qt::CaseInsensitive) ||
                         (errorMessage.contains(QStringLiteral("Path"), Qt::CaseInsensitive) &&
                          errorMessage.contains(QStringLiteral("not found"), Qt::CaseInsensitive))))) {
@@ -484,7 +487,7 @@ void CloudBackupSyncTrigger::handleListingResponse()
 
     bool fetchSubDirListing = m_deviceDirectories.isEmpty();
 
-    if (cloudName == QStringLiteral("OneDrive")) {
+    if (cloudName == OneDriveAccount) {
         QJsonArray children = parsed.value("children").toArray();
         Q_FOREACH (const QJsonValue &child, children) {
             const QString childName = child.toObject().value("name").toString();
@@ -506,7 +509,7 @@ void CloudBackupSyncTrigger::handleListingResponse()
                 m_dirListing.append(entry);
             }
         }
-    } else { // cloudName == QStringLiteral("Dropbox")
+    } else { // cloudName == DropboxAccount
         QJsonArray contents = parsed.value("entries").toArray();
         Q_FOREACH (const QJsonValue &child, contents) {
             const QString childPath = child.toObject().value("path_display").toString();
