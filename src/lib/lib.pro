@@ -86,5 +86,6 @@ QMAKE_PKGCONFIG_LIBDIR = $$target.path
 QMAKE_PKGCONFIG_INCDIR = $$develheaders.path
 QMAKE_PKGCONFIG_DESTDIR = pkgconfig
 QMAKE_PKGCONFIG_REQUIRES = Qt5Qml Qt5Xml libsailfishkeyprovider accounts-qt5 libsignon-qt5
+QMAKE_PKGCONFIG_VERSION = $$VERSION
 
 INSTALLS += target develheaders pkgconfig
