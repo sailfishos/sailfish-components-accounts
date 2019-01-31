@@ -92,19 +92,12 @@ install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
 %files
 %defattr(-,root,root,-)
 %{_libdir}/libsailfishaccounts.so.*
-%{_libdir}/qt5/qml/Sailfish/Accounts/qmldir
-%{_libdir}/qt5/qml/Sailfish/Accounts/libsailfishaccountsplugin.so
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountIcon.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPicker.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDelegate.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListDelegate.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsFlowView.qml
-%{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
+%{_libdir}/qt5/qml/Sailfish/Accounts
+%{_datadir}/translations/*.qm
 
 %files tests
 %defattr(-,root,root,-)
-/opt/tests/Sailfish/Accounts/qt5/*
+/opt/tests/Sailfish/Accounts
 %{_datadir}/accounts/providers/test-provider.provider
 %{_datadir}/accounts/services/test-service2.service
 %{_datadir}/accounts/services/test-service-oauth.service
@@ -114,11 +107,11 @@ install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
 %defattr(-,root,root,-)
 %{_libdir}/libsailfishaccounts.so
 %{_libdir}/pkgconfig/sailfishaccounts.pc
-%{_includedir}/libsailfishaccounts/*
+%{_includedir}/libsailfishaccounts
 
 %files ts-devel
 %defattr(-,root,root,-)
-%{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
+%{_datadir}/translations/source/*.ts
 
 %files doc
 %defattr(-,root,root,-)
