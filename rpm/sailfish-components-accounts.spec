@@ -6,6 +6,7 @@ Group:      System/Libraries
 License:    Proprietary
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
+Source1:    %{name}.privileges
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
@@ -85,6 +86,9 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}/%{_docdir}/%{name}
 cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 
+mkdir -p %{buildroot}%{_datadir}/mapplauncherd/privileges.d
+install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
+
 %files
 %defattr(-,root,root,-)
 %{_libdir}/libsailfishaccounts.so.*
@@ -123,6 +127,7 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 %files tools
 %defattr(-,root,root,-)
 %{_bindir}/sailfish-accounts-tool
+%{_datadir}/mapplauncherd/privileges.d/*
 
 %post
 /sbin/ldconfig
