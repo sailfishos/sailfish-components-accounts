@@ -6,6 +6,7 @@ Group:      System/Libraries
 License:    Proprietary
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
+Source1:    %{name}.privileges
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
@@ -85,22 +86,18 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}/%{_docdir}/%{name}
 cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 
+mkdir -p %{buildroot}%{_datadir}/mapplauncherd/privileges.d
+install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
+
 %files
 %defattr(-,root,root,-)
 %{_libdir}/libsailfishaccounts.so.*
-%{_libdir}/qt5/qml/Sailfish/Accounts/qmldir
-%{_libdir}/qt5/qml/Sailfish/Accounts/libsailfishaccountsplugin.so
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountIcon.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPicker.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountProviderPickerDelegate.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListView.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsListDelegate.qml
-%{_libdir}/qt5/qml/Sailfish/Accounts/AccountsFlowView.qml
-%{_datadir}/translations/sailfish_components_accounts_qt5_eng_en.qm
+%{_libdir}/qt5/qml/Sailfish/Accounts
+%{_datadir}/translations/*.qm
 
 %files tests
 %defattr(-,root,root,-)
-/opt/tests/Sailfish/Accounts/qt5/*
+/opt/tests/Sailfish/Accounts
 %{_datadir}/accounts/providers/test-provider.provider
 %{_datadir}/accounts/services/test-service2.service
 %{_datadir}/accounts/services/test-service-oauth.service
@@ -110,11 +107,11 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 %defattr(-,root,root,-)
 %{_libdir}/libsailfishaccounts.so
 %{_libdir}/pkgconfig/sailfishaccounts.pc
-%{_includedir}/libsailfishaccounts/*
+%{_includedir}/libsailfishaccounts
 
 %files ts-devel
 %defattr(-,root,root,-)
-%{_datadir}/translations/source/sailfish_components_accounts_qt5.ts
+%{_datadir}/translations/source/*.ts
 
 %files doc
 %defattr(-,root,root,-)
@@ -123,6 +120,7 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 %files tools
 %defattr(-,root,root,-)
 %{_bindir}/sailfish-accounts-tool
+%{_datadir}/mapplauncherd/privileges.d/*
 
 %post
 /sbin/ldconfig
