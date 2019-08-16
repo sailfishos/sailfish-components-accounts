@@ -22,7 +22,7 @@ BuildRequires:  pkgconfig(mlite5)
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools
 Requires:  mapplauncherd-qt5
-Requires:  sailfishsilica-qt5 >= 0.8.67
+Requires:  sailfishsilica-qt5 >= 1.1.53
 
 %description
 Sailfish Accounts UI Components
