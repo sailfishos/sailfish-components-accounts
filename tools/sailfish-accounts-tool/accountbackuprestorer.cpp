@@ -65,7 +65,7 @@ QVariant convert(From const &src)
 template <typename T>
 T value(QSettings const &settings, QString const &name, T const &defVal)
 {
-    return settings.value(name, convert<T>(defVal)).value<T>();
+    return settings.value(name, convert<T>(defVal)).template value<T>();
 }
 
 template <typename T>
