@@ -111,6 +111,8 @@ public:
                                                const QVariantMap &properties,
                                                const QString &scheduleXml);
 
+    static QString backupDeviceName();
+
 signals:
     void profileCreated(const QString &profileId);
     void profileCreationError(int accountId, const QString &serviceName, const QString &errorString);

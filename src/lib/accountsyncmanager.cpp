@@ -21,10 +21,14 @@
 #include <Accounts/AccountService>
 #include <Accounts/Manager>
 
+// nemo
+#include <ssudeviceinfo.h>
+
 #include <QDebug>
 #include <QSet>
 #include <QList>
 #include <QHash>
+#include <QtCore/QCryptographicHash>
 
 #include <QStandardPaths>
 #include <QFileInfo>
@@ -605,7 +609,7 @@ bool AccountSyncManager::updateBackupRestoreOptions(const QString &profileId, co
     clientProfile->setKey("sfos-dir-remote", options.remoteDirPath);
     clientProfile->setKey("sfos-filename", options.fileName);
 
-    QString savedProfileId = d->m_profileManager->updateProfile(*syncProfile);
+    const QString savedProfileId = d->m_profileManager->updateProfile(*syncProfile);
     delete syncProfile;
     return !savedProfileId.isEmpty();
 }
@@ -712,6 +716,32 @@ QStringList AccountSyncManager::defaultTemplateProfiles(Accounts::Account *accou
     QStringList defaultTemplates = account->value(SyncProfileTemplatesKey).toStringList();
     account->selectService(prevService);
     return defaultTemplates;
+}
+
+/*!
+    Returns a name unique to this device based on the user-friendly device name and SSU device
+    identifier.
+
+    This can be used as the directory name for a backup directory to identify the backups created
+    for this device.
+*/
+QString AccountSyncManager::backupDeviceName()
+{
+    SsuDeviceInfo deviceInfo;
+    const QString deviceId = deviceInfo.deviceUid();
+    const QByteArray hashedDeviceId = QCryptographicHash::hash(deviceId.toUtf8(), QCryptographicHash::Sha256);
+    const QString encodedDeviceId = QString::fromUtf8(hashedDeviceId.toBase64(QByteArray::Base64UrlEncoding)).mid(0,12);
+    if (deviceId.isEmpty()) {
+        qWarning() << "Could not determine device identifier for backup directory name!";
+        return QString();
+    }
+
+    QString deviceDisplayNamePrefix = deviceInfo.displayName(Ssu::DeviceModel);
+    if (!deviceDisplayNamePrefix.isEmpty()) {
+        deviceDisplayNamePrefix = deviceDisplayNamePrefix.replace(' ', '-') + '_';
+    }
+
+    return deviceDisplayNamePrefix + encodedDeviceId;
 }
 
 #include "accountsyncmanager.moc"
