@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
+ * Copyright (C) 2013-2019 Jolla Ltd.
+ * Copyright (C) 2019 Open Mobile Platform LLC
  * Contact: Bea Lam <bea.lam@jollamobile.com>
  *
  * License: Proprietary
@@ -20,22 +21,38 @@
 #include <Accounts/AccountService>
 #include <Accounts/Manager>
 
+// nemo
+#include <ssudeviceinfo.h>
+
 #include <QDebug>
 #include <QSet>
 #include <QList>
 #include <QHash>
+#include <QtCore/QCryptographicHash>
 
 #include <QStandardPaths>
 #include <QFileInfo>
 #include <QFile>
+#include <QDir>
 
-static const QString SyncProfileTemplatesKey = QStringLiteral("sync_profile_templates");
+namespace {
 
-static QString SyncProfileIdKey(const QString &templateProfileName)
-{
+const QString SyncProfileTemplatesKey = QStringLiteral("sync_profile_templates");
+
+QString SyncProfileIdKey(const QString &templateProfileName) {
     return QStringLiteral("%1/%2").arg(templateProfileName).arg(Buteo::KEY_PROFILE_ID);
 }
 
+}
+
+QStringList AccountSyncManager::BackupRestoreOptions::localDirFileNames() const
+{
+    QDir localBackupDir(localDirPath);
+    if (localBackupDir.exists()) {
+        return localBackupDir.entryList(QDir::Files);
+    }
+    return QStringList();
+}
 
 class AccountSyncProfileManagerPrivate : public QObject
 {
@@ -556,6 +573,101 @@ bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVari
     return !savedProfileId.isEmpty();
 }
 
+bool AccountSyncManager::updateBackupRestoreOptions(const QString &profileId, const BackupRestoreOptions &options)
+{
+    if (profileId.isEmpty()) {
+        qWarning() << "Invalid profileId";
+        return false;
+    }
+    Buteo::SyncProfile *syncProfile = d->m_profileManager->syncProfile(profileId);
+    if (!syncProfile) {
+        qWarning() << "Invalid profile name:" << profileId;
+        return false;
+    }
+
+    Buteo::Profile *clientProfile = syncProfile->clientProfile();
+    if (!clientProfile) {
+        qWarning() << "Cannot find client profile in sync profile:" << syncProfile->name();
+        return false;
+    }
+
+    QString operationValue;
+    switch (options.operation) {
+    case AccountSyncManager::BackupRestoreOptions::DirectoryListing:
+        operationValue = "dir-listing";
+        break;
+    case AccountSyncManager::BackupRestoreOptions::Upload:
+        operationValue = "upload";
+        break;
+    case AccountSyncManager::BackupRestoreOptions::Download:
+        operationValue = "download";
+        break;
+    };
+
+    clientProfile->setKey("sfos-operation", operationValue);
+    clientProfile->setKey("sfos-dir-local", options.localDirPath);
+    clientProfile->setKey("sfos-dir-remote", options.remoteDirPath);
+    clientProfile->setKey("sfos-filename", options.fileName);
+
+    const QString savedProfileId = d->m_profileManager->updateProfile(*syncProfile);
+    delete syncProfile;
+    return !savedProfileId.isEmpty();
+}
+
+AccountSyncManager::BackupRestoreOptions AccountSyncManager::backupRestoreOptions(const QString &profileId, bool *ok) const
+{
+    if (profileId.isEmpty()) {
+        qWarning() << "Invalid profileId";
+        return BackupRestoreOptions();
+    }
+    Buteo::SyncProfile *syncProfile = d->m_profileManager->syncProfile(profileId);
+    if (!syncProfile) {
+        qWarning() << "Invalid profile name:" << profileId;
+        return BackupRestoreOptions();
+    }
+
+    Buteo::Profile *clientProfile = syncProfile->clientProfile();
+    if (!clientProfile) {
+        qWarning() << "Cannot find client profile in sync profile:" << syncProfile->name();
+        return BackupRestoreOptions();
+    }
+
+    BackupRestoreOptions options;
+    QString operation = clientProfile->key("sfos-operation");
+    options.localDirPath = clientProfile->key("sfos-dir-local");
+    options.remoteDirPath = clientProfile->key("sfos-dir-remote");  // can be empty to use defaults
+    options.fileName = clientProfile->key("sfos-filename");     // can be empty for upload/download to use defaults
+
+    if (operation == "dir-listing") {
+        options.operation = BackupRestoreOptions::DirectoryListing;
+    } else if (operation == "upload") {
+        options.operation = BackupRestoreOptions::Upload;
+    } else if (operation == "download") {
+        options.operation = BackupRestoreOptions::Download;
+    } else {
+        qWarning() << "Backup/restore options for sync profile" << syncProfile->name()
+                   << "has invalid operation type:" << operation;
+        return BackupRestoreOptions();
+    }
+
+    if (options.localDirPath.isEmpty()) {
+        qWarning() << "Backup/restore options for sync profile" << syncProfile->name()
+                   << "do not specify a local directory!";
+        return BackupRestoreOptions();
+    }
+
+    if (options.operation == BackupRestoreOptions::DirectoryListing && options.fileName.isEmpty()) {
+        qWarning() << "Backup/restore options for sync profile" << syncProfile->name()
+                   << "do not specify a file name for directory listing!";
+        return BackupRestoreOptions();
+    }
+
+    if (ok) {
+        *ok = true;
+    }
+    return options;
+}
+
 QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId) const
 {
     if (profileId.isEmpty()) {
@@ -604,6 +716,32 @@ QStringList AccountSyncManager::defaultTemplateProfiles(Accounts::Account *accou
     QStringList defaultTemplates = account->value(SyncProfileTemplatesKey).toStringList();
     account->selectService(prevService);
     return defaultTemplates;
+}
+
+/*!
+    Returns a name unique to this device based on the user-friendly device name and SSU device
+    identifier.
+
+    This can be used as the directory name for a backup directory to identify the backups created
+    for this device.
+*/
+QString AccountSyncManager::backupDeviceName()
+{
+    SsuDeviceInfo deviceInfo;
+    const QString deviceId = deviceInfo.deviceUid();
+    const QByteArray hashedDeviceId = QCryptographicHash::hash(deviceId.toUtf8(), QCryptographicHash::Sha256);
+    const QString encodedDeviceId = QString::fromUtf8(hashedDeviceId.toBase64(QByteArray::Base64UrlEncoding)).mid(0,12);
+    if (deviceId.isEmpty()) {
+        qWarning() << "Could not determine device identifier for backup directory name!";
+        return QString();
+    }
+
+    QString deviceDisplayNamePrefix = deviceInfo.displayName(Ssu::DeviceModel);
+    if (!deviceDisplayNamePrefix.isEmpty()) {
+        deviceDisplayNamePrefix = deviceDisplayNamePrefix.replace(' ', '-') + '_';
+    }
+
+    return deviceDisplayNamePrefix + encodedDeviceId;
 }
 
 #include "accountsyncmanager.moc"
