@@ -18,51 +18,147 @@
 //libaccounts-qt
 #include <Accounts/Manager>
 
-class ProviderModel::ProviderModelPrivate
+class ProviderModel::ProviderModelPrivate : public QObject
 {
+    Q_OBJECT
 public:
-    ProviderModelPrivate()
-        : componentComplete(false)
-    {
-    }
+    ProviderModelPrivate(ProviderModel *parent);
 
-    ~ProviderModelPrivate() {}
+    bool providerMatchesProviderFilter(const QString &providerName);
+    bool providerMatchesServiceFilter(const QString &providerName);
+    bool canCreateAccountForProvider(const Accounts::Provider &provider) const;
+    bool hasFilters() const;
 
-    bool providerMatchesServiceFilter(const QString &providerName) {
-        if (serviceFilters.isEmpty()) {
-            return true;
-        }
-        QStringList supportedServices = providerServiceTypes[providerName];
-        if (!supportedServices.isEmpty()) {
-            Q_FOREACH (const QString &service, serviceFilters) {
-                if (supportedServices.contains(service, Qt::CaseInsensitive)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+    void reloadProviders();
+    void reloadAccountCounts();
+    void updateAccountCount(Accounts::AccountId id);
 
-    void reloadProviders() {
-        QList<Accounts::Provider> result;
-        for (int i=0; i<providerList.count(); i++) {
-            const Accounts::Provider &p = providerList.at(i);
-            if (providerMatchesServiceFilter(p.name())) {
-                result.append(p);
-            }
-        }
-        filteredProviderList = result;
-    }
+    static QString retrieveDescription(const Accounts::Provider &provider);
 
     QList<Accounts::Provider> providerList;
     QList<Accounts::Provider> filteredProviderList;
     QHash<QString, QStringList> providerServiceTypes;
     QHash<int, QByteArray> headerData;
+    QHash<QString, int> accountCounts;
+    QStringList filteredProviderNames;
     QStringList serviceFilters;
-    bool componentComplete;
+    QStringList providerFilters;
+    QStringList otherExcludedProviders;
+    bool excludeProvidersForUncreatableAccounts = false;
+    bool componentComplete = false;
+
+    Q_DECLARE_PUBLIC(ProviderModel)
+    ProviderModel *q_ptr;
 };
 
-static QString retrieveDescription(const Accounts::Provider &provider)
+ProviderModel::ProviderModelPrivate::ProviderModelPrivate(ProviderModel *parent)
+    : QObject(parent)
+    , q_ptr(parent)
+{
+}
+
+bool ProviderModel::ProviderModelPrivate::providerMatchesProviderFilter(const QString &providerName)
+{
+    return providerFilters.isEmpty() || providerFilters.contains(providerName);
+}
+
+bool ProviderModel::ProviderModelPrivate::providerMatchesServiceFilter(const QString &providerName)
+{
+    if (serviceFilters.isEmpty()) {
+        return true;
+    }
+    const QStringList supportedServices = providerServiceTypes[providerName];
+    if (!supportedServices.isEmpty()) {
+        Q_FOREACH (const QString &service, serviceFilters) {
+            if (supportedServices.contains(service, Qt::CaseInsensitive)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool ProviderModel::ProviderModelPrivate::canCreateAccountForProvider(const Accounts::Provider &provider) const
+{
+    if (!excludeProvidersForUncreatableAccounts) {
+        return true;
+    }
+    return !provider.isSingleAccount() || accountCounts.value(provider.name(), 0) == 0;
+}
+
+bool ProviderModel::ProviderModelPrivate::hasFilters() const
+{
+    return !providerFilters.isEmpty()
+            || !serviceFilters.isEmpty()
+            || excludeProvidersForUncreatableAccounts
+            || !otherExcludedProviders.isEmpty();
+}
+
+void ProviderModel::ProviderModelPrivate::reloadProviders()
+{
+    Q_Q(ProviderModel);
+
+    if (!componentComplete) {
+        return;
+    }
+
+    QList<Accounts::Provider> result;
+    const QList<Accounts::Provider> &providers = filteredProviderList;
+    QStringList names;
+    const int prevCount = q->rowCount();
+
+    for (const Accounts::Provider &provider : providers) {
+        const QString &providerName = provider.name();
+        if (providerMatchesProviderFilter(providerName)
+                && providerMatchesServiceFilter(providerName)
+                && canCreateAccountForProvider(provider)
+                && !otherExcludedProviders.contains(providerName)) {
+            result.append(provider);
+            names.append(providerName);
+        }
+    }
+
+    q->beginResetModel();
+    filteredProviderList = result;
+    q->endResetModel();
+
+    if (filteredProviderNames != names) {
+        filteredProviderNames = names;
+        emit q->providerNamesChanged();
+    }
+
+    if (prevCount != result.count()) {
+        emit q->rowCountChanged();
+    }
+}
+
+void ProviderModel::ProviderModelPrivate::reloadAccountCounts()
+{
+    if (!excludeProvidersForUncreatableAccounts) {
+        return;
+    }
+    accountCounts.clear();
+    Accounts::Manager *manager = globalAccountManager();
+    const QList<quint32> accountIdList = manager->accountList();
+    for (quint32 id : accountIdList) {
+        updateAccountCount(id);
+    }
+}
+
+
+void ProviderModel::ProviderModelPrivate::updateAccountCount(Accounts::AccountId id) {
+    if (!excludeProvidersForUncreatableAccounts) {
+        return;
+    }
+    Accounts::Manager *manager = globalAccountManager();
+    Accounts::Account *account = manager->account(id);
+    if (account) {
+        const QString providerName = account->providerName();
+        accountCounts.insert(providerName, accountCounts.value(providerName, 0) + 1);
+    }
+}
+
+QString ProviderModel::ProviderModelPrivate::retrieveDescription(const Accounts::Provider &provider)
 {
     QDomElement root = provider.domDocument().documentElement();
     QDomElement descriptionElement = root.firstChildElement("description");
@@ -72,6 +168,8 @@ static QString retrieveDescription(const Accounts::Provider &provider)
         return QString();
     }
 }
+
+//-----------------------
 
 /*!
     \qmltype ProviderModel
@@ -92,7 +190,7 @@ static QString retrieveDescription(const Accounts::Provider &provider)
 
 ProviderModel::ProviderModel(QObject* parent)
     : QAbstractListModel(parent)
-    , d_ptr(new ProviderModelPrivate)
+    , d_ptr(new ProviderModelPrivate(this))
 {
     Q_D(ProviderModel);
 
@@ -105,6 +203,9 @@ ProviderModel::ProviderModel(QObject* parent)
     Accounts::Manager *m = globalAccountManager();
     Accounts::ServiceList allServices = m->serviceList(); // force reload of service files.
     Accounts::ProviderList providers = m->providerList();
+
+    connect(m, &Accounts::Manager::accountCreated,
+            d, &ProviderModelPrivate::updateAccountCount);
 
     foreach (const Accounts::Provider &provider, providers) {
         for (QList<Accounts::Service>::iterator it = allServices.begin(); it != allServices.end();) {
@@ -132,9 +233,6 @@ QHash<int, QByteArray> ProviderModel::roleNames() const
 
 ProviderModel::~ProviderModel()
 {
-    Q_D(ProviderModel);
-
-    delete d;
 }
 
 /*!
@@ -161,13 +259,64 @@ void ProviderModel::setServiceFilter(const QStringList &serviceFilter)
     Q_D(ProviderModel);
     if (serviceFilter != d->serviceFilters) {
         d->serviceFilters = serviceFilter;
-        if (d->componentComplete) {
-            beginResetModel();
-            d->reloadProviders();
-            endResetModel();
-        }
+        d->reloadProviders();
         emit serviceFilterChanged();
     }
+}
+
+QStringList ProviderModel::providerFilter() const
+{
+    Q_D(const ProviderModel);
+    return d->providerFilters;
+}
+
+void ProviderModel::setProviderFilter(const QStringList &providerFilter)
+{
+    Q_D(ProviderModel);
+    if (providerFilter != d->providerFilters) {
+        d->providerFilters = providerFilter;
+        d->reloadProviders();
+        emit providerFilterChanged();
+    }
+}
+
+QStringList ProviderModel::otherExcludedProviders() const
+{
+    Q_D(const ProviderModel);
+    return d->otherExcludedProviders;
+}
+
+void ProviderModel::setOtherExcludedProviders(const QStringList &otherExcludedProviders)
+{
+    Q_D(ProviderModel);
+    if (otherExcludedProviders != d->otherExcludedProviders) {
+        d->otherExcludedProviders = otherExcludedProviders;
+        d->reloadProviders();
+        emit otherExcludedProvidersChanged();
+    }
+}
+
+bool ProviderModel::excludeProvidersForUncreatableAccounts() const
+{
+    Q_D(const ProviderModel);
+    return d->excludeProvidersForUncreatableAccounts;
+}
+
+void ProviderModel::setExcludeProvidersForUncreatableAccounts(bool excludeProvidersForUncreatableAccounts)
+{
+    Q_D(ProviderModel);
+    if (excludeProvidersForUncreatableAccounts != d->excludeProvidersForUncreatableAccounts) {
+        d->excludeProvidersForUncreatableAccounts = excludeProvidersForUncreatableAccounts;
+        d->reloadAccountCounts();
+        d->reloadProviders();
+        emit excludeProvidersForUncreatableAccountsChanged();
+    }
+}
+
+QStringList ProviderModel::providerNames() const
+{
+    Q_D(const ProviderModel);
+    return d->filteredProviderNames;
 }
 
 int ProviderModel::rowCount(const QModelIndex &) const
@@ -193,7 +342,7 @@ QVariant ProviderModel::data(const QModelIndex& index, int role) const
     case ProviderDisplayNameRole:
         return SailfishAccounts::translatedDisplayName(provider);
     case ProviderDescriptionRole:
-        return retrieveDescription(provider);
+        return d->retrieveDescription(provider);
     case ProviderIconRole:
         return provider.iconName();
     case ProviderIsSingleAccountRole:
@@ -210,12 +359,12 @@ void ProviderModel::classBegin()
 void ProviderModel::componentComplete()
 {
     Q_D(ProviderModel);
-    if (!d->serviceFilters.isEmpty()) {
-        beginResetModel();
-        d->reloadProviders();
-        endResetModel();
-    }
     d->componentComplete = true;
+    if (d->hasFilters()) {
+        d->reloadProviders();
+    }
 }
 
 Q_DECLARE_METATYPE(Accounts::Provider)
+
+#include "providermodel.moc"
