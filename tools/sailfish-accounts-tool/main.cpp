@@ -1,6 +1,8 @@
 /*
 ** Utility to ease migration of existing accounts
-** Copyright (C) 2014 Jolla Ltd.
+** Copyright (c) 2014 - 2020 Jolla Ltd.
+** Copyright (c) 2020 Open Mobile Platform LLC.
+**
 */
 
 #include <QtDebug>
@@ -180,6 +182,6 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
         return 0;
     }
 
-    qWarning() << usageString;
+    qWarning() << qUtf8Printable(usageString);
     ::exit(1);
 }
