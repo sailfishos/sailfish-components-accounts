@@ -38,6 +38,9 @@
 // Copied from libaccounts-qt account.h
 #define ACCOUNTS_KEY_CREDENTIALS_ID QLatin1String("CredentialsId")
 
+// Used for SSL certificate authentication in some email accounts
+#define ACCOUNTS_KEY_SSL_CERT_CREDENTIALS_ID QLatin1String("SslCertCredentialsId")
+
 #define DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY QLatin1String("default_credentials_username")
 
 /*
@@ -1317,7 +1320,8 @@ void Account::remove()
     d->account->selectService(Accounts::Service());
     QStringList configurationKeys = d->account->allKeys();
     foreach (const QString &key, configurationKeys) {
-        if (key.contains(CREDENTIALS_GROUP)) {
+        if (key.contains(CREDENTIALS_GROUP)
+                || key.contains(ACCOUNTS_KEY_SSL_CERT_CREDENTIALS_ID)) {
             int identityId = d->account->valueAsInt(key, 0);
             if (identityId) {
                 SignOn::Identity *doomedIdentity = SignOn::Identity::existingIdentity(identityId, this);
