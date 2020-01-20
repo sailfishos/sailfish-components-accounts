@@ -542,20 +542,10 @@ void AccountModel::monitorSyncStatus(Accounts::Account *account)
     DisplayData *displayData = d->accountsList.at(accountIndex);
     displayData->monitorInitialSync = true;
 
-    if (account->providerName() == QStringLiteral("activesync")) {
-        if (!d->dbusInitialized) {
-            static const QString dbusAddress = QStringLiteral("com.nokia.asdbus");
-            static const QString dbusPath = QStringLiteral("/com/nokia/asdbus");
-            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncStarted", this, SLOT(exchangeSyncStarted(qulonglong)));
-            d->dbusConnection.connect(QString(), dbusPath, dbusAddress, "syncCompleted", this, SLOT(exchangeSyncCompleted(qulonglong, int)));
-            d->dbusInitialized = true;
-        }
-    } else {
-        if (!d->accountSyncManager) {
-            d->accountSyncManager = new AccountSyncManager(this);
-            connect(d->accountSyncManager, SIGNAL(profileSyncStatusChanged(QString,int,QString)),
-                    SLOT(profileSyncStatusChanged(QString,int,QString)));
-        }
+    if (!d->accountSyncManager) {
+        d->accountSyncManager = new AccountSyncManager(this);
+        connect(d->accountSyncManager, SIGNAL(profileSyncStatusChanged(QString,int,QString)),
+                SLOT(profileSyncStatusChanged(QString,int,QString)));
     }
 }
 

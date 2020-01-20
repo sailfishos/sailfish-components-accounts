@@ -694,13 +694,13 @@ void AccountPrivate::handleCredentialsInfo(const SignOn::IdentityInfo &info)
     signInCredentials.identity->storeCredentials(signInCredentials.identityInfo);
 }
 
-void maybeSetCredentialsIdForProvider(Accounts::Account *account,
-                                      int identityId,
-                                      const QString &method,
-                                      const QString &serviceName,
-                                      const QString &symmetricKey,
-                                      const QString &username,
-                                      QVariantMap *configurationValues)
+static void maybeSetCredentialsIdForProvider(Accounts::Account *account,
+                                             int identityId,
+                                             const QString &method,
+                                             const QString &serviceName,
+                                             const QString &symmetricKey,
+                                             const QString &username,
+                                             QVariantMap *configurationValues)
 {
     // if the method is oauth2, and if no credentialsId has been set
     // for the services from that provider, we can set the given credentialsId
@@ -754,6 +754,7 @@ void maybeSetCredentialsIdForProvider(Accounts::Account *account,
         }
     }
 }
+
 void AccountPrivate::handleResponse(const SignOn::SessionData &data)
 {
     if (signInCredentials.creatingSignInCredentials) {

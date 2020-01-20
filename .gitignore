@@ -1,0 +1,9 @@
+*.so
+*.so.*
+installroot/
+RPMS/
+.qmake.cache
+moc_*.cpp
+*.o
+*~
+
