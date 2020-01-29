@@ -10,7 +10,6 @@ Column {
     property bool excludeProvidersForUncreatableAccounts
 
     signal providerSelected(int index, string providerName)
-    signal providerDeselected(int index, string providerName)   // deprecated
 
     //--- end of public api
 
