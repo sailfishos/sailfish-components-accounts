@@ -26,28 +26,41 @@ class TranslatorManager
 public:
     mutable QHash<QString, QTranslator*> translators;
 
-    QTranslator *translator(const QString &trCatalog)
+    QTranslator *translator(const QString &trCatalog, bool engineeringEnglish)
     {
         QTranslator *translator = 0;
-        if (!translators.contains(trCatalog)) {
-            QFileInfo fi(trCatalog);
+        QString catalogName = engineeringEnglish ? (trCatalog + QLatin1String("_eng_en")) : trCatalog;
+
+        if (!translators.contains(catalogName)) {
+            QFileInfo fi(catalogName);
             translator = new QTranslator;
             if (fi.isAbsolute()) {
                 if (fi.exists()) {
                     // fully specified path to file
-                    translator->load(trCatalog);
+                    // engineering version just skipped, combination doesn't make sense
+                    if (!engineeringEnglish) {
+                        translator->load(catalogName);
+                    }
                 } else {
                     // partially specified path to file
                     QString trPath = fi.path();
                     QString trFile = fi.fileName();
-                    translator->load(QLocale(), trFile, "-", trPath);
+                    if (engineeringEnglish) {
+                        translator->load(trFile, trPath);
+                    } else {
+                        translator->load(QLocale(), trFile, "-", trPath);
+                    }
                 }
             } else {
-                translator->load(QLocale(), trCatalog, "-", "/usr/share/translations");
+                if (engineeringEnglish) {
+                    translator->load(catalogName, "/usr/share/translations");
+                } else {
+                    translator->load(QLocale(), catalogName, "-", "/usr/share/translations");
+                }
             }
-            translators.insert(trCatalog, translator);
+            translators.insert(catalogName, translator);
         } else {
-            translator = translators.value(trCatalog);
+            translator = translators.value(catalogName);
         }
         return translator;
     }
@@ -58,22 +71,27 @@ public:
     }
 };
 
-QThreadStorage<TranslatorManager*> g_translationManager;
-QTranslator *cachedTranslator(const QString &trCatalog)
+static QThreadStorage<TranslatorManager*> g_translationManager;
+
+static QTranslator *cachedTranslator(const QString &trCatalog, bool engineeringEnglish)
 {
     if (!g_translationManager.hasLocalData()) {
         g_translationManager.setLocalData(new TranslatorManager);
     }
 
     TranslatorManager *manager = g_translationManager.localData();
-    return manager ? manager->translator(trCatalog) : 0;
+    return manager ? manager->translator(trCatalog, engineeringEnglish) : 0;
 }
 
 #define RETURN_TRANSLATED_DISPLAYNAME(instance)                                                         \
     do {                                                                                                \
+        if (instance.trCatalog().isEmpty()) return instance.displayName();                              \
         QByteArray translationId = instance.displayName().toLatin1();                                   \
-        QTranslator *translator = cachedTranslator(instance.trCatalog());                               \
+        QTranslator *translator = cachedTranslator(instance.trCatalog(), false);                        \
         QString retn = translator ? translator->translate("", translationId.constData()) : QString();   \
+        if (!retn.isEmpty() && retn != translationId.constData()) return retn;                          \
+        translator = cachedTranslator(instance.trCatalog(), true);                                      \
+        retn = translator ? translator->translate("", translationId.constData()) : QString();           \
         return retn.isEmpty() ? instance.displayName() : retn;                                          \
     } while (0)                                                                                         \
 
