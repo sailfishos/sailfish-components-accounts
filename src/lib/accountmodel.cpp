@@ -8,6 +8,7 @@
 //project
 #include "accountmodel.h"
 #include "account.h"
+#include "account_p.h"
 #include "provider.h"
 #include "accountsyncmanager.h"
 #include "globalaccountmanager_p.h"
@@ -27,8 +28,6 @@
 static const QString AccountUpdatedSignalTriggerDummyValueKey = QStringLiteral("dummy_value");
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 static const QString AccountDefaultCredentialsUserName = QStringLiteral("default_credentials_username");
-static const QString AccountReadOnlyKey = QStringLiteral("readonly");
-static const QString AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.
 
 namespace {
     QString obsoleteAccountProviderDisplayName()

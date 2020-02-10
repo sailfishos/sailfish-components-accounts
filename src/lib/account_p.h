@@ -21,6 +21,9 @@
 //libsignon-qt
 #include <SignOn/IdentityInfo>
 
+static const auto AccountReadOnlyKey = QStringLiteral("readonly");
+static const auto AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.
+
 struct SignInCredentials {
     bool creatingSignInCredentials;
     bool updatingSignInCredentials;
@@ -91,6 +94,9 @@ public:
     bool displayNamePendingInit;
     bool configurationValuesPendingInit;
     bool constructedWithAccountPtr;
+
+    bool provisioned;
+    bool readonly;
 
     Account::Status status;
     Account::ErrorType error;
