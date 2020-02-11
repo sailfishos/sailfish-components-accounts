@@ -177,7 +177,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     : QObject(parent)
     , q(parent)
     , manager(globalAccountManager())
-    , account(0)
+    , account(nullptr)
     , pendingSync(false)
     , pendingInitModifications(false)
     , identifier(0)
@@ -187,6 +187,8 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     , displayNamePendingInit(false)
     , configurationValuesPendingInit(false)
     , constructedWithAccountPtr(false)
+    , provisioned(false)
+    , readonly(false)
     , status(Account::Initializing)
     , error(Account::NoError)
     , sessionState(SignOn::AuthSession::SessionNotStarted)
@@ -199,8 +201,8 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     signInCredentials.forcingCredentialsRefresh = false;
     signInCredentials.haveForcedCredentialsExpiry = false;
     signInCredentials.canceling = false;
-    signInCredentials.identity = NULL;
-    signInCredentials.session = NULL;
+    signInCredentials.identity = nullptr;
+    signInCredentials.session = nullptr;
 
     // set up the account
     if (acc) {
@@ -256,8 +258,10 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
         supportedServiceNames.append(currService.name());
     }
 
+    bool validAccountId = (account->id() != 0);
+
     // grab the default service enabled status unless the user has set it or it's a new account
-    if (!enabledPendingInit && account->id() != 0) {
+    if (!enabledPendingInit && validAccountId) {
         if (enabled != account->enabled()) {
             enabled = account->enabled();
             emit q->enabledChanged();
@@ -265,11 +269,23 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
     }
 
     // similarly for the display name
-    if (!displayNamePendingInit && account->id() != 0) {
+    if (!displayNamePendingInit && validAccountId) {
         if (displayName != account->displayName()) {
             displayName = account->displayName();
             emit q->displayNameChanged();
         }
+    }
+
+    bool newProvisioned = account->value(AccountProvisionedKey, false).toBool();
+    if (provisioned != newProvisioned) {
+        provisioned = newProvisioned;
+        emit q->provisionedChanged();
+    }
+
+    bool newReadonly = account->value(AccountReadOnlyKey, false).toBool();
+    if (readonly != newReadonly) {
+        readonly = newReadonly;
+        emit q->readonlyChanged();
     }
 
     // clear the list of service enabled state changes
@@ -310,6 +326,18 @@ void AccountPrivate::asyncQueryInfo()
     if (providerName != account->providerName()) {
         providerName = account->providerName();
         emit q->providerNameChanged();
+    }
+
+    bool newProvisioned = account->value(AccountProvisionedKey, false).toBool();
+    if (provisioned != newProvisioned) {
+        provisioned = newProvisioned;
+        emit q->provisionedChanged();
+    }
+
+    bool newReadonly = account->value(AccountReadOnlyKey, false).toBool();
+    if (readonly != newReadonly) {
+        readonly = newReadonly;
+        emit q->readonlyChanged();
     }
 
     // supported service names
@@ -595,9 +623,22 @@ void AccountPrivate::handleSynced()
             emit q->providerNameChanged();
         }
 
+        bool newProvisioned = account->value(AccountProvisionedKey, false).toBool();
+        if (provisioned != newProvisioned) {
+            provisioned = newProvisioned;
+            emit q->provisionedChanged();
+        }
+
+        bool newReadonly = account->value(AccountReadOnlyKey, false).toBool();
+        if (readonly != newReadonly) {
+            readonly = newReadonly;
+            emit q->readonlyChanged();
+        }
+
         // check to see if the configuration values were updated
         QVariantMap allValues;
         QStringList allKeys = account->allKeys();
+
         foreach (const QString &key, allKeys) {
             allValues.insert(key, account->value(key, QVariant(), 0));
         }
@@ -2484,6 +2525,16 @@ QString Account::defaultCredentialsUserName() const
 {
     return d->defaultCredentialsUserName;
 
+}
+
+bool Account::provisioned() const
+{
+    return d && d->provisioned;
+}
+
+bool Account::readonly() const
+{
+    return d && d->readonly;
 }
 
 /*!
