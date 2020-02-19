@@ -34,15 +34,7 @@ public:
     class BackupRestoreOptions
     {
     public:
-        enum Operation {
-            DirectoryListing,
-            Upload,
-            Download
-        };
-
         QStringList localDirFileNames() const;
-
-        Operation operation = DirectoryListing;
 
         // DirListing: the local dir to which fileName will be saved with the directory listing text file.
         // Up/Download: The local dir to sync to/from.
@@ -128,7 +120,5 @@ private:
     AccountSyncProfileManagerPrivate *d;
     Accounts::Manager *accountManager() const;
 };
-
-Q_DECLARE_METATYPE(AccountSyncManager::BackupRestoreOptions::Operation)
 
 #endif

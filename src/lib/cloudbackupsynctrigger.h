@@ -19,6 +19,14 @@ class Q_DECL_EXPORT CloudBackupSyncTrigger : public QObject
 {
     Q_OBJECT
 public:
+    enum Operation {
+        InvalidOperation,
+        Backup,
+        BackupQuery,
+        BackupRestore
+    };
+    Q_ENUM(Operation)
+
     CloudBackupSyncTrigger(QObject *parent = 0);
 
     /* localDir and remotePath are optional.  The default localDir is /home/nemo/.local/share/system/privileged/Backups/ */
@@ -35,11 +43,16 @@ Q_SIGNALS:
     void requestListingFailed(int accountId, const QString &message);
 
 private:
-    bool startOperation(int accountId, const AccountSyncManager::BackupRestoreOptions &options);
-    bool syncWithCloud(int accountId, const QString &localDir, const QString &remotePath, const QString &remoteFile, const QString &direction);
+    bool startOperation(int accountId, Operation operation, const AccountSyncManager::BackupRestoreOptions &options);
+    QString createProfile(int accountId, Operation operation);
     void performListingRequest(int accountId, const QString &accessToken, const QString &cloudName, const QString &remotePath);
     void processDirectoryListResults();
     void handleProfileSyncStatusChanged(const QString &profileId, int status, const QString &errorString);
+
+    static QString profileMarkerForOperation(CloudBackupSyncTrigger::Operation operation);
+    static bool profileMatchesBackupOperation(const QString &profileId, CloudBackupSyncTrigger::Operation operation);
+    static QString templateProfileForAccountOperation(const QString &accountProviderName, CloudBackupSyncTrigger::Operation operation);
+    static CloudBackupSyncTrigger::Operation operationForProfileId(const QString &profileId);
 
     int m_accountId = -1;
     AccountSyncManager::BackupRestoreOptions m_backupRestoreOptions;
