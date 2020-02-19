@@ -591,20 +591,6 @@ bool AccountSyncManager::updateBackupRestoreOptions(const QString &profileId, co
         return false;
     }
 
-    QString operationValue;
-    switch (options.operation) {
-    case AccountSyncManager::BackupRestoreOptions::DirectoryListing:
-        operationValue = "dir-listing";
-        break;
-    case AccountSyncManager::BackupRestoreOptions::Upload:
-        operationValue = "upload";
-        break;
-    case AccountSyncManager::BackupRestoreOptions::Download:
-        operationValue = "download";
-        break;
-    };
-
-    clientProfile->setKey("sfos-operation", operationValue);
     clientProfile->setKey("sfos-dir-local", options.localDirPath);
     clientProfile->setKey("sfos-dir-remote", options.remoteDirPath);
     clientProfile->setKey("sfos-filename", options.fileName);
@@ -633,34 +619,9 @@ AccountSyncManager::BackupRestoreOptions AccountSyncManager::backupRestoreOption
     }
 
     BackupRestoreOptions options;
-    QString operation = clientProfile->key("sfos-operation");
     options.localDirPath = clientProfile->key("sfos-dir-local");
     options.remoteDirPath = clientProfile->key("sfos-dir-remote");  // can be empty to use defaults
     options.fileName = clientProfile->key("sfos-filename");     // can be empty for upload/download to use defaults
-
-    if (operation == "dir-listing") {
-        options.operation = BackupRestoreOptions::DirectoryListing;
-    } else if (operation == "upload") {
-        options.operation = BackupRestoreOptions::Upload;
-    } else if (operation == "download") {
-        options.operation = BackupRestoreOptions::Download;
-    } else {
-        qWarning() << "Backup/restore options for sync profile" << syncProfile->name()
-                   << "has invalid operation type:" << operation;
-        return BackupRestoreOptions();
-    }
-
-    if (options.localDirPath.isEmpty()) {
-        qWarning() << "Backup/restore options for sync profile" << syncProfile->name()
-                   << "do not specify a local directory!";
-        return BackupRestoreOptions();
-    }
-
-    if (options.operation == BackupRestoreOptions::DirectoryListing && options.fileName.isEmpty()) {
-        qWarning() << "Backup/restore options for sync profile" << syncProfile->name()
-                   << "do not specify a file name for directory listing!";
-        return BackupRestoreOptions();
-    }
 
     if (ok) {
         *ok = true;
