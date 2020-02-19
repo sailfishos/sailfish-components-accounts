@@ -14,11 +14,13 @@ BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(Qt5OpenGL)
 BuildRequires:  pkgconfig(Qt5DBus)
 BuildRequires:  pkgconfig(libsignon-qt5)
-BuildRequires:  pkgconfig(accounts-qt5) >= 1.13
+BuildRequires:  pkgconfig(accounts-qt5) >= 1.16
+BuildRequires:  pkgconfig(accounts-glib) >= 1.24
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
 BuildRequires:  pkgconfig(buteosyncfw5) >= 0.7.14
 BuildRequires:  pkgconfig(qt5-boostable)
 BuildRequires:  pkgconfig(mlite5)
+BuildRequires:  pkgconfig(sailfishaccesscontrol)
 BuildRequires:  ssu-devel
 BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools

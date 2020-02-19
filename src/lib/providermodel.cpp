@@ -18,6 +18,12 @@
 //libaccounts-qt
 #include <Accounts/Manager>
 
+//AccessControl
+#include <sailfishaccesscontrol.h>
+#include <unistd.h>
+
+const static auto USER_GROUP_HEADER = QStringLiteral("user-group:");
+
 class ProviderModel::ProviderModelPrivate : public QObject
 {
     Q_OBJECT
@@ -82,6 +88,15 @@ bool ProviderModel::ProviderModelPrivate::canCreateAccountForProvider(const Acco
 {
     if (!excludeProvidersForUncreatableAccounts) {
         return true;
+    }
+    if (!provider.tags().isEmpty()) {
+        foreach (const QString& tag, provider.tags()) {
+            if (tag.startsWith(USER_GROUP_HEADER)) {
+                // Hide provider if calling user is not in the required group
+                if (!sailfish_access_control_hasgroup(getuid(), tag.mid(USER_GROUP_HEADER.length()).toUtf8()))
+                    return false;
+            }
+        }
     }
     return !provider.isSingleAccount() || accountCounts.value(provider.name(), 0) == 0;
 }
