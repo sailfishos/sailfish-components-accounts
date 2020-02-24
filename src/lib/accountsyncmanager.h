@@ -25,30 +25,11 @@ namespace Accounts {
 
 class AccountSyncProfileManagerPrivate;
 class AccountSyncOptions;
-class CloudBackupSyncTrigger;
 
 class Q_DECL_EXPORT AccountSyncManager : public QObject
 {
     Q_OBJECT
 public:
-    class BackupRestoreOptions
-    {
-    public:
-        QStringList localDirFileNames() const;
-
-        // DirListing: the local dir to which fileName will be saved with the directory listing text file.
-        // Up/Download: The local dir to sync to/from.
-        QString localDirPath;
-
-        // DirListing: the remote dir for which the listing is to be fetched. Empty to fetch from root.
-        // Up/Download: The remote dir to sync to/from. Empty to sync to/from default directories.
-        QString remoteDirPath;
-
-        // DirListing: the name of the file in localDirPath which will contain the directory listing data.
-        // Up/Download: The local/remote file to be synced. Empty to sync all files in the local/remote dir.
-        QString fileName;
-    };
-
     enum SyncStatus {
         UnknownSyncStatus,
         SyncStarted,
@@ -58,12 +39,21 @@ public:
     };
     Q_ENUM(SyncStatus)
 
+    enum BackupOperationType {
+        InvalidOperation,
+        Backup,
+        BackupQuery,
+        BackupRestore
+    };
+    Q_ENUM(BackupOperationType)
+
     AccountSyncManager(QObject *parent = 0);
     ~AccountSyncManager();
 
     Q_INVOKABLE void createProfile(const QString &templateProfileName, int accountId, const QString &serviceName);
     Q_INVOKABLE void updateProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
     Q_INVOKABLE void syncProfile(const QString &profileId);
+    Q_INVOKABLE void abortProfileSync(const QString &profileId);
 
     Q_INVOKABLE int createAllProfiles(int accountId);
     Q_INVOKABLE QStringList profileIds(int accountId, const QString &serviceName = QString()) const;
@@ -81,11 +71,14 @@ public:
                       Accounts::Account *account,
                       const Accounts::Service &srv);
     bool updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options);
-    bool updateBackupRestoreOptions(const QString &profileId, const BackupRestoreOptions &options);
 
     QMap<QString, QString> profileProperties(const QString &profileId) const;
     QString syncScheduleXml(const QString &profileId) const;
-    BackupRestoreOptions backupRestoreOptions(const QString &profileId, bool *ok) const;
+
+    Q_INVOKABLE QString findBackupOperationProfile(int accountId, BackupOperationType operation);
+    static BackupOperationType backupOperationTypeForProfileId(const QString &profileId);
+
+    QString accountDisplayName(int accountId);
 
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv) const;
     bool hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const;
@@ -103,8 +96,6 @@ public:
                                                const QVariantMap &properties,
                                                const QString &scheduleXml);
 
-    static QString backupDeviceName();
-
 signals:
     void profileCreated(const QString &profileId);
     void profileCreationError(int accountId, const QString &serviceName, const QString &errorString);
@@ -116,7 +107,6 @@ signals:
     void allProfileCreationError(int accountId, const QString &errorString);
 
 private:
-    friend class CloudBackupSyncTrigger;
     AccountSyncProfileManagerPrivate *d;
     Accounts::Manager *accountManager() const;
 };

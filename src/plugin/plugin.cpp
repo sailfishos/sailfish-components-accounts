@@ -28,7 +28,6 @@
 #include "signinparameters.h"
 #include "accountsyncmanager.h"
 #include "accountsyncoptions.h"
-#include "cloudbackupsynctrigger.h"
 
 // using custom translator so it gets properly removed from qApp when engine is deleted
 class AppTranslator: public QTranslator
@@ -83,7 +82,6 @@ public:
         qmlRegisterType<AccountSyncManager>("Sailfish.Accounts", 1, 0, "AccountSyncManager");
         qmlRegisterType<AccountSyncOptions>("Sailfish.Accounts", 1, 0, "AccountSyncOptions");
         qmlRegisterType<AccountSyncSchedule>("Sailfish.Accounts", 1, 0, "AccountSyncSchedule");
-        qmlRegisterType<CloudBackupSyncTrigger>("Sailfish.Accounts", 1, 0, "CloudBackupSyncTrigger");
     }
 };
 
