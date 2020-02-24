@@ -21,8 +21,7 @@ SOURCES += \
     $$PWD/servicemodel.cpp \
     $$PWD/signinparameters.cpp \
     $$PWD/accountsyncmanager.cpp \
-    $$PWD/accountsyncoptions.cpp \
-    $$PWD/cloudbackupsynctrigger.cpp
+    $$PWD/accountsyncoptions.cpp
 
 HEADERS += \
     $$PWD/account.h \
@@ -44,8 +43,7 @@ HEADERS += \
     $$PWD/signinparameters.h \
     $$PWD/accountsyncmanager.h \
     $$PWD/accountsyncoptions.h \
-    $$PWD/accountsyncoptions_p.h \
-    $$PWD/cloudbackupsynctrigger.h
+    $$PWD/accountsyncoptions_p.h
 
 # We can use either QCA or OpenSSL-EVP for AES encryption of credentials
 CONFIG(qca_encryption) {
@@ -74,8 +72,7 @@ develheaders.files = \
     $$PWD/servicetype.h \
     $$PWD/signinparameters.h \
     $$PWD/accountsyncmanager.h \
-    $$PWD/accountsyncoptions.h \
-    $$PWD/cloudbackupsynctrigger.h
+    $$PWD/accountsyncoptions.h
 
 target.path = $$[QT_INSTALL_LIBS]
 pkgconfig.files = $$PWD/pkgconfig/sailfishaccounts.pc
