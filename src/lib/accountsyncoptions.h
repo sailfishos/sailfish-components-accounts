@@ -50,7 +50,7 @@ public:
         Saturday = 0x20,
         Sunday = 0x40
     };
-    Q_DECLARE_FLAGS(Days, Day);
+    Q_DECLARE_FLAGS(Days, Day)
 
     AccountSyncSchedule(QObject *parent = 0);
     ~AccountSyncSchedule();
