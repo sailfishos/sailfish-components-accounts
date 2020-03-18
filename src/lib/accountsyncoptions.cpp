@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Jolla Ltd.
- * Contact: Bea Lam <bea.lam@jollamobile.com>
+ * Copyright (c) 2014 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -9,18 +9,21 @@
 
 // buteo-syncfw
 #include <ProfileEngineDefs.h>
+#include <SyncCommonDefs.h>
 
 #include <QDebug>
 #include <QSet>
 #include <QList>
 
-static const AccountSyncOptions::PastSyncPeriod DefaultPastSyncPeriod = AccountSyncOptions::OneMonthAgo;
-static const AccountSyncOptions::Direction DefaultDirection = AccountSyncOptions::TwoWaySync;
-static const bool DefaultAutomaticSync = true;
+namespace {
 
-static QList<AccountSyncSchedule::Days> getDayList()
+const AccountSyncOptions::PastSyncPeriod DefaultPastSyncPeriod = AccountSyncOptions::OneMonthAgo;
+const AccountSyncOptions::Direction DefaultDirection = AccountSyncOptions::TwoWaySync;
+const bool DefaultAutomaticSync = true;
+
+QList<AccountSyncSchedule::Day> getDayList()
 {
-    QList<AccountSyncSchedule::Days> days;
+    QList<AccountSyncSchedule::Day> days;
     days << AccountSyncSchedule::Monday
          << AccountSyncSchedule::Tuesday
          << AccountSyncSchedule::Wednesday
@@ -31,10 +34,14 @@ static QList<AccountSyncSchedule::Days> getDayList()
     return days;
 }
 
+} // anon namespace
+
+
 AccountSyncSchedulePrivate::AccountSyncSchedulePrivate(AccountSyncSchedule *schedule)
     : q(schedule)
     , m_interval(AccountSyncSchedule::NoInterval)
     , m_peakInterval(AccountSyncSchedule::Every15Minutes)
+    , m_longInterval(AccountSyncSchedule::NoLongInterval)
     , m_days(AccountSyncSchedule::everyday())
     , m_peakDays(0)
     , m_modified(false)
@@ -67,9 +74,9 @@ void AccountSyncSchedulePrivate::setDays(AccountSyncSchedule::Days d)
 
 QSet<int> AccountSyncSchedulePrivate::daysToQtDaySet(AccountSyncSchedule::Days scheduledDays)
 {
-    static const QList<AccountSyncSchedule::Days> dayList = getDayList();
+    static const QList<AccountSyncSchedule::Day> dayList = getDayList();
     QSet<int> qtDays;
-    for (int qtDay=Qt::Monday; qtDay<=Qt::Sunday; qtDay++) {
+    for (int qtDay = Qt::Monday; qtDay <= Qt::Sunday; qtDay++) {
         int day = dayList[qtDay-1];   // start at Qt::Monday = 1
         if (scheduledDays & day) {
             qtDays << qtDay;
@@ -80,9 +87,9 @@ QSet<int> AccountSyncSchedulePrivate::daysToQtDaySet(AccountSyncSchedule::Days s
 
 AccountSyncSchedule::Days AccountSyncSchedulePrivate::daysFromQtDaySet(const QSet<int> &qtDays)
 {
-    static const QList<AccountSyncSchedule::Days> dayList = getDayList();
+    static const QList<AccountSyncSchedule::Day> dayList = getDayList();
     AccountSyncSchedule::Days days;
-    Q_FOREACH (int qtDay, qtDays) {
+    for (int qtDay : qtDays) {
         days |= dayList[qtDay - 1];     // start at Qt::Monday = 1
     }
     return days;
@@ -128,19 +135,28 @@ AccountSyncSchedule::Interval AccountSyncSchedulePrivate::intervalFromMinutes(un
     return interval;
 }
 
-AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::SyncSchedule &source, QObject *parent)
+AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::SyncProfile &profile, QObject *parent)
 {
     AccountSyncSchedule *result = new AccountSyncSchedule(parent);
     AccountSyncSchedulePrivate *d = result->d;
+    const Buteo::SyncSchedule &source = profile.syncSchedule();
 
-    if (source.time().isValid()) {
-        if (source.interval() > 0) {
-            qWarning() << "Buteo::SyncSchedule has both time and interval, the time will be used and the interval discarded";
+    const QSet<int> daySet = source.days();
+    const QTime time = source.time();
+    if (source.interval() > 0) {
+        if (source.interval() == Sync::MonthInterval) {
+            result->setLongIntervalSyncMode(AccountSyncSchedule::MonthLongInterval, time);
+        } else if (source.interval() == Sync::FirstDayOfMonthInterval) {
+            result->setLongIntervalSyncMode(AccountSyncSchedule::FirstDayOfMonthInterval, time);
+        } else if (source.interval() == Sync::LastDayOfMonthInterval) {
+            result->setLongIntervalSyncMode(AccountSyncSchedule::LastDayOfMonthInterval, time);
+        } else {
+            result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daysFromQtDaySet(daySet));
         }
-        result->setDailySyncMode(source.time(), daysFromQtDaySet(source.days()));
-    } else {
-        result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daysFromQtDaySet(source.days()));
+    } else if (time.isValid()) {
+        result->setDailySyncMode(time, daysFromQtDaySet(daySet));
     }
+
     if (source.rushEnabled()) {
         QTime peakStart = source.rushBegin();
         if (!peakStart.isValid()) {
@@ -156,13 +172,15 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
     } else {
         d->m_peakEnabled = false;
     }
+
     d->m_enabled = source.scheduleEnabled();
     d->m_externalPeakEnabled = source.syncExternallyDuringRush();
     d->m_modified = false;
+
     return result;
 }
 
-Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSchedule *source)
+Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSchedule *source, Buteo::SyncProfile *profile)
 {
     if (!source) {
         Buteo::SyncSchedule result;
@@ -172,14 +190,25 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
 
     AccountSyncSchedulePrivate *d = source->d;
     Buteo::SyncSchedule result;
+    const QDateTime lastSync = profile->lastSyncTime();
 
     result.setScheduleEnabled(d->m_enabled);
     result.setDays(daysToQtDaySet(d->m_days));
+    result.setTime(d->m_dailySyncTime);
 
-    if (d->m_dailySyncTime.isValid() && d->m_interval == AccountSyncSchedule::NoInterval) {
-        result.setTime(d->m_dailySyncTime);
-    } else {
+    switch (d->m_longInterval) {
+    case AccountSyncSchedule::MonthLongInterval:
+        result.setInterval(Sync::MonthInterval);
+        break;
+    case AccountSyncSchedule::FirstDayOfMonthInterval:
+        result.setInterval(Sync::FirstDayOfMonthInterval);
+        break;
+    case AccountSyncSchedule::LastDayOfMonthInterval:
+        result.setInterval(Sync::LastDayOfMonthInterval);
+        break;
+    case AccountSyncSchedule::NoLongInterval:
         result.setInterval(intervalToMinutes(d->m_interval));
+        break;
     }
 
     result.setRushEnabled(d->m_peakEnabled);
@@ -187,6 +216,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
     result.setRushDays(daysToQtDaySet(d->m_peakDays));
     result.setRushTime(d->m_peakStartTime, d->m_peakEndTime);
     result.setRushInterval(intervalToMinutes(d->m_peakInterval));
+    result.setScheduleConfiguredTime(QDateTime::currentDateTime());
 
     return result;
 }
@@ -221,10 +251,22 @@ void AccountSyncSchedule::setDailySyncMode(const QTime &time, int days)
 {
     if (d->m_dailySyncTime != time) {
         d->m_dailySyncTime = time;
-        d->m_interval = AccountSyncSchedule::NoInterval;
-        emit dailySyncTimeChanged();
         d->setModified(true);
+        emit dailySyncTimeChanged();
     }
+
+    if (d->m_interval != AccountSyncSchedule::NoInterval) {
+        d->m_interval = AccountSyncSchedule::NoInterval;
+        d->setModified(true);
+        emit intervalChanged();
+    }
+
+    if (d->m_longInterval != AccountSyncSchedule::NoLongInterval) {
+        d->m_longInterval = AccountSyncSchedule::NoLongInterval;
+        d->setModified(true);
+        emit longIntervalChanged();
+    }
+
     d->setDays((AccountSyncSchedule::Days)days);
 }
 
@@ -232,10 +274,45 @@ void AccountSyncSchedule::setIntervalSyncMode(Interval interval, int days)
 {
     if (d->m_interval != interval) {
         d->m_interval = interval;
-        emit intervalChanged();
         d->setModified(true);
+        emit intervalChanged();
     }
+
+    if (d->m_dailySyncTime.isValid()) {
+        d->m_dailySyncTime = QTime();
+        d->setModified(true);
+        emit dailySyncTimeChanged();
+    }
+
+    if (d->m_longInterval != AccountSyncSchedule::NoLongInterval) {
+        d->m_longInterval = AccountSyncSchedule::NoLongInterval;
+        d->setModified(true);
+        emit longIntervalChanged();
+    }
+
     d->setDays((AccountSyncSchedule::Days)days);
+}
+
+void AccountSyncSchedule::setLongIntervalSyncMode(LongInterval interval, const QTime &time)
+{
+    if (d->m_longInterval != interval) {
+        d->m_longInterval = interval;
+        d->setModified(true);
+        emit longIntervalChanged();
+    }
+
+    if (time != d->m_dailySyncTime) {
+        d->m_dailySyncTime = time;
+        d->setModified(true);
+        emit dailySyncTimeChanged();
+    }
+
+    if (d->m_interval != AccountSyncSchedule::NoInterval) {
+        d->m_interval = AccountSyncSchedule::NoInterval;
+        emit intervalChanged();
+    }
+
+    d->setDays((AccountSyncSchedule::Days)0);
 }
 
 void AccountSyncSchedule::setPeakSchedule(const QTime &peakStart,
@@ -321,6 +398,11 @@ AccountSyncSchedule::Interval AccountSyncSchedule::interval() const
     return d->m_interval;
 }
 
+AccountSyncSchedule::LongInterval AccountSyncSchedule::longInterval() const
+{
+    return d->m_longInterval;
+}
+
 AccountSyncSchedule::Interval AccountSyncSchedule::peakInterval() const
 {
     return d->m_peakInterval;
@@ -363,10 +445,10 @@ AccountSyncOptionsPrivate::AccountSyncOptionsPrivate(AccountSyncOptions *parent)
     , m_schedule(0)
     , m_pastSyncPeriod(DefaultPastSyncPeriod)
     , m_direction(DefaultDirection)
+    , m_allowedConnectionTypes(0)
     , m_modified(false)
     , m_autoSync(DefaultAutomaticSync)
     , m_syncExternallyEnabled(false)
-
 {
 }
 
@@ -398,9 +480,41 @@ AccountSyncOptions *AccountSyncOptionsPrivate::fromButeoProfile(const Buteo::Syn
     }
     d->m_autoSync = source.boolKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE, DefaultAutomaticSync);
     d->m_syncExternallyEnabled = source.boolKey(Buteo::KEY_SYNC_EXTERNALLY, false);
-    d->m_schedule = AccountSyncSchedulePrivate::fromButeoSchedule(source.syncSchedule(), options);
+    d->m_schedule = AccountSyncSchedulePrivate::fromButeoSchedule(source, options);
+
+    int connectionTypes = 0;
+    const QList<Sync::InternetConnectionType> connectionTypesList = source.internetConnectionTypes();
+    for (Sync::InternetConnectionType connectionType : connectionTypesList) {
+        switch (connectionType) {
+        case Sync::INTERNET_CONNECTION_UNKNOWN:
+            break;
+        case Sync::INTERNET_CONNECTION_ETHERNET:
+            connectionTypes |= AccountSyncOptions::Ethernet;
+            break;
+        case Sync::INTERNET_CONNECTION_WLAN:
+            connectionTypes |= AccountSyncOptions::Wlan;
+            break;
+        case Sync::INTERNET_CONNECTION_BLUETOOTH:
+            connectionTypes |= AccountSyncOptions::Bluetooth;
+            break;
+        case Sync::INTERNET_CONNECTION_2G:
+        case Sync::INTERNET_CONNECTION_3G:
+        case Sync::INTERNET_CONNECTION_4G:
+        case Sync::INTERNET_CONNECTION_CDMA2000:
+        case Sync::INTERNET_CONNECTION_WCDMA:
+        case Sync::INTERNET_CONNECTION_HSPA:
+        case Sync::INTERNET_CONNECTION_WIMAX:
+        case Sync::INTERNET_CONNECTION_EVDO:
+        case Sync::INTERNET_CONNECTION_LTE:
+            connectionTypes |= AccountSyncOptions::Cellular;
+            break;
+        }
+    }
+    d->m_allowedConnectionTypes = connectionTypes;
+
     QObject::connect(d->m_schedule, SIGNAL(modifiedChanged()), options, SIGNAL(modifiedChanged()));
     d->m_modified = false;
+
     return options;
 }
 
@@ -425,8 +539,33 @@ void AccountSyncOptionsPrivate::writeToButeoProfile(AccountSyncOptions *options,
     profile->setSyncDirection(buteoDirection);
     profile->setKey(Buteo::KEY_SYNC_ALWAYS_UP_TO_DATE, (d->m_autoSync ? "true" : "false"));
     profile->setKey(Buteo::KEY_SYNC_EXTERNALLY, (d->m_syncExternallyEnabled ? "true" : "false"));
+
+    QList<Sync::InternetConnectionType> connectionTypes;
+    if (d->m_allowedConnectionTypes & AccountSyncOptions::Ethernet) {
+        connectionTypes << Sync::INTERNET_CONNECTION_ETHERNET;
+    }
+    if (d->m_allowedConnectionTypes & AccountSyncOptions::Wlan) {
+        connectionTypes << Sync::INTERNET_CONNECTION_WLAN;
+    }
+    if (d->m_allowedConnectionTypes & AccountSyncOptions::Cellular) {
+        connectionTypes << Sync::INTERNET_CONNECTION_2G
+                        << Sync::INTERNET_CONNECTION_3G
+                        << Sync::INTERNET_CONNECTION_4G
+                        << Sync::INTERNET_CONNECTION_CDMA2000
+                        << Sync::INTERNET_CONNECTION_WCDMA
+                        << Sync::INTERNET_CONNECTION_CDMA2000
+                        << Sync::INTERNET_CONNECTION_HSPA
+                        << Sync::INTERNET_CONNECTION_WIMAX
+                        << Sync::INTERNET_CONNECTION_EVDO
+                        << Sync::INTERNET_CONNECTION_LTE;
+    }
+    if (d->m_allowedConnectionTypes & AccountSyncOptions::Bluetooth) {
+        connectionTypes << Sync::INTERNET_CONNECTION_BLUETOOTH;
+    }
+    profile->setInternetConnectionTypes(connectionTypes);
+
     if (options->schedule()) {
-        profile->setSyncSchedule(AccountSyncSchedulePrivate::toButeoSchedule(options->schedule()));
+        profile->setSyncSchedule(AccountSyncSchedulePrivate::toButeoSchedule(options->schedule(), profile));
     }
 }
 
@@ -540,6 +679,20 @@ void AccountSyncOptions::setDirection(Direction direction)
     if (d->m_direction != direction) {
         d->m_direction = direction;
         emit directionChanged();
+        d->setModified(true);
+    }
+}
+
+int AccountSyncOptions::allowedConnectionTypes() const
+{
+    return d->m_allowedConnectionTypes;
+}
+
+void AccountSyncOptions::setAllowedConnectionTypes(int allowedConnectionTypes)
+{
+    if (d->m_allowedConnectionTypes != allowedConnectionTypes) {
+        d->m_allowedConnectionTypes = allowedConnectionTypes;
+        emit allowedConnectionTypesChanged();
         d->setModified(true);
     }
 }

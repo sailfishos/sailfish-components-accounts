@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Jolla Ltd.
- * Contact: Bea Lam <bea.lam@jollamobile.com>
+ * Copyright (c) 2014 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -21,6 +21,7 @@ class Q_DECL_EXPORT AccountSyncSchedule : public QObject
     Q_PROPERTY(int days READ days NOTIFY daysChanged)
     Q_PROPERTY(QTime dailySyncTime READ dailySyncTime NOTIFY dailySyncTimeChanged)
     Q_PROPERTY(Interval interval READ interval NOTIFY intervalChanged)
+    Q_PROPERTY(LongInterval longInterval READ longInterval NOTIFY longIntervalChanged)
     Q_PROPERTY(bool peakScheduleEnabled READ peakScheduleEnabled WRITE setPeakScheduleEnabled NOTIFY peakScheduleEnabledChanged)
     Q_PROPERTY(bool syncExternallyDuringPeak READ syncExternallyDuringPeak WRITE setSyncExternallyDuringPeak NOTIFY syncExternallyDuringPeakChanged)
     Q_PROPERTY(QTime peakStartTime READ peakStartTime NOTIFY peakStartTimeChanged)
@@ -28,8 +29,6 @@ class Q_DECL_EXPORT AccountSyncSchedule : public QObject
     Q_PROPERTY(Interval peakInterval READ peakInterval NOTIFY peakIntervalChanged)
     Q_PROPERTY(int peakDays READ peakDays NOTIFY peakDaysChanged)
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
-    Q_ENUMS(Interval)
-    Q_ENUMS(Day)
 
 public:
     enum Interval {
@@ -40,6 +39,15 @@ public:
         Every5Minutes,
         NoInterval = 100
     };
+    Q_ENUM(Interval)
+
+    enum LongInterval {
+        MonthLongInterval,
+        FirstDayOfMonthInterval,
+        LastDayOfMonthInterval,
+        NoLongInterval = 100
+    };
+    Q_ENUM(LongInterval)
 
     enum Day {
         Monday = 0x01,
@@ -48,8 +56,12 @@ public:
         Thursday = 0x08,
         Friday = 0x10,
         Saturday = 0x20,
-        Sunday = 0x40
+        Sunday = 0x40,
+        WeekDays = Monday | Tuesday | Wednesday | Thursday | Friday,
+        WeekendDays = Saturday | Sunday,
+        EveryDay = WeekDays | WeekendDays,
     };
+    Q_ENUM(Day)
     Q_DECLARE_FLAGS(Days, Day)
 
     AccountSyncSchedule(QObject *parent = 0);
@@ -60,6 +72,7 @@ public:
 
     Q_INVOKABLE void setDailySyncMode(const QTime &time, int days = everyday());
     Q_INVOKABLE void setIntervalSyncMode(Interval interval, int days = everyday());
+    Q_INVOKABLE void setLongIntervalSyncMode(LongInterval interval, const QTime &time);
 
     void setPeakScheduleEnabled(bool enable);
     bool peakScheduleEnabled() const;
@@ -77,6 +90,7 @@ public:
     int days() const;
     Interval interval() const;
     QTime dailySyncTime() const;
+    LongInterval longInterval() const;
 
     int peakDays() const;
     Interval peakInterval() const;
@@ -91,6 +105,7 @@ Q_SIGNALS:
     void enabledChanged();
     void daysChanged();
     void intervalChanged();
+    void longIntervalChanged();
     void peakIntervalChanged();
     void dailySyncTimeChanged();
     void peakScheduleEnabledChanged();
@@ -114,10 +129,12 @@ class Q_DECL_EXPORT AccountSyncOptions : public QObject
     Q_PROPERTY(bool syncExternallyEnabled READ syncExternallyEnabled WRITE setSyncExternallyEnabled NOTIFY syncExternallyEnabledChanged)
     Q_PROPERTY(PastSyncPeriod pastSyncPeriod READ pastSyncPeriod WRITE setPastSyncPeriod NOTIFY pastSyncPeriodChanged)
     Q_PROPERTY(Direction direction READ direction WRITE setDirection NOTIFY directionChanged)
+    Q_PROPERTY(int allowedConnectionTypes READ allowedConnectionTypes WRITE setAllowedConnectionTypes NOTIFY allowedConnectionTypesChanged)
     Q_PROPERTY(AccountSyncSchedule *schedule READ schedule WRITE setSchedule NOTIFY scheduleChanged)
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
     Q_ENUMS(PastSyncPeriod)
     Q_ENUMS(Direction)
+    Q_ENUMS(NetworkConnection)
 public:
     enum PastSyncPeriod {
         OneDayAgo,
@@ -132,6 +149,14 @@ public:
         OneWayFromDevice,
         TwoWaySync
     };
+
+    enum NetworkConnection {
+        Ethernet = 0x01,
+        Wlan = 0x02,
+        Cellular = 0x04,
+        Bluetooth = 0x08
+    };
+    Q_DECLARE_FLAGS(NetworkConnections, NetworkConnection)
 
     AccountSyncOptions(QObject *parent = 0);
     ~AccountSyncOptions();
@@ -150,6 +175,9 @@ public:
     Direction direction() const;
     void setDirection(Direction direction);
 
+    int allowedConnectionTypes() const;
+    void setAllowedConnectionTypes(int allowedConnectionTypes);
+
     AccountSyncSchedule *schedule() const;
     void setSchedule(AccountSyncSchedule *schedule);
 
@@ -158,6 +186,7 @@ Q_SIGNALS:
     void syncExternallyEnabledChanged();
     void pastSyncPeriodChanged();
     void directionChanged();
+    void allowedConnectionTypesChanged();
     void scheduleChanged();
     void modifiedChanged();
 
@@ -165,5 +194,6 @@ private:
     friend class AccountSyncOptionsPrivate;
     AccountSyncOptionsPrivate *d;
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS(AccountSyncOptions::NetworkConnections);
 
 #endif
