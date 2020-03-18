@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2013-2019 Jolla Ltd.
- * Copyright (C) 2019 Open Mobile Platform LLC
- * Contact: Bea Lam <bea.lam@jollamobile.com>
+ * Copyright (c) 2013 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -11,6 +10,7 @@
 
 #include <QObject>
 #include <QVariantMap>
+#include <QDateTime>
 
 #include <Accounts/AccountService>
 
@@ -58,6 +58,10 @@ public:
     Q_INVOKABLE int createAllProfiles(int accountId);
     Q_INVOKABLE QStringList profileIds(int accountId, const QString &serviceName = QString()) const;
     Q_INVOKABLE AccountSyncOptions *accountSyncOptions(const QString &profileId);
+
+    Q_INVOKABLE QDateTime nextSyncTime(const QString &profileId);
+    Q_INVOKABLE QDateTime lastSyncTime(const QString &profileId);
+    Q_INVOKABLE QDateTime lastSuccessfulSyncTime(const QString &profileId);
 
     Q_INVOKABLE bool templateProfilesAvailable(const QStringList &templateProfiles) const;
     Q_INVOKABLE QStringList defaultTemplateProfiles(int accountId, const QString &serviceName) const;
