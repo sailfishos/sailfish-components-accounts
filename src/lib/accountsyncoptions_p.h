@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Jolla Ltd.
- * Contact: Bea Lam <bea.lam@jollamobile.com>
+ * Copyright (c) 2014 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -23,12 +23,13 @@ public:
     void setModified(bool modified);
     void setDays(AccountSyncSchedule::Days d);
 
-    static AccountSyncSchedule *fromButeoSchedule(const Buteo::SyncSchedule &source, QObject *parent);
-    static Buteo::SyncSchedule toButeoSchedule(AccountSyncSchedule *source);
+    static AccountSyncSchedule *fromButeoSchedule(const Buteo::SyncProfile &profile, QObject *parent);
+    static Buteo::SyncSchedule toButeoSchedule(AccountSyncSchedule *source, Buteo::SyncProfile *profile);
 
     static QSet<int> daysToQtDaySet(AccountSyncSchedule::Days days);
     static AccountSyncSchedule::Days daysFromQtDaySet(const QSet<int> &qtDays);
     static unsigned int intervalToMinutes(AccountSyncSchedule::Interval interval);
+    static unsigned int longIntervalToMinutes(AccountSyncSchedule::LongInterval interval);
     static AccountSyncSchedule::Interval intervalFromMinutes(unsigned int minutes);
 
     QTime m_dailySyncTime;
@@ -37,6 +38,7 @@ public:
     AccountSyncSchedule *q;
     AccountSyncSchedule::Interval m_interval;
     AccountSyncSchedule::Interval m_peakInterval;
+    AccountSyncSchedule::LongInterval m_longInterval;
     AccountSyncSchedule::Days m_days;
     AccountSyncSchedule::Days m_peakDays;
     bool m_modified;
@@ -63,6 +65,7 @@ public:
     AccountSyncSchedule *m_schedule;
     AccountSyncOptions::PastSyncPeriod m_pastSyncPeriod;
     AccountSyncOptions::Direction m_direction;
+    int m_allowedConnectionTypes;
     bool m_modified;
     bool m_autoSync;
     bool m_syncExternallyEnabled;

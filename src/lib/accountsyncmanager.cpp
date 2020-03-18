@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2013-2019 Jolla Ltd.
- * Copyright (C) 2019 Open Mobile Platform LLC
- * Contact: Bea Lam <bea.lam@jollamobile.com>
+ * Copyright (c) 2013 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -62,6 +61,11 @@ QString profileMarkerForBackupOperationType(AccountSyncManager::BackupOperationT
 bool profileMatchesBackupOperation(const QString &profileId, AccountSyncManager::BackupOperationType operation)
 {
     return profileId.contains(QString(".%1-").arg(profileMarkerForBackupOperationType(operation)));
+}
+
+QString profileForBackupOperationType(int accountId, const QString &accountProviderName, AccountSyncManager::BackupOperationType operation)
+{
+    return QString("%1.%2-%3").arg(accountProviderName).arg(profileMarkerForBackupOperationType(operation)).arg(accountId);
 }
 
 QString templateProfileForBackupOperationType(const QString &accountProviderName, AccountSyncManager::BackupOperationType operation)
@@ -400,6 +404,36 @@ AccountSyncOptions *AccountSyncManager::accountSyncOptions(const QString &profil
     return AccountSyncOptionsPrivate::fromButeoProfile(*profile, this);
 }
 
+QDateTime AccountSyncManager::nextSyncTime(const QString &profileId)
+{
+    Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
+    if (!profile) {
+        qWarning() << "Invalid profile name:" << profileId;
+        return QDateTime();
+    }
+    return profile->nextSyncTime(profile->lastSuccessfulSyncTime());
+}
+
+QDateTime AccountSyncManager::lastSyncTime(const QString &profileId)
+{
+    Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
+    if (!profile) {
+        qWarning() << "Invalid profile name:" << profileId;
+        return QDateTime();
+    }
+    return profile->lastSyncTime();
+}
+
+QDateTime AccountSyncManager::lastSuccessfulSyncTime(const QString &profileId)
+{
+    Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
+    if (!profile) {
+        qWarning() << "Invalid profile name:" << profileId;
+        return QDateTime();
+    }
+    return profile->lastSuccessfulSyncTime();
+}
+
 bool AccountSyncManager::templateProfilesAvailable(const QStringList &templateProfiles) const
 {
     Q_FOREACH (const QString &profileName, templateProfiles) {
@@ -611,6 +645,11 @@ QString AccountSyncManager::findBackupOperationProfile(int accountId, BackupOper
     if (!account) {
         qWarning() << "No account found for account id" << accountId;
         return QString();
+    }
+
+    Buteo::SyncProfile *syncProfile = d->m_profileManager->syncProfile(profileForBackupOperationType(accountId, account->providerName(), operation));
+    if (syncProfile) {
+        return syncProfile->name();
     }
 
     const QString serviceName = QString("%1-backup").arg(account->providerName());
