@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013 - 2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -8,6 +8,7 @@
 //project
 #include "providermodel.h"
 #include "provider.h"
+#include "providerhelper.h"
 #include "globalaccountmanager_p.h"
 #include "globaltranslatorcache_p.h"
 
@@ -17,12 +18,6 @@
 
 //libaccounts-qt
 #include <Accounts/Manager>
-
-//AccessControl
-#include <sailfishaccesscontrol.h>
-#include <unistd.h>
-
-const static auto USER_GROUP_HEADER = QStringLiteral("user-group:");
 
 class ProviderModel::ProviderModelPrivate : public QObject
 {
@@ -89,15 +84,11 @@ bool ProviderModel::ProviderModelPrivate::canCreateAccountForProvider(const Acco
     if (!excludeProvidersForUncreatableAccounts) {
         return true;
     }
-    if (!provider.tags().isEmpty()) {
-        foreach (const QString& tag, provider.tags()) {
-            if (tag.startsWith(USER_GROUP_HEADER)) {
-                // Hide provider if calling user is not in the required group
-                if (!sailfish_access_control_hasgroup(getuid(), tag.mid(USER_GROUP_HEADER.length()).toUtf8()))
-                    return false;
-            }
-        }
+
+    if (!allowedProvider(provider.tags())) {
+        return false;
     }
+
     return !provider.isSingleAccount() || accountCounts.value(provider.name(), 0) == 0;
 }
 

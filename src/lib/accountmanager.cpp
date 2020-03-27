@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013 - 2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -11,6 +11,7 @@
 #include "globalaccountmanager_p.h"
 
 #include "provider.h"
+#include "providerhelper.h"
 #include "service.h"
 #include "servicetype.h"
 #include "account.h"
@@ -295,6 +296,11 @@ Provider *AccountManager::provider(const QString &providerName) const
 {
     AccountManager *parentPtr = const_cast<AccountManager*>(this);
     Accounts::Provider prv = d->manager->provider(providerName);
+
+    if (!allowedProvider(prv.tags())) {
+        return nullptr;
+    }
+
     Provider *newPI = new Provider(prv, parentPtr);
     return newPI;
 }
