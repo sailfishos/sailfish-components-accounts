@@ -15,6 +15,7 @@ SOURCES += \
     $$PWD/globalaccountmanager_p.cpp \
     $$PWD/globaltranslatorcache_p.cpp \
     $$PWD/provider.cpp \
+    $$PWD/providerhelper.cpp \
     $$PWD/providermodel.cpp \
     $$PWD/service.cpp \
     $$PWD/servicetype.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
     $$PWD/globalaccountmanager_p.h \
     $$PWD/globaltranslatorcache_p.h \
     $$PWD/provider.h \
+    $$PWD/providerhelper.h \
     $$PWD/providermodel.h \
     $$PWD/service.h \
     $$PWD/servicetype.h \
