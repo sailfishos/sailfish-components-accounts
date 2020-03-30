@@ -35,9 +35,6 @@
 #define CREDENTIALS_GROUP QLatin1String("segregated_credentials")
 #define BUILD_CREDENTIALS_CONFIGURATION_KEY(appName, credName) QString(QLatin1String("%1/%2/%3")).arg(appName).arg(CREDENTIALS_GROUP).arg(credName)
 
-// Copied from libaccounts-qt account.h
-#define ACCOUNTS_KEY_CREDENTIALS_ID QLatin1String("CredentialsId")
-
 // Used for SSL certificate authentication in some email accounts
 #define ACCOUNTS_KEY_SSL_CERT_CREDENTIALS_ID QLatin1String("SslCertCredentialsId")
 
