@@ -348,3 +348,35 @@ bool AccountManager::credentialsNeedUpdate(int accountId)
 
     return false;
 }
+
+QList<int> AccountManager::enabledAccounts(const QString &providerName, const QString &serviceName)
+{
+    QList<int> returnList;
+    if (providerName.isEmpty()) {
+        return returnList;
+    }
+
+    QList<quint32> accountIdList = d->manager->accountList();
+    foreach (quint32 id, accountIdList) {
+        Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
+        if (account != NULL
+                && account->providerName() == providerName
+                && account->enabled()
+                && !account->valueAsBool(AccountCredentialsNeedUpdateKey)) {
+            if (serviceName.isEmpty()) {
+                returnList.append(static_cast<int>(id));
+            } else {
+                Accounts::Service service = d->manager->service(serviceName);
+                if (service.isValid()) {
+                    account->selectService(service);
+                    if (account->enabled()) {
+                        returnList.append(static_cast<int>(id));
+                    }
+                    account->selectService(Accounts::Service());
+                }
+            }
+        }
+    }
+
+    return returnList;
+}

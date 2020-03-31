@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -46,6 +46,7 @@ public:
     Q_INVOKABLE Provider *provider(const QString &providerName) const;
     Q_INVOKABLE Account *account(int accountId) const;
     Q_INVOKABLE bool credentialsNeedUpdate(int accountId);
+    Q_INVOKABLE QList<int> enabledAccounts(const QString &providerName, const QString &serviceName);
 
     // property accessors and mutators.
     QStringList serviceTypeNames() const;
