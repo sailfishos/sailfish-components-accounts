@@ -23,6 +23,7 @@
 
 static const auto AccountReadOnlyKey = QStringLiteral("readonly");
 static const auto AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.
+static const auto AccountLimitedKey = QStringLiteral("limited");
 
 struct SignInCredentials {
     bool creatingSignInCredentials;
@@ -97,6 +98,7 @@ public:
 
     bool provisioned;
     bool readonly;
+    bool limited;
 
     Account::Status status;
     Account::ErrorType error;

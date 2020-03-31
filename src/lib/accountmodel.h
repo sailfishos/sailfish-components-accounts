@@ -48,7 +48,8 @@ public:
         PerformingInitialSyncRole,
         AccountUserNameRole,
         AccountReadOnlyRole,
-        AccountProvisionedRole
+        AccountProvisionedRole,
+        AccountLimitedRole
     };
 
     enum FilterType {
