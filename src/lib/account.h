@@ -47,6 +47,7 @@ class Q_DECL_EXPORT Account : public QObject, public QQmlParserStatus
 
     Q_PROPERTY(bool provisioned READ provisioned NOTIFY provisionedChanged)
     Q_PROPERTY(bool readonly READ readonly NOTIFY readonlyChanged)
+    Q_PROPERTY(bool limited READ limited NOTIFY limitedChanged)
 
     Q_PROPERTY(QStringList supportedServiceNames READ supportedServiceNames NOTIFY supportedServiceNamesChanged)
 
@@ -142,6 +143,7 @@ public:
     QString defaultCredentialsUserName() const;
     bool provisioned() const;
     bool readonly() const;
+    bool limited() const;
     QString providerName() const;
     QStringList supportedServiceNames() const;
 
@@ -165,6 +167,7 @@ Q_SIGNALS:
 
     void provisionedChanged();
     void readonlyChanged();
+    void limitedChanged();
 
     void enabledWithServiceChanged(const QString &serviceName);
 

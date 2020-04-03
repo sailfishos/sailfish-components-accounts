@@ -186,6 +186,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     , constructedWithAccountPtr(false)
     , provisioned(false)
     , readonly(false)
+    , limited(false)
     , status(Account::Initializing)
     , error(Account::NoError)
     , sessionState(SignOn::AuthSession::SessionNotStarted)
@@ -285,6 +286,12 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
         emit q->readonlyChanged();
     }
 
+    bool newLimited = account->value(AccountLimitedKey, false).toBool();
+    if (limited != newLimited) {
+        limited = newLimited;
+        emit q->limitedChanged();
+    }
+
     // clear the list of service enabled state changes
     serviceEnabledChanges.clear();
 
@@ -335,6 +342,12 @@ void AccountPrivate::asyncQueryInfo()
     if (readonly != newReadonly) {
         readonly = newReadonly;
         emit q->readonlyChanged();
+    }
+
+    bool newLimited = account->value(AccountLimitedKey, false).toBool();
+    if (limited != newLimited) {
+        limited = newLimited;
+        emit q->limitedChanged();
     }
 
     // supported service names
@@ -630,6 +643,12 @@ void AccountPrivate::handleSynced()
         if (readonly != newReadonly) {
             readonly = newReadonly;
             emit q->readonlyChanged();
+        }
+
+        bool newLimited = account->value(AccountLimitedKey, false).toBool();
+        if (limited != newLimited) {
+            limited = newLimited;
+            emit q->limitedChanged();
         }
 
         // check to see if the configuration values were updated
@@ -2532,6 +2551,11 @@ bool Account::provisioned() const
 bool Account::readonly() const
 {
     return d && d->readonly;
+}
+
+bool Account::limited() const
+{
+    return d && d->limited;
 }
 
 /*!

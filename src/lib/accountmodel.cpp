@@ -182,6 +182,11 @@ public:
             displayData->account->selectService(Accounts::Service());
             return displayData->account->value(AccountProvisionedKey).toBool();
         }
+        if (role == AccountLimitedRole) {
+            displayData->account->selectService(Accounts::Service());
+            return displayData->account->value(AccountLimitedKey).toBool();
+        }
+
         return QVariant();
     }
 
@@ -288,6 +293,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountUserNameRole, "accountUserName");
     d->headerData.insert(AccountReadOnlyRole, "accountReadOnly");
     d->headerData.insert(AccountProvisionedRole, "accountProvisioned");
+    d->headerData.insert(AccountLimitedRole, "accountLimited");
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),
