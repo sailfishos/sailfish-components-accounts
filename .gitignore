@@ -4,6 +4,7 @@ installroot/
 RPMS/
 .qmake.cache
 moc_*.cpp
+*.pro.*
 *.o
 *~
 
