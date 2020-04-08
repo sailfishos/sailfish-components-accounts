@@ -1,5 +1,6 @@
 /*
-** Copyright (C) 2014 Jolla Ltd.
+ * Copyright (c) 2014-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
 */
 
 #ifndef ACCOUNTMODIFIER_P_H

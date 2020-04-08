@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -103,10 +103,10 @@ public:
 
     // invokable api.
     Q_INVOKABLE QVariantMap configurationValues(const QString &serviceName) const;
-    Q_INVOKABLE void setConfigurationValues(const QString &serviceName, const QVariantMap &serviceValues);
+    Q_INVOKABLE QVariant configurationValue(const QString &serviceName, const QString &key) const;
     Q_INVOKABLE void setConfigurationValue(const QString &serviceName, const QString &key, const QVariant &value);
     Q_INVOKABLE void removeConfigurationValue(const QString &serviceName, const QString &key);
-    Q_INVOKABLE bool isEnabledWithService(const QString &serviceName);
+    Q_INVOKABLE bool isEnabledWithService(const QString &serviceName) const;
     Q_INVOKABLE void enableWithService(const QString &serviceName);
     Q_INVOKABLE void disableWithService(const QString &serviceName);
 
@@ -176,13 +176,16 @@ Q_SIGNALS:
     void signInResponse(const QVariantMap &data);
     void signInError(const QString &message, int errorType);
 
-// the following should be private, but are public to allow AccountFactory
+protected:
+    Account(QObject *parent, AccountPrivate *d);
+
+// the following should be protected, but are public to allow AccountFactory
 // (from jolla-settings-accounts) to use them during account creation.
 public:
     Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent, const QVariantMap &serviceConfigValues = QVariantMap());
     Accounts::Account *account();
 
-private:
+protected:
     AccountPrivate *d;
     friend class AccountPrivate;
 };

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -423,7 +423,11 @@ void tst_Account::configurationValues()
     account->classBegin();
     account->setIdentifier(newA->id());
     QCOMPARE(account->configurationValues(QString()), QVariantMap());
-    account->setConfigurationValues(QString(), testData);
+
+    for (const QString &key : testData.keys()) {
+        account->setConfigurationValue(QString(), key, testData[key]);
+    }
+
     QCOMPARE(account->configurationValues(QString()), testData);
     account->removeConfigurationValue(QString(), testKey);
     QCOMPARE(account->configurationValues(QString()), QVariantMap());
@@ -503,6 +507,9 @@ void tst_Account::configurationValues()
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
     // the synced signal may be emitted from the account before the change propagates to other account instances.
+
+
+
     QTRY_COMPARE(a->valueAsString(testKey), testStrValue.toString());
     account->setConfigurationValue(QString(), testKey, testStrListValue);
     account->sync();
@@ -547,7 +554,15 @@ void tst_Account::serviceConfigurationValues()
     account->componentComplete();
     QTRY_COMPARE(account->status(), Account::Initialized);
 
-    account->setConfigurationValues(testServiceName, testData);
+    const QVariantMap existing = account->configurationValues(testServiceName);
+    for (const QString &key : existing.keys()) {
+        account->removeConfigurationValue(testServiceName, key);
+    }
+
+    for (const QString &key : testData.keys()) {
+        account->setConfigurationValue(testServiceName, key, testData[key]);
+    }
+
     QCOMPARE(account->configurationValues(testServiceName), testData);
     account->removeConfigurationValue(testServiceName, testKey);
     QCOMPARE(account->configurationValues(testServiceName), QVariantMap());
