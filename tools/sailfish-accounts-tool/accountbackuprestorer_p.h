@@ -76,9 +76,9 @@ private:
 
     QMap<quint32, quint32> createCredentials(const QVariantMap &allCredentialsSettings);
 
-    QMap<QString, QString> syncProfileSettings(Accounts::Account *account,
-                                               const Accounts::Service &srv,
-                                               const QString &templateProfileName);
+    QVariantMap syncProfileSettings(Accounts::Account *account,
+                                    const Accounts::Service &srv,
+                                    const QString &templateProfileName);
     QString syncScheduleXml(Accounts::Account *account,
                             const Accounts::Service &srv,
                             const QString &templateProfileName);

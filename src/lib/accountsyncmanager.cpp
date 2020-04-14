@@ -671,18 +671,24 @@ AccountSyncManager::BackupOperationType AccountSyncManager::backupOperationTypeF
     return InvalidOperation;
 }
 
-QMap<QString, QString> AccountSyncManager::profileProperties(const QString &profileId) const
+QVariantMap AccountSyncManager::profileProperties(const QString &profileId) const
 {
+    QVariantMap results;
     if (profileId.isEmpty()) {
         qWarning() << "Invalid profileId";
-        return QMap<QString, QString>();
+        return results;
     }
     Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
     if (!profile) {
         qWarning() << "Invalid profile id:" << profileId;
-        return QMap<QString, QString>();
+        return results;
     }
-    return profile->allKeys();
+
+    const QMap<QString, QString> map = profile->allKeys();
+    for (QMap<QString, QString>::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it) {
+        results.insert(it.key(), it.value());
+    }
+    return results;
 }
 
 QString AccountSyncManager::syncScheduleXml(const QString &profileId) const
