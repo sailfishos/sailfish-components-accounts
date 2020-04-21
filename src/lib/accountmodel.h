@@ -30,6 +30,7 @@ class Q_DECL_EXPORT AccountModel : public QAbstractListModel, public QQmlParserS
     Q_INTERFACES(QQmlParserStatus)
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    Q_PROPERTY(bool filterByEnabled READ filterByEnabled WRITE setFilterByEnabled NOTIFY filterByEnabledChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
     Q_ENUMS(FilterType)
     Q_ENUMS(AccountError)
@@ -75,6 +76,9 @@ public:
     QString filter() const;
     void setFilter(const QString &filter);
 
+    bool filterByEnabled() const;
+    void setFilterByEnabled(bool filterByEnabled);
+
     int count() const;
 
     Q_INVOKABLE void setAccountEnabled(int index, bool enabled);
@@ -91,6 +95,7 @@ public:
 signals:
     void filterTypeChanged();
     void filterChanged();
+    void filterByEnabledChanged();
     void countChanged();
 
 protected:
@@ -117,6 +122,8 @@ private:
     void monitorSyncStatus(Accounts::Account *account);
 
 private:
+    friend class DisplayData;
+
     AccountModelPrivate* d_ptr;
     Q_DISABLE_COPY(AccountModel)
     Q_DECLARE_PRIVATE(AccountModel)
