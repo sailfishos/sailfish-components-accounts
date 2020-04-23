@@ -338,9 +338,10 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
                 account->selectService(srv);
                 Q_FOREACH (const QString &templateProfile, m_syncManager->defaultTemplateProfiles(account, srv)) {
                     backupIni.beginGroup(templateProfile);
-                    QMap<QString, QString> settingsMap = syncProfileSettings(account, srv, templateProfile);
-                    Q_FOREACH (const QString &key, settingsMap.keys()) {
-                        backupIni.setValue(key, settingsMap.value(key));
+                    const QVariantMap settingsMap = syncProfileSettings(account, srv, templateProfile);
+                    for (QVariantMap::ConstIterator it = settingsMap.constBegin();
+                         it != settingsMap.constEnd(); ++it) {
+                        backupIni.setValue(it.key(), it.value());
                     }
                     backupIni.endGroup();
                 }
@@ -713,9 +714,9 @@ QMap<quint32, quint32> AccountBackupRestorer::createCredentials(const QVariantMa
     return oldToNewIds;
 }
 
-QMap<QString, QString> AccountBackupRestorer::syncProfileSettings(Accounts::Account *account,
-                                                                  const Accounts::Service &srv,
-                                                                  const QString &templateProfileName)
+QVariantMap AccountBackupRestorer::syncProfileSettings(Accounts::Account *account,
+                                                       const Accounts::Service &srv,
+                                                       const QString &templateProfileName)
 {
     Q_FOREACH (const QString &profileId, m_syncManager->profileIds(account->id(), srv.name())) {
         if (profileId.contains(templateProfileName)) {
@@ -725,7 +726,7 @@ QMap<QString, QString> AccountBackupRestorer::syncProfileSettings(Accounts::Acco
         }
     }
 
-    return QMap<QString, QString>();
+    return QVariantMap();
 }
 
 QString AccountBackupRestorer::syncScheduleXml(Accounts::Account *account,
