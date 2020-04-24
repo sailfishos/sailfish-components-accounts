@@ -41,8 +41,13 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
             "Usage:\n"
             "To modify the value of a setting, use -m switch:\n"
             "%1 -p <provider_name> -s <service_name> -m <setting_name> <setting_type> <setting_value>\n"
+            "\n"
+            "To query a setting, use -q switch:\n"
+            "%1 -p <provider_name> -s <service_name> -q [setting_name]\n"
+            "\n"
             "To remove a setting, use -r switch:\n"
             "%1 -p <provider_name> -s <service_name> -r <setting_name>\n"
+            "\n"
             "Examples:\n"
             "1) Adding a new boolean property 'new_property' to the 'sync' service of all facebook accounts:\n"
             "%1 -p facebook -s sync -m new_property bool true\n"
@@ -52,6 +57,10 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
             "%1 -p facebook -s sync -r obsolete_property\n"
             "4) Modifying 'existing property' for the global service of all facebook accounts:\n"
             "%1 -p facebook -s --global -m existing_property bool false \n"
+            "5) Querying 'existing property' for the global service of all facebook accounts:\n"
+            "%1 -p facebook -s --global -q existing_property\n"
+            "4) Queriying all properties for the global service of all facebook accounts:\n"
+            "%1 -p facebook -s --global -q\n"
             "\n"
             "To update per-data sync services to have the correct sync settings and sync profiles:\n"
             "%1 --update-sync-services\n"
@@ -147,10 +156,14 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
         am.mode = AccountModifier::MigrateCalDavPerProvider;
         am.scheduleCommandForNextBoot = scheduleForNextBoot;
     } else {
-        am.mode = AccountModifier::ModifyServiceSettings;
         am.providerName = args.value(2);
         am.serviceName = args.value(4);
         am.modeSwitch = args.value(5);
+        if (am.modeSwitch == QString::fromLatin1("-q")) {
+            am.mode = AccountModifier::QueryServiceSettings;
+        } else {
+            am.mode = AccountModifier::ModifyServiceSettings;
+        }
         am.settingName = args.value(6);
         am.settingType = args.value(7);
         am.settingValue = args.value(8);
@@ -163,6 +176,8 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
             ((am.modeSwitch == QString::fromLatin1("-r") && argc == 7) ||
              ((am.modeSwitch == QString::fromLatin1("-m") && argc == 9 &&
                      validSettingTypes.contains(am.settingType)))));
+    } else if (am.mode == AccountModifier::QueryServiceSettings) {
+        validParams = ((argc > 5) && (argc < 8) && (!am.providerName.isEmpty()));
     } else if (am.mode == AccountModifier::BackupAccounts ||
                am.mode == AccountModifier::RestoreAccounts) {
         validParams = !am.backupFile.isEmpty();

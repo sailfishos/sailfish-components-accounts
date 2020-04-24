@@ -8,6 +8,7 @@
 // buteo-syncfw
 #include <ProfileEngineDefs.h>
 #include <SyncCommonDefs.h>
+#include <iostream>
 
 // libaccounts-qt
 #include <Accounts/Manager>
@@ -269,6 +270,9 @@ void AccountModifier::next()
     case ModifyServiceSettings:
         needsSync = applyServiceSettingChanges();
         break;
+    case QueryServiceSettings:
+        needsSync = queryServiceSetting();
+        break;
     case UpdateProviderAvailability:
         needsSync = applyProviderAvailabilityChanges();
         break;
@@ -356,6 +360,90 @@ bool AccountModifier::applyServiceSettingChanges()
         }
         return true;
     }
+    return false;
+}
+
+QString AccountModifier::formatAllValues() const
+{
+    QString output;
+
+    const QStringList keys = m_currAccount->allKeys();
+    for (const QString key : keys) {
+        output += QString("%1\n").arg(formatValue(key));
+    }
+
+    return output;
+}
+
+QString AccountModifier::formatValue(const QString key) const
+{
+    QVariant value = m_currAccount->value(key);
+
+    QString type;
+    switch (value.type()) {
+    case QMetaType::Bool:
+        type = "bool";
+        break;
+    case QMetaType::QString:
+        type = "string";
+        break;
+    case QMetaType::Int:
+        type = "int";
+        break;
+    case QMetaType::UInt:
+        type = "uint";
+        break;
+    case QMetaType::LongLong:
+        type = "longlong";
+        break;
+    case QMetaType::ULongLong:
+        type = "ulonglong";
+        break;
+    case QMetaType::QStringList:
+        type = "stringlist";
+        break;
+    default:
+        type = "unknown";
+        break;
+    }
+
+    return QString("%1 = %2 : %3").arg(qUtf8Printable(key), type, qUtf8Printable(value.toString()));
+}
+
+bool AccountModifier::queryServiceSetting()
+{
+    QString output;
+    if (m_currAccount->providerName() == providerName) {
+        if (serviceName == QString::fromLatin1("--global")) {
+            m_currAccount->selectService(Accounts::Service());
+
+            if (settingName.isEmpty()) {
+                output += formatAllValues();
+            } else {
+                output += formatValue(settingName);
+            }
+        } else {
+            // query the setting for a particular service or for all services
+            Accounts::ServiceList allServices = m_currAccount->services();
+            foreach (const Accounts::Service &srv, allServices) {
+                if (serviceName.isEmpty() || srv.name() == serviceName) {
+                    if (serviceName.isEmpty()) {
+                        output += QString("Service: %1\n\n").arg(srv.name());
+                    }
+                    m_currAccount->selectService(srv);
+                    if (settingName.isEmpty()) {
+                        output += formatAllValues();
+                    } else {
+                        output += formatValue(settingName);
+                    }
+                    m_currAccount->selectService(Accounts::Service());
+                    output += QString("\n");
+                }
+            }
+        }
+        std::cout << output.toStdString();
+    }
+
     return false;
 }
 
