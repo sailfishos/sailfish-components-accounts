@@ -38,67 +38,155 @@ namespace {
     }
 }
 
-struct DisplayData {
-    DisplayData(Accounts::Account *acct)
-        : account(acct)
-        , performingInitialSync(false)
-        , monitorInitialSync(false)
-        , provisioned(false)
-    {
-        Accounts::ServiceList services = account->services();
-        account->selectService(Accounts::Service());
-        provisioned = account->value(AccountProvisionedKey).toBool();
-        foreach (const Accounts::Service &service, services) {
-            serviceNames.append(service.name());
-            serviceTypes.append(service.serviceType());
-        }
-    }
+class DisplayData : public QObject
+{
+    Q_OBJECT
+public:
+    DisplayData(AccountModel *parent, Accounts::Account *acct);
     ~DisplayData() { } // note: pre-libaccounts-qt version 1.7, would need to delete account; here.
 
-    bool matchesFilter(AccountModel::FilterType filterType, const QString &filter) const {
-        switch (filterType) {
-        case AccountModel::NoFilter:
-            return true;
-        case AccountModel::ProviderFilter:
-            return filter == providerName;
-        case AccountModel::ServiceFilter:
-            return serviceNames.contains(filter);
-        case AccountModel::ServiceTypeFilter:
-            return serviceTypes.contains(filter);
-        case AccountModel::ProvisionedFilter:
-            return provisioned == (filter.compare("true", Qt::CaseInsensitive) == 0);
-        }
-        return false;
-    }
+    bool matchesFilter(AccountModel::FilterType filterType, const QString &filter, bool filterByEnabled) const;
+    QString displayName();
 
-    QString displayName() {
-        QString savedDisplayName = account->displayName();
-        account->selectService(Accounts::Service());
-        if (savedDisplayName.isEmpty() || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
-            if (providerDisplayName.isEmpty()){
-                if (account->provider().isValid()) {
-                    providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
-                } else {
-                    providerDisplayName = obsoleteAccountProviderDisplayName();
-                }
-            }
-            return providerDisplayName;
-        }
-        return savedDisplayName;
-    }
+    void accountDestroyed();
+    void enabledChanged(const QString &serviceName, bool enabled);
+
+    class CachedService
+    {
+    public:
+        QString name;
+        QString type;
+        bool enabled = false;
+    };
 
     QHash<QString, int> profilesSyncStatus;
+    QList<CachedService> serviceCache;
+    AccountModel *q;
     Accounts::Account *account;
     QString providerName;
     QString providerDisplayName;
     QString accountIcon;
-    QStringList serviceNames;
-    QStringList serviceTypes;
-    bool performingInitialSync;
-    bool monitorInitialSync;
-    bool provisioned;
+    bool performingInitialSync = false;
+    bool monitorInitialSync = false;
+    bool provisioned = false;
+    bool accountEnabled = false;
     Q_DISABLE_COPY(DisplayData)
 };
+
+DisplayData::DisplayData(AccountModel *parent, Accounts::Account *acct)
+    : QObject(parent)
+    , q(parent)
+    , account(acct)
+{
+    connect(account, &Accounts::Account::enabledChanged,
+            this, &DisplayData::enabledChanged);
+    connect(account, &Accounts::Account::destroyed,
+            this, &DisplayData::accountDestroyed);
+
+    Accounts::ServiceList services = account->services();
+    account->selectService(Accounts::Service());
+    provisioned = account->value(AccountProvisionedKey).toBool();
+    accountEnabled = account->enabled();
+
+    for (const Accounts::Service &service : services) {
+        CachedService cached;
+        account->selectService(service);
+        cached.name = service.name();
+        cached.type = service.serviceType();
+        cached.enabled = account->enabled();
+        serviceCache.append(cached);
+    }
+    account->selectService(Accounts::Service());
+}
+
+bool DisplayData::matchesFilter(AccountModel::FilterType filterType, const QString &filter, bool filterByEnabled) const
+{
+    if (!account) {
+        return false;
+    }
+
+    if (filterByEnabled && !accountEnabled) {
+        return false;
+    }
+
+    switch (filterType) {
+    case AccountModel::NoFilter:
+        return true;
+    case AccountModel::ProviderFilter:
+        return filter == providerName;
+    case AccountModel::ServiceFilter:
+        for (const CachedService &cached : serviceCache) {
+            if (cached.name == filter) {
+                return !filterByEnabled || cached.enabled;
+            }
+        }
+        return false;
+    case AccountModel::ServiceTypeFilter:
+    {
+        // If filterByEnabled: return true if any service of this type is enabled.
+        for (const CachedService &cached : serviceCache) {
+            if (cached.type == filter) {
+                if (!filterByEnabled || cached.enabled) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    case AccountModel::ProvisionedFilter:
+        return provisioned == (filter.compare("true", Qt::CaseInsensitive) == 0);
+    }
+    return false;
+}
+
+QString DisplayData::displayName()
+{
+    if (!account) {
+        return QString();
+    }
+
+    const QString savedDisplayName = account->displayName();
+    account->selectService(Accounts::Service());
+    if (savedDisplayName.isEmpty() || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
+        if (providerDisplayName.isEmpty()){
+            if (account->provider().isValid()) {
+                providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
+            } else {
+                providerDisplayName = obsoleteAccountProviderDisplayName();
+            }
+        }
+        return providerDisplayName;
+    }
+    return savedDisplayName;
+}
+
+void DisplayData::accountDestroyed()
+{
+    account = nullptr;
+}
+
+void DisplayData::enabledChanged(const QString &serviceName, bool enabled)
+{
+    if (!account) {
+        return;
+    }
+
+    if (serviceName.isEmpty() || serviceName == QLatin1String("global")) {
+        accountEnabled = enabled;
+    } else {
+        for (int i = 0; i < serviceCache.count(); ++i) {
+            if (serviceCache[i].name == serviceName) {
+                serviceCache[i].enabled = enabled;
+                break;
+            }
+        }
+    }
+
+    if (q->filterByEnabled()) {
+        q->reload();
+    }
+}
+
 
 class AccountModel::AccountModelPrivate
 {
@@ -110,6 +198,7 @@ public:
         , rowToUpdate(-1)
         , componentComplete(false)
         , dbusInitialized(false)
+        , filterByEnabled(false)
     {
     }
 
@@ -201,6 +290,7 @@ public:
     int rowToUpdate;
     bool componentComplete;
     bool dbusInitialized;
+    bool filterByEnabled;
 };
 
 namespace {
@@ -342,6 +432,23 @@ void AccountModel::setFilter(const QString &filter)
     }
 }
 
+bool AccountModel::filterByEnabled() const
+{
+    Q_D(const AccountModel);
+    return d->filterByEnabled;
+}
+
+void AccountModel::setFilterByEnabled(bool filterByEnabled)
+{
+    Q_D(AccountModel);
+    if (filterByEnabled != d->filterByEnabled) {
+        d->filterByEnabled = filterByEnabled;
+        if (d->componentComplete)
+            reload();
+        emit filterByEnabledChanged();
+    }
+}
+
 int AccountModel::count() const
 {
     Q_D(const AccountModel);
@@ -432,7 +539,7 @@ void AccountModel::populate()
     foreach (Accounts::AccountId id, idList) {
         Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
         addedAccount(account);
-        DisplayData *data = new DisplayData(account);
+        DisplayData *data = new DisplayData(this, account);
         insertAccountSorted(data, account, &d->accountsList, &d->filteredAccountsList);
     }
 
@@ -447,13 +554,14 @@ void AccountModel::reload()
     int prevCount = count();
     QList<DisplayData *> result;
     for (int i=0; i<d->accountsList.count(); i++) {
-        if (d->accountsList[i]->matchesFilter(d->filterType, d->filter)) {
+        if (d->accountsList[i]->matchesFilter(d->filterType, d->filter, d->filterByEnabled)) {
             result.append(d->accountsList[i]);
         }
     }
     beginResetModel();
     d->filteredAccountsList = result;
     endResetModel();
+
     if (prevCount != count()) {
         emit countChanged();
     }
@@ -504,7 +612,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
 
         if (account != 0) {
             addedAccount(account);
-            insertAccountSorted(new DisplayData(account), account, &d->accountsList, &d->filteredAccountsList);
+            insertAccountSorted(new DisplayData(this, account), account, &d->accountsList, &d->filteredAccountsList);
             monitorSyncStatus(account);
             reload();
             emit countChanged();
@@ -701,3 +809,4 @@ void AccountModel::removedAccount(Accounts::Account *account)
     }
 }
 
+#include "accountmodel.moc"
