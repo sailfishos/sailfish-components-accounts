@@ -51,6 +51,7 @@ private slots:
     //invokables
     void configurationValues();
     void serviceConfigurationValues();
+    void configPrecedence();
     void enableDisableWithService();
     //signin-related
     void credentialsFunctions();
@@ -652,6 +653,147 @@ void tst_Account::serviceConfigurationValues()
     QTest::qWait(300);
     a->value(testKey, expectStringList); // expectStringList is an in-out parameter.
     QCOMPARE(expectStringList, testStrListValue);
+
+    // cleanup.
+    account->remove();
+}
+
+void tst_Account::configPrecedence()
+{
+    // When syncing an account, only those values that have changed should be
+    // written to the account. This is to ensure that values written in the
+    // background aren't overwritten by the sync.
+    QVariantMap testData;
+    QString testKey(QLatin1String("test-key"));
+    QVariant testStrListValue(QStringList() << QLatin1String("first") << QLatin1String("second"));
+    QVariant testStrValue1(QString(QLatin1String("test-value-1")));
+    QVariant testStrValue2(QString(QLatin1String("test-value-2")));
+    QVariant testStrValue3(QString(QLatin1String("test-value-3")));
+    QString testServiceName;
+    QVariantMap existing;
+
+    Accounts::Manager manager;
+    QScopedPointer<Accounts::Account> newA(manager.createAccount("test-provider"));
+    QSignalSpy newASyncedSpy(newA.data(), SIGNAL(synced()));
+    QList<QVariant> spyArgs;
+    newA->setDisplayName("test");
+    newA->setEnabled(false);
+    newA->sync();
+    QTRY_VERIFY(newASyncedSpy.count() > 0);
+
+    QScopedPointer<Account> account(new Account);
+    account->classBegin();
+    account->setIdentifier(newA->id());
+    account->componentComplete();
+    QTRY_COMPARE(account->status(), Account::Initialized);
+
+    Accounts::Manager m;
+    Accounts::Account *a = m.account(account->identifier());
+    QVERIFY(a != 0);
+
+    QTRY_VERIFY(testStrValue1 != testStrValue2);
+    QTRY_VERIFY(testStrValue2 != testStrValue3);
+    QTRY_VERIFY(testStrValue3 != testStrValue1);
+
+    // Perform the tests for an account
+    testServiceName = QString();
+    a->selectService(Accounts::Service());
+
+    // Clear everything out
+    existing = account->configurationValues(testServiceName);
+    for (const QString &key : existing.keys()) {
+        account->removeConfigurationValue(testServiceName, key);
+    }
+    QCOMPARE(account->configurationValues(testServiceName).isEmpty(), true);
+
+    // Background addition doesn't get overwritten
+    account->setConfigurationValue(testServiceName, testKey, testStrValue1);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue1);
+
+    a->setValue(testKey, testStrValue2);
+    a->sync();
+    QTRY_COMPARE(a->value(testKey), testStrValue2);
+
+    account->setConfigurationValue(testServiceName, testKey, testStrValue1);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue2);
+
+    // Background addition followed by set does get overwritten
+    account->removeConfigurationValue(testServiceName, testKey);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    account->setConfigurationValue(testServiceName, testKey, testStrValue1);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue1);
+
+    a->setValue(testKey, testStrValue2);
+    a->sync();
+    QTRY_COMPARE(a->value(testKey), testStrValue2);
+
+    account->setConfigurationValue(testServiceName, testKey, testStrValue3);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue3);
+
+    // Perform the tests for a service
+    testServiceName = QString("test-service2");
+    Accounts::Service s = m.service(testServiceName);
+    QVERIFY(s.isValid());
+    a->selectService(s);
+
+    // Clear everything out
+    existing = account->configurationValues(testServiceName);
+    for (const QString &key : existing.keys()) {
+        account->removeConfigurationValue(testServiceName, key);
+    }
+    QCOMPARE(account->configurationValues(testServiceName).isEmpty(), true);
+
+    // Background addition doesn't get overwritten
+    account->setConfigurationValue(testServiceName, testKey, testStrValue1);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue1);
+
+    a->setValue(testKey, testStrValue2);
+    a->sync();
+    QTRY_COMPARE(a->value(testKey), testStrValue2);
+
+    account->setConfigurationValue(testServiceName, testKey, testStrValue1);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue2);
+
+    // Background addition followed by set does get overwritten
+    account->removeConfigurationValue(testServiceName, testKey);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    account->setConfigurationValue(testServiceName, testKey, testStrValue1);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue1);
+
+    a->setValue(testKey, testStrValue2);
+    a->sync();
+    QTRY_COMPARE(a->value(testKey), testStrValue2);
+
+    account->setConfigurationValue(testServiceName, testKey, testStrValue3);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced);
+
+    QTRY_COMPARE(a->value(testKey), testStrValue3);
 
     // cleanup.
     account->remove();
