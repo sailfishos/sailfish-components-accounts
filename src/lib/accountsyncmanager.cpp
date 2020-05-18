@@ -325,9 +325,10 @@ void AccountSyncManager::syncProfile(const QString &profileId)
         emit profileUpdateError(profileId, QStringLiteral("specified profileId is an empty string"));
         return;
     }
-    if (!d->startSync(profileId)) {
-        emit profileSyncStatusChanged(profileId, SyncError, QStringLiteral("Unable to start sync!"));
-    }
+
+    // Not an error if startSync() returns false, as the sync may just be queued. If the sync
+    // fails, the syncStatus() signal will be received with an error.
+    d->startSync(profileId);
 }
 
 void AccountSyncManager::abortProfileSync(const QString &profileId)
