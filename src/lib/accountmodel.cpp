@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013 - 2019 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -63,6 +63,7 @@ public:
     QList<CachedService> serviceCache;
     AccountModel *q;
     Accounts::Account *account;
+    QTimer *m_delayedReloadTimer;
     QString providerName;
     QString providerDisplayName;
     QString accountIcon;
@@ -77,11 +78,16 @@ DisplayData::DisplayData(AccountModel *parent, Accounts::Account *acct)
     : QObject(parent)
     , q(parent)
     , account(acct)
+    , m_delayedReloadTimer(new QTimer(this))
 {
     connect(account, &Accounts::Account::enabledChanged,
             this, &DisplayData::enabledChanged);
     connect(account, &Accounts::Account::destroyed,
             this, &DisplayData::accountDestroyed);
+
+    m_delayedReloadTimer->setSingleShot(true);
+    connect(m_delayedReloadTimer, &QTimer::timeout,
+            q, &AccountModel::reload);
 
     Accounts::ServiceList services = account->services();
     account->selectService(Accounts::Service());
@@ -171,19 +177,28 @@ void DisplayData::enabledChanged(const QString &serviceName, bool enabled)
         return;
     }
 
+    bool changed = false;
     if (serviceName.isEmpty() || serviceName == QLatin1String("global")) {
-        accountEnabled = enabled;
+        if (accountEnabled != enabled) {
+            accountEnabled = enabled;
+            changed = true;
+        }
     } else {
         for (int i = 0; i < serviceCache.count(); ++i) {
             if (serviceCache[i].name == serviceName) {
-                serviceCache[i].enabled = enabled;
+                if (serviceCache[i].enabled != enabled) {
+                    serviceCache[i].enabled = enabled;
+                    changed = true;
+                }
                 break;
             }
         }
     }
 
-    if (q->filterByEnabled()) {
-        q->reload();
+    if (changed && q->filterByEnabled()) {
+        // Sometimes there are many simultaneous service changes (e.g. when an account is created)
+        // so ensure minimal calls to reload().
+        m_delayedReloadTimer->start(0);
     }
 }
 
@@ -542,10 +557,6 @@ void AccountModel::populate()
         DisplayData *data = new DisplayData(this, account);
         insertAccountSorted(data, account, &d->accountsList, &d->filteredAccountsList);
     }
-
-    if (count() > 0) {
-        emit countChanged();
-    }
 }
 
 void AccountModel::reload()
@@ -615,7 +626,6 @@ void AccountModel::accountCreated(Accounts::AccountId id)
             insertAccountSorted(new DisplayData(this, account), account, &d->accountsList, &d->filteredAccountsList);
             monitorSyncStatus(account);
             reload();
-            emit countChanged();
         }
     }
 }
