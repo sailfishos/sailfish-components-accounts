@@ -11,6 +11,7 @@
 #include "globalaccountmanager_p.h"
 
 #include <QtDebug>
+#include <QMetaObject>
 
 #ifdef USE_SAILFISHKEYPROVIDER
 #include <sailfishkeyprovider.h>
@@ -41,6 +42,11 @@ AccountAuthenticator::AccountAuthenticator(QObject *parent)
 void AccountAuthenticator::signIn(int accountId, const QString &serviceName)
 {
     d->signIn(accountId, serviceName);
+}
+
+void AccountAuthenticator::sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors)
+{
+    d->sendAuthenticatedRequest(url, credentials, ignoreSslErrors);
 }
 
 bool AccountAuthenticator::setCredentialsNeedUpdate(int accountId, const QString &serviceName)
@@ -262,6 +268,69 @@ void AccountAuthenticatorPrivate::signOnError(const SignOn::Error &error)
     //% "Authentication error (for unknown service): %1"
     const QString errorString = qtTrId("sailfishaccounts-la-auth_error_no_service").arg(error.message());
     emit q->signInError(accountId, QString(), errorString);
+}
+
+void AccountAuthenticatorPrivate::sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors)
+{
+    if (!m_networkAccessManager) {
+        m_networkAccessManager = new QNetworkAccessManager(this);
+    }
+
+    if (!url.isValid()) {
+        QMetaObject::invokeMethod(q,
+                                  "authenticatedRequestFinished",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(bool, true),
+                                  //% "Invalid URL. Check the server address and try again."
+                                  Q_ARG(QString, qtTrId("sailfish_components_accounts_qt5-la-invalid_server_url")));
+        return;
+    }
+
+    QNetworkRequest request;
+    QUrl authUrl(url);
+
+    if (!credentials.accessToken.isEmpty()) {
+        request.setRawHeader("Authorization", "Bearer " + credentials.accessToken.toLatin1());
+    } else {
+        authUrl.setUserName(credentials.username);
+        authUrl.setPassword(credentials.password);
+    }
+    request.setUrl(authUrl);
+
+    QNetworkReply *reply = m_networkAccessManager->head(request);
+    reply->setProperty("ignoreSslErrors", ignoreSslErrors);
+    connect(reply, &QNetworkReply::finished,
+            this, &AccountAuthenticatorPrivate::authenticatedRequestFinished);
+    connect(reply, &QNetworkReply::sslErrors,
+            this, &AccountAuthenticatorPrivate::authenticatedRequestSslErrors);
+}
+
+void AccountAuthenticatorPrivate::authenticatedRequestFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    const int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+    if (reply->error() == QNetworkReply::NoError) {
+        emit q->authenticatedRequestFinished(true, QString());
+    } else {
+        QUrl url = reply->url();
+        url.setUserName(QString());
+        url.setPassword(QString());
+        qWarning() << "sendAuthenticatedRequest(): request error:" << reply->error()
+                   << "response code:" << httpCode
+                   << "url:" << url.toString();
+        //% "Check the sign-in details and try again. Authentication failed for url: %1"
+        const QString errorString = qtTrId("sailfish_components_accounts_qt5-la-request_auth_failed").arg(url.toString());
+        emit q->authenticatedRequestFinished(false, errorString);
+    }
+}
+
+void AccountAuthenticatorPrivate::authenticatedRequestSslErrors(const QList<QSslError> &errors)
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->property("ignoreSslErrors").toBool()) {
+        reply->ignoreSslErrors(errors);
+    }
 }
 
 bool AccountAuthenticatorPrivate::setCredentialsNeedUpdate(int accountId, const QString &serviceName)

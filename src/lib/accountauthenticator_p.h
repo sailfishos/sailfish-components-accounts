@@ -36,15 +36,19 @@ public:
     ~AccountAuthenticatorPrivate();
 
     void signIn(int accountId, const QString &serviceName);
+    void sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors);
     bool setCredentialsNeedUpdate(int accountId, const QString &serviceName);
 
 private:
     void signOnResponse(const SignOn::SessionData &response);
     void signOnError(const SignOn::Error &error);
 
-private:
+    void authenticatedRequestFinished();
+    void authenticatedRequestSslErrors(const QList<QSslError> &errors);
+
     AccountAuthenticator *q;
-    Accounts::Manager *m_manager;
+    Accounts::Manager *m_manager = nullptr;
+    QNetworkAccessManager *m_networkAccessManager = nullptr;
 
     class AuthData
     {
