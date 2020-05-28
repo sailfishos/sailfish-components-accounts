@@ -7,7 +7,7 @@
 
 #include "accountmanager.h"
 #include "accountmanager_p.h"
-
+#include "globaltranslatorcache_p.h"
 #include "globalaccountmanager_p.h"
 
 #include "provider.h"
@@ -141,6 +141,7 @@ void AccountManagerPrivate::createAccountError(const Accounts::Error &error)
 AccountManager::AccountManager(QObject *parent)
     : QObject(parent), d(new AccountManagerPrivate(this))
 {
+    SailfishAccounts::initLibTranslator();
 }
 
 AccountManager::~AccountManager()
@@ -245,6 +246,7 @@ bool AccountManager::createAccount(const QString &providerName)
         d->busy = true;
         Accounts::Account *newAccount = d->manager->createAccount(providerName);
         if (!newAccount) {
+            //% "Cannot find account provider"
             emit accountCreationFailed(qtTrId("sailfish_accounts-accountmanager-er_invalid_provider"), providerName);
             return true; // succeeded trigger, but failed to create the account.
         }

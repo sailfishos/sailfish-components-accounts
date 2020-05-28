@@ -16,30 +16,6 @@ OTHER_FILES += \
         $$PWD/qmldir \
         $$PWD/*.qml
 
-TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
-EE_QM = $$OUT_PWD/sailfish_components_accounts_qt5_eng_en.qm
-
-translations.commands += lupdate $$PWD $$PWD/../lib/accountmodel.cpp -ts $$TS_FILE
-translations.depends = $$PWD/*.qml $$PWD/../lib/accountmodel.cpp
-translations.CONFIG += no_check_exist no_link
-translations.output = $$TS_FILE
-translations.input = .
-
-translations_install.files = $$TS_FILE
-translations_install.path = /usr/share/translations/source
-translations_install.CONFIG += no_check_exist
-
-# should add -markuntranslated "-" when proper translations are in place (or for testing)
-engineering_english.commands += lrelease -idbased $$TS_FILE -qm $$EE_QM
-engineering_english.CONFIG += no_check_exist no_link
-engineering_english.depends = translations
-engineering_english.input = $$TS_FILE
-engineering_english.output = $$EE_QM
-
-engineering_english_install.path = /usr/share/translations
-engineering_english_install.files = $$EE_QM
-engineering_english_install.CONFIG += no_check_exist
-
 import.files = $$PWD/qmldir \
                 $$PWD/AccountIcon.qml \
                 $$PWD/AccountProviderPicker.qml \
@@ -50,7 +26,4 @@ import.files = $$PWD/qmldir \
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 
-QMAKE_EXTRA_TARGETS += translations engineering_english
-PRE_TARGETDEPS += translations engineering_english
-
-INSTALLS += target import translations_install engineering_english_install
+INSTALLS += target import

@@ -383,6 +383,8 @@ AccountModel::AccountModel(QObject* parent)
     : QAbstractListModel(parent)
     , d_ptr(new AccountModelPrivate())
 {
+    SailfishAccounts::initLibTranslator();
+
     Q_D(AccountModel);
     d->manager = globalAccountManager();
     Accounts::ServiceList allServices = d->manager->serviceList(); // force reload of service files.

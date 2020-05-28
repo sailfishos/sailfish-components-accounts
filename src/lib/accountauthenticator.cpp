@@ -9,6 +9,7 @@
 
 #include "accountauthenticator_p.h"
 #include "globalaccountmanager_p.h"
+#include "globaltranslatorcache_p.h"
 
 #include <QtDebug>
 #include <QMetaObject>
@@ -37,6 +38,7 @@ AccountAuthenticator::AccountAuthenticator(QObject *parent)
     : QObject(parent)
     , d(new AccountAuthenticatorPrivate(this))
 {
+    SailfishAccounts::initLibTranslator();
 }
 
 void AccountAuthenticator::signIn(int accountId, const QString &serviceName)
