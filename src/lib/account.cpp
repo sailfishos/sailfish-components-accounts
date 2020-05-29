@@ -12,6 +12,7 @@
 #include "globalaccountmanager_p.h"
 #include "accountvalueencoding_p.h"
 #include "accountvalueencryption_p.h"
+#include "globaltranslatorcache_p.h"
 
 #include <QtDebug>
 
@@ -718,9 +719,9 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
     if (!signInCredentials.session) {
         signInCredentials.cleanup(true);
         setStatus(Account::Synced);
-        //: Error emitted if an error occurred while creating a signon session
-        //% "Unable to create signon session"
-        emit q->signInError(qtTrId("sailfish_accounts-account-session_create_failed"), Account::SignInUnknownError);
+        //: Error emitted if an error occurred while creating a signon session after storing the credentials
+        //% "Unable to create signon session after storing credentials"
+        emit q->signInError(qtTrId("sailfish_accounts-account-session_create_after_store_credentials_failed"), Account::SignInUnknownError);
         return;
     }
 
@@ -1248,6 +1249,7 @@ void AccountPrivate::setUserName(const QString &user)
 Account::Account(QObject *parent)
     : QObject(parent), d(new AccountPrivate(this, 0))
 {
+    SailfishAccounts::initLibTranslator();
 }
 
 Account::~Account()

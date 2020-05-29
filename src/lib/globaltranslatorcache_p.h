@@ -17,6 +17,8 @@
 
 namespace SailfishAccounts
 {
+    void initLibTranslator();
+
     QTranslator *cachedTranslator(const QString &trCatalog);
     QString translatedDisplayName(const Accounts::Provider &provider);
     QString translatedDisplayName(const Accounts::Service &service);
