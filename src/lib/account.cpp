@@ -1815,7 +1815,7 @@ void Account::createSignInCredentials(const QString &applicationName,
     Accounts::Service service(d->manager->service(parameters->serviceName()));
     if (!service.isValid()) {
         //: Error emitted if function called with invalid service name
-        //% "Invalid service name specified via SignInParameters"
+        //% "Invalid service name specified via sign-in parameters"
         emit signInError(qtTrId("sailfish_accounts-account-csic_same"), Account::SignInInvalidCredentialsError);
         return;
     }
