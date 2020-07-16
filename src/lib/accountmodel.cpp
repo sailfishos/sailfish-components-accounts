@@ -630,10 +630,18 @@ void AccountModel::accountCreated(Accounts::AccountId id)
         Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
 
         if (account != 0) {
+            int prevCount = count();
+
             addedAccount(account);
+            // Newly created account is already added here to filteredAccountsList. Hence, reload cannot
+            // see count change => handle count change here.
             insertAccountSorted(new DisplayData(this, account), account, &d->accountsList, &d->filteredAccountsList);
             monitorSyncStatus(account);
-            reload();
+            reload(false);
+
+            if (prevCount != count()) {
+                emit countChanged();
+            }
         }
     }
 }
