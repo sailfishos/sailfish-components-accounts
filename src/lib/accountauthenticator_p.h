@@ -37,6 +37,10 @@ public:
 
     void signIn(int accountId, const QString &serviceName);
     void sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors);
+    void sendOcsUserRequest(int accountId,
+                            const QString &serviceName,
+                            const AccountAuthenticatorCredentials &credentials,
+                            bool ignoreSslErrors);
     bool setCredentialsNeedUpdate(int accountId, const QString &serviceName);
 
 private:
@@ -46,9 +50,11 @@ private:
     void authenticatedRequestFinished();
     void authenticatedRequestSslErrors(const QList<QSslError> &errors);
 
-    AccountAuthenticator *q;
-    Accounts::Manager *m_manager = nullptr;
-    QNetworkAccessManager *m_networkAccessManager = nullptr;
+    void ocsUserRequestFinished();
+    void ocsUserRequestSslErrors(const QList<QSslError> &errors);
+
+    QNetworkRequest networkRequest(const QUrl &serverAddress, const AccountAuthenticatorCredentials &credentials, const QString &path);
+    QString parseUserIdFromOcsUserResponse(const QByteArray &ocsUserResponse);
 
     class AuthData
     {
@@ -63,6 +69,8 @@ private:
         AccountAuthenticatorCredentials credentials;
     };
 
+    AccountAuthenticator *q;
+    QNetworkAccessManager *m_networkAccessManager = nullptr;
     QVector<AuthData> m_authData;
 };
 
