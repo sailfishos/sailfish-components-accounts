@@ -39,9 +39,14 @@ public:
     AccountAuthenticator(QObject *parent = nullptr);
 
     Q_INVOKABLE void signIn(int accountId, const QString &serviceName);
+
     Q_INVOKABLE void sendAuthenticatedRequest(const QUrl &url,
                                               const AccountAuthenticatorCredentials &credentials,
                                               bool ignoreSslErrors);
+    Q_INVOKABLE void sendOcsUserRequest(int accountId,
+                                        const QString &serviceName,
+                                        const AccountAuthenticatorCredentials &credentials,
+                                        bool ignoreSslErrors);
     Q_INVOKABLE bool setCredentialsNeedUpdate(int accountId, const QString &serviceName);
 
 Q_SIGNALS:
@@ -51,6 +56,7 @@ Q_SIGNALS:
     void signInError(int accountId, const QString &serviceName, const QString &errorString);
 
     void authenticatedRequestFinished(bool success, const QString &errorString);
+    void ocsUserRequestFinished(bool success, const QString &errorString);
 
 private:
     friend class AccountAuthenticatorPrivate;
