@@ -87,7 +87,9 @@ DisplayData::DisplayData(AccountModel *parent, Accounts::Account *acct)
 
     m_delayedReloadTimer->setSingleShot(true);
     connect(m_delayedReloadTimer, &QTimer::timeout,
-            q, &AccountModel::reload);
+            q, [this]() {
+      q->reload();
+    });
 
     Accounts::ServiceList services = account->services();
     account->selectService(Accounts::Service());
@@ -561,7 +563,7 @@ void AccountModel::populate()
     }
 }
 
-void AccountModel::reload()
+void AccountModel::reload(bool emitCountChange)
 {
     Q_D(AccountModel);
     int prevCount = count();
@@ -575,7 +577,7 @@ void AccountModel::reload()
     d->filteredAccountsList = result;
     endResetModel();
 
-    if (prevCount != count()) {
+    if (emitCountChange && prevCount != count()) {
         emit countChanged();
     }
 }
@@ -612,9 +614,13 @@ void AccountModel::componentComplete()
     Q_D(AccountModel);
     populate();
     if (d->filterType != NoFilter && !d->filter.isEmpty()) {
-        reload();
+        reload(false);
     }
     d->componentComplete = true;
+
+    if (count() > 0) {
+      emit countChanged();
+    }
 }
 
 void AccountModel::accountCreated(Accounts::AccountId id)
