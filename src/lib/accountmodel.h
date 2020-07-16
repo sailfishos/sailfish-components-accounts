@@ -118,7 +118,7 @@ private:
     void addedAccount(Accounts::Account *account);
     void removedAccount(Accounts::Account *account);
     void populate();
-    void reload();
+    void reload(bool emitCountChange = true);
     void monitorSyncStatus(Accounts::Account *account);
 
 private:
