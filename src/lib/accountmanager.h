@@ -44,6 +44,7 @@ public:
     Q_INVOKABLE ServiceType *serviceType(const QString &serviceTypeName) const;
     Q_INVOKABLE Service *service(const QString &serviceName) const;
     Q_INVOKABLE Provider *provider(const QString &providerName) const;
+    Q_INVOKABLE Provider *providerForAccount(int accountId) const;
     Q_INVOKABLE Account *account(int accountId) const;
     Q_INVOKABLE bool credentialsNeedUpdate(int accountId);
     Q_INVOKABLE QList<int> enabledAccounts(const QString &providerName, const QString &serviceName);

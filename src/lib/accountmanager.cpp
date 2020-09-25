@@ -307,6 +307,26 @@ Provider *AccountManager::provider(const QString &providerName) const
     return newPI;
 }
 
+Provider *AccountManager::providerForAccount(int accountId) const
+{
+    if (accountId <= 0) {
+        return NULL;
+    }
+    AccountManager *parentPtr = const_cast<AccountManager*>(this);
+    Accounts::Account *existingAccount = Accounts::Account::fromId(d->manager, accountId, parentPtr);
+    if (!existingAccount) {
+        return NULL;
+    }
+
+    Accounts::Provider prv = existingAccount->provider();
+    if (!allowedProvider(prv.tags())) {
+        return nullptr;
+    }
+
+    Provider *newPI = new Provider(prv, parentPtr);
+    return newPI;
+}
+
 /*!
     \qmlmethod Account* AccountManager::account(int accountId)
 
