@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -29,6 +29,7 @@
 #include "accountsyncmanager.h"
 #include "accountsyncoptions.h"
 #include "accountauthenticator.h"
+#include "accountvalue.h"
 
 // using custom translator so it gets properly removed from qApp when engine is deleted
 class AppTranslator: public QTranslator
@@ -85,6 +86,7 @@ public:
         qmlRegisterType<AccountSyncSchedule>("Sailfish.Accounts", 1, 0, "AccountSyncSchedule");
         qmlRegisterType<AccountAuthenticator>("Sailfish.Accounts", 1, 0, "AccountAuthenticator");
         qmlRegisterUncreatableType<AccountAuthenticatorCredentials>("Sailfish.Accounts", 1, 0, "AccountAuthenticatorCredentials", "");
+        qmlRegisterType<AccountValue>("Sailfish.Accounts", 1, 0, "AccountValue");
     }
 };
 

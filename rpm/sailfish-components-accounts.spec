@@ -16,7 +16,7 @@ BuildRequires:  pkgconfig(Qt5DBus)
 BuildRequires:  pkgconfig(libsignon-qt5)
 BuildRequires:  pkgconfig(accounts-qt5) >= 1.16
 BuildRequires:  pkgconfig(libsailfishkeyprovider)
-BuildRequires:  pkgconfig(buteosyncfw5) >= 0.7.14
+BuildRequires:  pkgconfig(buteosyncfw5) >= 0.9.6
 BuildRequires:  pkgconfig(qt5-boostable)
 BuildRequires:  pkgconfig(mlite5)
 BuildRequires:  pkgconfig(sailfishaccesscontrol)
@@ -25,6 +25,7 @@ BuildRequires:  qt5-qttools-linguist
 BuildRequires:  qt5-qttools
 Requires:  mapplauncherd-qt5
 Requires:  sailfishsilica-qt5 >= 1.1.53
+Requires:  buteo-syncfw-qt5 >= 0.9.6
 
 %description
 Sailfish Accounts UI Components

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -67,8 +67,10 @@
     unable to use or access tokens associated with a different application.
 */
 
+namespace  { // Empty namespace
+
 // encrypts the given plaintext string with the given key, encodes the result in base64.
-static QString b64_encrypted_string(const QString &plaintext, const QString &key)
+QString b64_encrypted_string(const QString &plaintext, const QString &key)
 {
     QByteArray ptBA = plaintext.toUtf8();
     QByteArray kBA = key.toUtf8();
@@ -84,7 +86,7 @@ static QString b64_encrypted_string(const QString &plaintext, const QString &key
 }
 
 // decodes the given ciphertext from base64 into encrypted data, and decrypts it.
-static QString decrypted_string_b64(const QString &ciphertext, const QString &key)
+QString decrypted_string_b64(const QString &ciphertext, const QString &key)
 {
     if (key.isEmpty()) {
         return ciphertext;
@@ -102,6 +104,51 @@ static QString decrypted_string_b64(const QString &ciphertext, const QString &ke
 
     QString decryptedString = QString::fromUtf8(decryptedData);
     return decryptedString;
+}
+
+const QVariant convertValue(const QVariant &value)
+{
+    if (value.type() == QVariant::Bool
+            || value.type() == QVariant::Int
+            || value.type() == QVariant::UInt
+            || value.type() == QVariant::LongLong
+            || value.type() == QVariant::ULongLong
+            || value.type() == QVariant::String
+            || value.type() == QVariant::StringList) {
+        return value;
+    } else if (value.type() == QVariant::List) {
+        return  value.toStringList();
+    } else if (value.userType() == QMetaType::type("QJSValue")) {
+        QVariant convertedValue = value.value<QJSValue>().toVariant();
+        if (convertedValue.isValid()) {
+            return value.toStringList();
+        }
+    }
+    return QVariant();
+}
+
+} // Empty namespace
+
+bool AccountPrivate::serviceReadyForEdits(const QString &serviceName) const
+{
+    if (status == Account::Invalid || status == Account::SyncInProgress) {
+        return false;
+    }
+
+    if (!serviceName.isEmpty() && !q->supportedServiceNames().contains(serviceName)) {
+        return false;
+    }
+
+    return true;
+}
+
+void AccountPrivate::setModified(bool &pendingInit)
+{
+    if (status == Account::Initializing) {
+        pendingInit = true;
+    } else {
+        setStatus(Account::Modified);
+    }
 }
 
 Account::ErrorType signOnErrorToErrorType(int signOnError)
@@ -180,7 +227,6 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     , pendingInitModifications(false)
     , identifier(0)
     , enabled(false)
-    , identifierPendingInit(false)
     , enabledPendingInit(false)
     , displayNamePendingInit(false)
     , configurationValuesPendingInit(false)
@@ -380,6 +426,10 @@ void AccountPrivate::asyncQueryInfo()
     if (configurationValuesPendingInit) {
         pendingInitModifications = true;
     } else {
+        // These should already be empty; make sure they are
+        configurationStates.clear();
+        serviceConfigurationStates.clear();
+
         // enumerate the global configuration values
         account->selectService(Accounts::Service());
         QVariantMap gsValues;
@@ -397,17 +447,16 @@ void AccountPrivate::asyncQueryInfo()
             foreach (const QString &key, serviceKeys) {
                 serviceValues.insert(key, account->value(key, QVariant(), 0));
             }
-            QVariantMap existingServiceValues = serviceConfigurationValues.value(currService.name());
-            if (serviceValues != existingServiceValues) {
-                serviceConfigurationValues.insert(currService.name(), serviceValues);
-            }
+            serviceConfigurationValues.insert(currService.name(), serviceValues);
+            // TODO: Check whether this is useful for us at all
+            serviceConfigurationStates.insert(currService.name(), QMap<QString, ConfigState>());
         }
         account->selectService(Accounts::Service());
+        serviceBaselineValues = serviceConfigurationValues;
 
         // populate the "global service" configuration values
-        if (configurationValues != gsValues) {
-            configurationValues = gsValues;
-        }
+        configurationValues = gsValues;
+        baselineValues = configurationValues;
     }
 
     if (configurationValues.contains(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY)) {
@@ -488,6 +537,38 @@ void AccountPrivate::updateStoreRepositories(bool enable)
     ssuInterface.call("updateRepos");
 }
 
+void AccountPrivate::updateServiceKey(const ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline, const QString &key)
+{
+    const ConfigState state = states.value(key, ConfigState::Default);
+    QVariant currValue = values.value(key);
+
+    switch (state) {
+    case ConfigState::Change:
+        account->setValue(key, currValue);
+        // keep the baseline up-to-date.
+        baseline.insert(key, currValue);
+        break;
+    case ConfigState::Remove:
+        account->remove(key);
+        // keep the baseline up-to-date.
+        baseline.remove(key);
+        break;
+    default:
+        // do nothing.
+        break;
+    }
+}
+
+void AccountPrivate::updateServiceKeys(const Accounts::Service &service, ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline)
+{
+    account->selectService(service);
+    // It'll be faster to go through the lists separately than to join them
+    for (const QString &key : states.keys()) {
+        updateServiceKey(states, values, baseline, key);
+    }
+    states.clear();
+}
+
 bool AccountPrivate::prepareSync()
 {
     if (status == Account::Initializing) {
@@ -512,7 +593,6 @@ bool AccountPrivate::prepareSync()
         // after this sync, we will once again allow
         // change signals to cause modifications to the properties.
         pendingInitModifications = false;
-        identifierPendingInit = false;
         enabledPendingInit = false;
         displayNamePendingInit = false;
         configurationValuesPendingInit = false;
@@ -524,79 +604,17 @@ bool AccountPrivate::prepareSync()
     }
 
     // set the global configuration values.
-    account->selectService(Accounts::Service());
-    QStringList allKeys = account->allKeys();
-    QStringList setKeys = configurationValues.keys();
-    QStringList doneKeys;
-    foreach (const QString &key, allKeys) {
-        // overwrite existing keys
-        if (setKeys.contains(key)) {
-            doneKeys.append(key);
-            const QVariant &currValue = configurationValues.value(key);
-            if (currValue.isValid()) {
-                account->setValue(key, currValue);
-            } else {
-                account->remove(key);
-            }
-        } else {
-            // remove removed keys
-            // The CredentialsId key may have been added by Accounts::Account internally due to a
-            // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
-            if (key != ACCOUNTS_KEY_CREDENTIALS_ID && key != DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY) {
-                account->remove(key);
-            }
-        }
-    }
-    foreach (const QString &key, setKeys) {
-        // add new keys
-        if (!doneKeys.contains(key)) {
-            const QVariant &currValue = configurationValues.value(key);
-            account->setValue(key, currValue);
-        }
-    }
+    updateServiceKeys(Accounts::Service(), configurationStates, configurationValues, baselineValues);
 
     // and the service-specific configuration values and service-enabledness status
-    foreach (const QString &srvn, supportedServiceNames) {
-        Accounts::Service srv = manager->service(srvn);
+    foreach (const QString &serviceName, supportedServiceNames) {
+        Accounts::Service srv = manager->service(serviceName);
         if (srv.isValid()) {
-            account->selectService(srv);
-
-            // first, configuration values:
-            QVariantMap setSrvValues = serviceConfigurationValues.value(srvn);
-            QStringList srvKeys = account->allKeys();
-            QStringList doneSrvKeys;
-            foreach (const QString &key, srvKeys) {
-                // overwrite existing keys
-                if (setSrvValues.contains(key)) {
-                    doneSrvKeys.append(key);
-                    const QVariant &currValue = setSrvValues.value(key);
-                    if (currValue.isValid()) {
-                        account->setValue(key, currValue);
-                    } else {
-                        account->remove(key);
-                    }
-                } else {
-                    // remove removed keys
-                    // The CredentialsId key may have been added by Accounts::Account internally due to a
-                    // call to Accounts::Account::setCredentialsId(), so make sure we don't remove this.
-                    if (key != ACCOUNTS_KEY_CREDENTIALS_ID) {
-                        account->remove(key);
-                    }
-                }
-            }
-            foreach (const QString &key, setSrvValues.keys()) {
-                // add new keys
-                if (!doneSrvKeys.contains(key)) {
-                    const QVariant &currValue = setSrvValues.value(key);
-                    account->setValue(key, currValue);
-                }
-            }
-
-            // If the saved enabled state was stored in the config values and thus updated above
-            // then we need to overwrite it here with the updated enabled state.
-            if (serviceEnabledChanges.contains(srvn)) {
-                account->setEnabled(serviceEnabledChanges[srvn]);
-            }
+            ConfigStateMap states = serviceConfigurationStates.value(serviceName);
+            QVariantMap baseline = serviceBaselineValues.value(serviceName);
+            updateServiceKeys(srv, states, serviceConfigurationValues.value(serviceName), baseline);
+            serviceConfigurationStates.insert(serviceName, states);
+            serviceBaselineValues.insert(serviceName, baseline);
         }
     }
 
@@ -832,11 +850,11 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         foreach (const QString &cachedKey, configurationValues.keys()) {
             account->setValue(cachedKey, configurationValues.value(cachedKey));
         }
-        foreach (const QString &srvName, serviceConfigurationValues.keys()) {
-            Accounts::Service srv = manager->service(srvName);
+        foreach (const QString &serviceName, serviceConfigurationValues.keys()) {
+            Accounts::Service srv = manager->service(serviceName);
             if (srv.isValid()) {
                 account->selectService(srv);
-                QVariantMap scvs = serviceConfigurationValues.value(srvName);
+                QVariantMap scvs = serviceConfigurationValues.value(serviceName);
                 foreach (const QString &cachedKey, scvs.keys()) {
                     account->setValue(cachedKey, scvs.value(cachedKey));
                 }
@@ -1247,15 +1265,22 @@ void AccountPrivate::setUserName(const QString &user)
 */
 
 Account::Account(QObject *parent)
-    : QObject(parent), d(new AccountPrivate(this, 0))
+    : Account(parent, nullptr)
 {
     SailfishAccounts::initLibTranslator();
+    d = new AccountPrivate(this, 0);
+}
+
+Account::Account(QObject *parent, AccountPrivate *d)
+    : QObject(parent)
+    , d(d)
+{
+    // Root constructor
 }
 
 Account::~Account()
 {
 }
-
 
 // QQmlParserStatus
 void Account::classBegin() { }
@@ -1281,6 +1306,9 @@ Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *
     : QObject(parent), d(new AccountPrivate(this, account, queryInfoOnCreation))
 {
     if (!serviceConfigValues.isEmpty()) {
+        d->configurationStates.clear();
+        d->serviceConfigurationStates.clear();
+
         foreach (const QString &serviceName, serviceConfigValues.keys()) {
             // sanitize the configuration values
             if (serviceConfigValues[serviceName].type() != QVariant::Map) {
@@ -1291,18 +1319,12 @@ Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *
             QVariantMap sanitizedConfig;
             QVariantMap vm = serviceConfigValues[serviceName].toMap();
             foreach (const QString &key, vm.keys()) {
-                QVariant currValue = vm[key];
-                if (currValue.type() == QVariant::Bool
-                        || currValue.type() == QVariant::Int
-                        || currValue.type() == QVariant::UInt
-                        || currValue.type() == QVariant::LongLong
-                        || currValue.type() == QVariant::ULongLong
-                        || currValue.type() == QVariant::String
-                        || currValue.type() == QVariant::StringList) {
-                    sanitizedConfig.insert(key, currValue);
-                } else if (currValue.type() == QVariant::List) {
-                    sanitizedConfig.insert(key, currValue.toStringList());
-                } else {
+                const QVariant currValue = vm[key];
+                const QVariant sanitizedValue = convertValue(currValue);
+                if (sanitizedValue.isValid()) {
+                    sanitizedConfig.insert(key, sanitizedValue);
+                }
+                else {
                     qWarning() << Q_FUNC_INFO << "Unsupported configuration value" << currValue << "for key" << key;
                 }
             }
@@ -1441,90 +1463,40 @@ QVariantMap Account::configurationValues(const QString &serviceName) const
     return d->serviceConfigurationValues.value(serviceName);
 }
 
-
 /*!
-    \qmlmethod void Account::setConfigurationValues(const QString &serviceName, const QVariantMap &values)
+    \qmlmethod QVariant Account::configurationValue(const QString &serviceName, const QString &key)
 
-    Sets the configuration settings for the account which apply
-    specifically to the service with the specified \a serviceName.
+    Returns the individual configuration value for the account
+    which applies specifically to the service with the specified
+    \a serviceName and the specified \a key.
 
-    The \a serviceName must identify a service supported by the
-    account, or be empty, else calling this function will have no effect.
-    If the \a serviceName is empty, the global account configuration
-    settings will updated instead.
+    Some default settings are usually specified in the \c{.service}
+    file installed by the account provider plugin.  Other settings
+    may be specified directly on an account for the service.
 
-    The follow variant types are supported:
+    If the specified \a serviceName is empty, the a value from the
+    account's global configuration settings will be retrieved
+    instead, if it exists.
 
-    \list
-    \li QVariant::Int
-    \li QVariant::UInt
-    \li QVariant::LongLong
-    \li QVariant::ULongLong
-    \li QVariant::String
-    \li QVariant::StringList
-    \li QVariant::List (in this case, the value will be converted to a QStringList)
-    \endlist
+    If the key does not exist for the given account and service, a
+    null QVariant will be returned.
 
-    If a variant in the given \a values uses a type outside of those listed above, it will not
-    be added to the configuration settings.
+    The configuration values are retrieved asynchronously after
+    account construction.  Clients should wait until the account
+    is in the \c Initialized or \c Synced state before they attempt
+    to access (or modify) the configuration values.
 */
-void Account::setConfigurationValues(const QString &serviceName, const QVariantMap &values)
+QVariant Account::configurationValue(const QString &serviceName, const QString &key) const
 {
-    if (d->status == Account::Invalid || d->status == Account::SyncInProgress) {
-        return;
+    if (d->status == Account::Invalid) {
+        return QVariant();
     }
 
-    if (!serviceName.isEmpty() && !supportedServiceNames().contains(serviceName)) {
-        return;
+    if (serviceName.isEmpty()) {
+        return d->configurationValues[key];
     }
 
-    QVariantMap validValues;
-    QStringList vkeys = values.keys();
-    foreach (const QString &key, vkeys) {
-        QVariant currValue = values.value(key);
-        if (currValue.type() == QVariant::Bool
-                || currValue.type() == QVariant::Int
-                || currValue.type() == QVariant::UInt
-                || currValue.type() == QVariant::LongLong
-                || currValue.type() == QVariant::ULongLong
-                || currValue.type() == QVariant::String
-                || currValue.type() == QVariant::StringList) {
-            validValues.insert(key, currValue);
-        } else if (currValue.type() == QVariant::List) {
-            validValues.insert(key, currValue.toStringList());
-        } else if (currValue.userType() == QMetaType::type("QJSValue")) {
-            QVariant convertedValue = currValue.value<QJSValue>().toVariant();
-            if (convertedValue.isValid()) {
-                validValues.insert(key, currValue.toStringList());
-            } else {
-                qWarning() << "Account::setConfigurationValues(): variant type QJSValue for key '" + key + "' cannot be converted, value will not be added";
-            }
-        } else {
-            qWarning() << "Account::setConfigurationValues(): variant type " << currValue.typeName()
-                       << "for key '" + key + "' not supported, value will not be added";
-        }
-    }
-
-    // NOTE: we deliberately don't do change detection, because
-    // we don't connect to valuesChanged() and update our internal
-    // maps when someone else changes an account setting.
-
-    bool globalService = serviceName.isEmpty();
-    if (globalService) {
-        d->configurationValues = validValues;
-        if (d->status == Account::Initializing) {
-            d->configurationValuesPendingInit = true;
-        } else {
-            d->setStatus(Account::Modified);
-        }
-    } else {
-        d->serviceConfigurationValues.insert(serviceName, validValues);
-        if (d->status == Account::Initializing) {
-            d->configurationValuesPendingInit = true;
-        } else {
-            d->setStatus(Account::Modified);
-        }
-    }
+    return d->serviceConfigurationValues.value(serviceName)[key];
 }
 
 /*!
@@ -1535,6 +1507,10 @@ void Account::setConfigurationValues(const QString &serviceName, const QVariantM
     given \a value. The \a value must be of a supported type; see setConfigurationValues() for
     the list of types that are supported.
 
+    The value will only be set to be updated if it is different from the value
+    collected at the last sync. This is to ensure any changes made by other
+    processes in the background are preserved.
+
     The \a serviceName must identify a service supported by the
     account, or be empty, else calling this function will have no effect.
     If the \a serviceName is empty, the global account configuration
@@ -1542,9 +1518,41 @@ void Account::setConfigurationValues(const QString &serviceName, const QVariantM
 */
 void Account::setConfigurationValue(const QString &serviceName, const QString &key, const QVariant &value)
 {
-    QVariantMap configValues = configurationValues(serviceName);
-    configValues.insert(key, value);
-    setConfigurationValues(serviceName, configValues);
+    if (!d->serviceReadyForEdits(serviceName)) {
+        qWarning() << "Service " << serviceName << " not ready when attempting to set " << key;
+        return;
+    }
+
+    const QVariant &validValue = convertValue(value);
+    if (!validValue.isValid()) {
+        qWarning() << "Account::setConfigurationValues(): variant type " << value.typeName()
+                   << "for key '" + key + "' not supported, value will not be added";
+        return;
+    }
+    const QVariant &baselineValue = serviceName.isEmpty()
+            ? d->baselineValues.value(key)
+            : d->serviceBaselineValues[serviceName].value(key);
+
+    // NOTE: We deliberately don't do change detection, because
+    // we don't connect to valuesChanged() and update our internal
+    // maps when someone else changes an account setting.
+
+    // Only update the state if we moved away from the baseline.
+    const bool sameValues = (baselineValue.type() == validValue.type()) && (baselineValue == validValue);
+    if (serviceName.isEmpty()) {
+        d->configurationValues[key] = validValue;
+        if (!sameValues || (d->configurationStates[key]
+                            != AccountPrivate::ConfigState::Default)) {
+            d->configurationStates[key] = AccountPrivate::ConfigState::Change;
+        }
+    } else {
+        d->serviceConfigurationValues[serviceName][key] = validValue;
+        if (!sameValues || (d->serviceConfigurationStates[serviceName][key]
+                            != AccountPrivate::ConfigState::Default)) {
+            d->serviceConfigurationStates[serviceName][key] = AccountPrivate::ConfigState::Change;
+        }
+    }
+    d->setModified(d->configurationValuesPendingInit);
 }
 
 /*!
@@ -1560,9 +1568,19 @@ void Account::setConfigurationValue(const QString &serviceName, const QString &k
 */
 void Account::removeConfigurationValue(const QString &serviceName, const QString &key)
 {
-    QVariantMap configValues = configurationValues(serviceName);
-    configValues.remove(key);
-    setConfigurationValues(serviceName, configValues);
+    if (!d->serviceReadyForEdits(serviceName)) {
+        qWarning() << "Service " << serviceName << " not ready when attempting to set " << key;
+        return;
+    }
+
+    if (serviceName.isEmpty()) {
+        d->configurationValues.remove(key);
+        d->configurationStates[key] = AccountPrivate::ConfigState::Remove;
+    } else {
+        d->serviceConfigurationValues[serviceName].remove(key);
+        d->serviceConfigurationStates[serviceName][key] = AccountPrivate::ConfigState::Remove;
+    }
+    d->setModified(d->configurationValuesPendingInit);
 }
 
 /*!
@@ -1573,7 +1591,7 @@ void Account::removeConfigurationValue(const QString &serviceName, const QString
     or if the specified service does not exist, or is not supported by the
     account.
 */
-bool Account::isEnabledWithService(const QString &serviceName)
+bool Account::isEnabledWithService(const QString &serviceName) const
 {
     // Return the (non-saved) enabled state if it was changed but we haven't synced yet.
     if (d->serviceEnabledChanges.contains(serviceName)) {
@@ -1627,11 +1645,8 @@ void Account::enableWithService(const QString &serviceName)
             if (!d->account->enabled()) {
                 d->account->setEnabled(true);
                 d->account->selectService(Accounts::Service());
-                if (d->status == Account::Initializing) {
-                    d->enabledPendingInit = true;
-                } else {
-                    d->setStatus(Account::Modified);
-                }
+                d->setModified(d->enabledPendingInit);
+                setConfigurationValue(serviceName, "enabled", true);
             } else {
                 d->account->selectService(Accounts::Service());
             }
@@ -1671,11 +1686,8 @@ void Account::disableWithService(const QString &serviceName)
             if (d->account->enabled()) {
                 d->account->setEnabled(false);
                 d->account->selectService(Accounts::Service());
-                if (d->status == Account::Initializing) {
-                    d->enabledPendingInit = true;
-                } else {
-                    d->setStatus(Account::Modified);
-                }
+                d->setModified(d->enabledPendingInit);
+                setConfigurationValue(serviceName, "enabled", false);
             } else {
                 d->account->selectService(Accounts::Service());
             }
@@ -2197,7 +2209,7 @@ void Account::removeSignInCredentials(const QString &applicationName,
     quint32 identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
 
     // remove the key from our local map.
-    d->configurationValues.remove(configurationValueKey);
+    removeConfigurationValue(QString(), configurationValueKey);
 
     // remove the key from the account
     d->account->selectService(Accounts::Service());
@@ -2446,11 +2458,7 @@ void Account::setEnabled(bool e)
 
     d->enabled = e;
 
-    if (d->status == Account::Initializing) {
-        d->enabledPendingInit = true;
-    } else {
-        d->setStatus(Account::Modified);
-    }
+    d->setModified(d->enabledPendingInit);
     emit enabledChanged();
 }
 
@@ -2478,14 +2486,12 @@ int Account::identifier() const
 void Account::setIdentifier(int id)
 {
     if (d->status == Account::Initializing) {
-        d->identifierPendingInit = true;
         d->identifier = id;
     } else if (id != d->identifier
                && (d->status != Account::SigningIn && d->status != Account::SyncInProgress)) {
         // the client is setting the account identifier after initialization.
         d->deleteLater();
         d = new AccountPrivate(this, 0);
-        d->identifierPendingInit = true;
         d->identifier = id;
         emit statusChanged(); // manually emit - initializing.
         componentComplete();
@@ -2532,10 +2538,7 @@ void Account::setDisplayName(const QString &dn)
         return;
 
     d->displayName = dn;
-    if (d->status == Account::Initializing)
-        d->displayNamePendingInit = true;
-    else
-        d->setStatus(Account::Modified);
+    d->setModified(d->displayNamePendingInit);
     emit displayNameChanged();
 }
 

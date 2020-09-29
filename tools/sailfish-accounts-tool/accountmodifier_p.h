@@ -1,5 +1,6 @@
 /*
-** Copyright (C) 2014 Jolla Ltd.
+ * Copyright (c) 2014-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
 */
 
 #ifndef ACCOUNTMODIFIER_P_H
@@ -33,6 +34,7 @@ public:
     enum Mode {
         UnknownMode,
         ModifyServiceSettings,
+        QueryServiceSettings,
         UpdateSyncServices,
         UpdateProviderAvailability,
         CreateProfiles,
@@ -82,6 +84,7 @@ private:
                               Buteo::SyncProfile *profile,
                               const QString &templateProfile);
     bool applyServiceSettingChanges();
+    bool queryServiceSetting();
     bool applySyncUpdateChanges();
     bool applyProviderAvailabilityChanges();
     bool createProfiles(bool triggerSync);
@@ -93,6 +96,8 @@ private:
     void triggerProfiles(Accounts::Account *account);
     bool profileDirReadable() const;
     void removeProfile();
+    QString formatValue(const QString key) const;
+    QString formatAllValues() const;
 
     static QString markerFilePath();
 

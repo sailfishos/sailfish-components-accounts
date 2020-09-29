@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
- * Contact: Chris Adams <chris.adams@jollamobile.com>
+ * Copyright (c) 2013-2020 Jolla Ltd.
+ * Copyright (c) 2020 Open Mobile Platform LLC.
  *
  * License: Proprietary
  */
@@ -59,6 +59,13 @@ class AccountPrivate : public QObject
     Q_OBJECT
 
 public:
+    enum ConfigState {
+        Default,
+        Change,
+        Remove
+    };
+    typedef QMap<QString, ConfigState> ConfigStateMap;
+
     AccountPrivate(Account *parent, Accounts::Account *acc, bool queryInfo = true);
     ~AccountPrivate();
 
@@ -71,6 +78,9 @@ public:
     void setUserName(const QString &user);
 
     void updateStoreRepositories(bool enable);
+
+    void updateServiceKeys(const Accounts::Service &service, ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline);
+    void updateServiceKey(const ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline, const QString &key);
 
     Account *q;
     Accounts::Manager *manager;
@@ -88,9 +98,14 @@ public:
     QString defaultCredentialsUserName;
     QVariantMap configurationValues;
     QMap<QString, QVariantMap> serviceConfigurationValues;
+
+    QVariantMap baselineValues;
+    QMap<QString, QVariantMap> serviceBaselineValues;
+    ConfigStateMap configurationStates;
+    QMap<QString, ConfigStateMap> serviceConfigurationStates;
+
     QStringList supportedServiceNames;
     QMap<QString, bool> serviceEnabledChanges;
-    bool identifierPendingInit;
     bool enabledPendingInit;
     bool displayNamePendingInit;
     bool configurationValuesPendingInit;
@@ -111,6 +126,8 @@ public:
                                       const QString &symmetricKey,
                                       const QString &applicationName,
                                       bool *succeeded) const;
+    bool serviceReadyForEdits(const QString &serviceName) const;
+    void setModified(bool &pendingInit);
 
 public Q_SLOTS:
     void enabledHandler(const QString &, bool);

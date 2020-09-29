@@ -17,7 +17,6 @@
 //Qt
 #include <QtDebug>
 #include <QTimer>
-#include <QDBusConnection>
 
 //libaccounts-qt
 #include <Accounts/Manager>
@@ -211,7 +210,6 @@ public:
     AccountModelPrivate()
         : accountSyncManager(0)
         , filterType(AccountModel::NoFilter)
-        , dbusConnection(QDBusConnection::sessionBus())
         , rowToUpdate(-1)
         , componentComplete(false)
         , dbusInitialized(false)
@@ -302,7 +300,6 @@ public:
     QList<DisplayData *> accountsList;
     QList<DisplayData *> filteredAccountsList;
     AccountModel::FilterType filterType;
-    QDBusConnection dbusConnection;
     QString filter;
     int rowToUpdate;
     bool componentComplete;
