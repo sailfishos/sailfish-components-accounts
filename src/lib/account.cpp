@@ -1646,10 +1646,10 @@ void Account::enableWithService(const QString &serviceName)
                 d->account->setEnabled(true);
                 d->account->selectService(Accounts::Service());
                 d->setModified(d->enabledPendingInit);
-                setConfigurationValue(serviceName, "enabled", true);
             } else {
                 d->account->selectService(Accounts::Service());
             }
+            setConfigurationValue(serviceName, "enabled", true);
         }
     }
 }
@@ -1671,8 +1671,9 @@ void Account::enableWithService(const QString &serviceName)
 */
 void Account::disableWithService(const QString &serviceName)
 {
-    if (d->status == Account::Invalid || d->status == Account::SyncInProgress)
+    if (d->status == Account::Invalid || d->status == Account::SyncInProgress) {
         return;
+    }
 
     if (d->serviceEnabledChanges.contains(serviceName) && !d->serviceEnabledChanges[serviceName]) {
         return;
@@ -1687,10 +1688,10 @@ void Account::disableWithService(const QString &serviceName)
                 d->account->setEnabled(false);
                 d->account->selectService(Accounts::Service());
                 d->setModified(d->enabledPendingInit);
-                setConfigurationValue(serviceName, "enabled", false);
             } else {
                 d->account->selectService(Accounts::Service());
             }
+            setConfigurationValue(serviceName, "enabled", false);
         }
     }
 }
