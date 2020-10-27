@@ -618,10 +618,6 @@ bool AccountPrivate::prepareSync()
         }
     }
 
-    // enable or disable the global service
-    account->selectService(Accounts::Service());
-    account->setEnabled(enabled);
-
     // set the display name
     account->setDisplayName(displayName);
 
@@ -2454,6 +2450,8 @@ void Account::setEnabled(bool e)
 {
     if (d->status == Account::Invalid || d->status == Account::SyncInProgress)
         return;
+    setConfigurationValue(QString(), "enabled", e);
+
     if (e == d->enabled)
         return;
 

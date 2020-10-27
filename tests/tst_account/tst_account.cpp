@@ -98,9 +98,10 @@ void tst_Account::untrackAccountRemoved(Accounts::AccountId id)
     m_cleanupList.removeAll(id);
 }
 
+Q_DECLARE_METATYPE(Accounts::AccountId)
 void tst_Account::enabled()
 {
-    Accounts::Manager manager;
+    Accounts::Manager manager("test-service");
     QScopedPointer<Accounts::Account> newA(manager.createAccount("test-provider"));
     QSignalSpy newASyncedSpy(newA.data(), SIGNAL(synced()));
     QList<QVariant> spyArgs;
@@ -123,12 +124,19 @@ void tst_Account::enabled()
     QCOMPARE(spy.count(), 2);
     QCOMPARE(account->enabled(), false);
 
+    // Check that underlying libaccount signals are also properly emitted.
+    qRegisterMetaType<Accounts::AccountId>("Accounts::AccountId");
+    QSignalSpy spyManager(&manager, &Accounts::Manager::enabledEvent);
+
     // now, with sync.
     account->setEnabled(true);
     account->sync(); // pending sync
     account->componentComplete(); // will construct new account.
     QTRY_COMPARE(account->status(), Account::Synced); // wait for sync.
     QVERIFY(account->enabled());
+
+    QCOMPARE(spyManager.count(), 1);
+    QCOMPARE(qvariant_cast<Accounts::AccountId>(spyManager.takeFirst().at(0)), newA->id());
 
     // and ensure that it's globally enabled in the database.
     Accounts::Manager m;
@@ -145,6 +153,15 @@ void tst_Account::enabled()
 
     // ensure that it's globally disabled in the database.
     QTRY_VERIFY(!a->enabled());
+
+    QCOMPARE(spyManager.count(), 1);
+    QCOMPARE(qvariant_cast<Accounts::AccountId>(spyManager.takeFirst().at(0)), newA->id());
+
+    // Check that enabledEvent is not spuriously emitted on any change.
+    account->setConfigurationValue(QString(), "test-setting", true);
+    account->sync();
+    QTRY_COMPARE(account->status(), Account::Synced); // wait for sync.
+    QVERIFY(spyManager.isEmpty());
 
     // cleanup.
     account->remove();
