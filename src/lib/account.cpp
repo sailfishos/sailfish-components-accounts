@@ -617,6 +617,7 @@ bool AccountPrivate::prepareSync()
             serviceBaselineValues.insert(serviceName, baseline);
         }
     }
+    account->selectService(Accounts::Service());
 
     // set the display name
     account->setDisplayName(displayName);
