@@ -23,6 +23,12 @@ class Provider;
 class Service;
 class Account;
 
+namespace Accounts {
+class Provider;
+class Service;
+class ServiceType;
+}
+
 class Q_DECL_EXPORT AccountManager : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
@@ -57,6 +63,12 @@ public:
 
     void classBegin();
     void componentComplete();
+
+    // Provided for external use
+    // Internally globaltranslatorcache_p.h should be used instead
+    static QString translatedDisplayName(const Accounts::Provider &instance);
+    static QString translatedDisplayName(const Accounts::Service &instance);
+    static QString translatedDisplayName(const Accounts::ServiceType &instance);
 
 Q_SIGNALS:
     void serviceTypeNamesChanged();

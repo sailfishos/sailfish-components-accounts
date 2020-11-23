@@ -402,3 +402,16 @@ QList<int> AccountManager::enabledAccounts(const QString &providerName, const QS
 
     return returnList;
 }
+
+// Provided for external use
+// Internally SailfishAccounts::translatedDisplayName() can be called directly
+#define TRANSLATE_DISPLAY_NAME(T) \
+    QString AccountManager::translatedDisplayName(const Accounts:: T &instance) \
+    { \
+        SailfishAccounts::initLibTranslator(); \
+        return SailfishAccounts::translatedDisplayName(instance); \
+    }
+
+TRANSLATE_DISPLAY_NAME(Provider)
+TRANSLATE_DISPLAY_NAME(Service)
+TRANSLATE_DISPLAY_NAME(ServiceType)
