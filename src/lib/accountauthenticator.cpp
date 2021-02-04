@@ -317,6 +317,9 @@ void AccountAuthenticatorPrivate::sendAuthenticatedRequest(const QUrl &url, cons
 
     QNetworkReply *reply = m_networkAccessManager->head(request);
     reply->setProperty("ignoreSslErrors", ignoreSslErrors);
+    reply->setProperty("credentialsUsername", credentials.username);
+    reply->setProperty("credentialsPassword", credentials.password);
+    reply->setProperty("credentialsAccessToken", credentials.accessToken);
     connect(reply, &QNetworkReply::finished,
             this, &AccountAuthenticatorPrivate::authenticatedRequestFinished);
     connect(reply, &QNetworkReply::sslErrors,
@@ -327,10 +330,23 @@ void AccountAuthenticatorPrivate::authenticatedRequestFinished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     const int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const bool ignoreSslErrors = reply->property("ignoreSslErrors").toBool();
+    const bool isWellKnown = reply->url().toString().contains(QStringLiteral(".well-known"));
 
     if (reply->error() == QNetworkReply::NoError) {
         emit q->authenticatedRequestFinished(true, QString());
+    } else if (!isWellKnown) {
+        // the url we tried didn't support authenticated requests.
+        // try the .well-known redirect endpoint.
+        AccountAuthenticatorCredentials credentials;
+        credentials.username = reply->property("credentialsUsername").toString();
+        credentials.password = reply->property("credentialsPassword").toString();
+        credentials.accessToken = reply->property("credentialsAccessToken").toString();
+        QUrl url = reply->url();
+        url.setPath(QStringLiteral("/.well-known"));
+        sendAuthenticatedRequest(url, credentials, ignoreSslErrors);
     } else {
+        // the credentials are probably wrong.
         QUrl url = reply->url();
         url.setUserName(QString());
         url.setPassword(QString());
