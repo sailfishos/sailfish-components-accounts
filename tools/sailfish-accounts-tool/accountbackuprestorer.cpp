@@ -504,6 +504,13 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
                 }
                 backupIni.endGroup();
 
+#ifndef BACKUP_ACCOUNT_CREDENTIALS_SECRETS
+                // The credentials restoration does not restore passwords, so the account is not
+                // usable until user signs in again with valid credentials.
+                newAccount->selectService(Accounts::Service());
+                newAccount->setValue(QStringLiteral("CredentialsNeedUpdate"), true);
+#endif // BACKUP_ACCOUNT_CREDENTIALS_SECRETS
+
                 // we have restored the account.  Write it to disk.
                 newAccount->syncAndBlock();
 
