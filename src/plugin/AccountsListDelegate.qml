@@ -15,7 +15,7 @@ ListItem {
     signal accountClicked(int accountId, string providerName)
 
     contentHeight: visible
-                   ? column.height + (errorLabel.visible ? errorLabel.height : 0) + 2*Theme.paddingSmall
+                   ? Math.max(icon.height, column.height + (errorLabel.visible ? errorLabel.height : 0)) + 2*Theme.paddingSmall
                    : 0
     menu: entriesInteractive ? menuComponent : null
 
