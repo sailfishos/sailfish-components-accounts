@@ -26,8 +26,6 @@ public:
     static AccountSyncSchedule *fromButeoSchedule(const Buteo::SyncProfile &profile, QObject *parent);
     static Buteo::SyncSchedule toButeoSchedule(AccountSyncSchedule *source, Buteo::SyncProfile *profile);
 
-    static QSet<int> daysToQtDaySet(AccountSyncSchedule::Days days);
-    static AccountSyncSchedule::Days daysFromQtDaySet(const QSet<int> &qtDays);
     static unsigned int intervalToMinutes(AccountSyncSchedule::Interval interval);
     static unsigned int longIntervalToMinutes(AccountSyncSchedule::LongInterval interval);
     static AccountSyncSchedule::Interval intervalFromMinutes(unsigned int minutes);

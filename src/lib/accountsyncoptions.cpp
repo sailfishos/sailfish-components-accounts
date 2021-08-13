@@ -72,29 +72,6 @@ void AccountSyncSchedulePrivate::setDays(AccountSyncSchedule::Days d)
     }
 }
 
-QSet<int> AccountSyncSchedulePrivate::daysToQtDaySet(AccountSyncSchedule::Days scheduledDays)
-{
-    static const QList<AccountSyncSchedule::Day> dayList = getDayList();
-    QSet<int> qtDays;
-    for (int qtDay = Qt::Monday; qtDay <= Qt::Sunday; qtDay++) {
-        int day = dayList[qtDay-1];   // start at Qt::Monday = 1
-        if (scheduledDays & day) {
-            qtDays << qtDay;
-        }
-    }
-    return qtDays;
-}
-
-AccountSyncSchedule::Days AccountSyncSchedulePrivate::daysFromQtDaySet(const QSet<int> &qtDays)
-{
-    static const QList<AccountSyncSchedule::Day> dayList = getDayList();
-    AccountSyncSchedule::Days days;
-    for (int qtDay : qtDays) {
-        days |= dayList[qtDay - 1];     // start at Qt::Monday = 1
-    }
-    return days;
-}
-
 unsigned int AccountSyncSchedulePrivate::intervalToMinutes(AccountSyncSchedule::Interval interval)
 {
     switch (interval) {
@@ -141,7 +118,7 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
     AccountSyncSchedulePrivate *d = result->d;
     const Buteo::SyncSchedule &source = profile.syncSchedule();
 
-    const QSet<int> daySet = source.days();
+    const AccountSyncSchedule::Days daySet(QFlags<Buteo::SyncSchedule::Day>::Int(source.days()));
     const QTime time = source.time();
     if (source.interval() > 0) {
         if (source.interval() == Sync::SYNC_INTERVAL_MONTHLY) {
@@ -151,10 +128,10 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
         } else if (source.interval() == Sync::SYNC_INTERVAL_LAST_DAY_OF_MONTH) {
             result->setLongIntervalSyncMode(AccountSyncSchedule::LastDayOfMonthInterval, time);
         } else {
-            result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daysFromQtDaySet(daySet));
+            result->setIntervalSyncMode(intervalFromMinutes(source.interval()), daySet);
         }
     } else if (time.isValid()) {
-        result->setDailySyncMode(time, daysFromQtDaySet(daySet));
+        result->setDailySyncMode(time, daySet);
     }
 
     if (source.rushEnabled()) {
@@ -167,7 +144,7 @@ AccountSyncSchedule *AccountSyncSchedulePrivate::fromButeoSchedule(const Buteo::
             peakEnd = QTime(17, 0, 0);
         }
         AccountSyncSchedule::Interval interval = intervalFromMinutes(source.rushInterval());
-        result->setPeakSchedule(peakStart, peakEnd, interval, daysFromQtDaySet(source.rushDays()));
+        result->setPeakSchedule(peakStart, peakEnd, interval, source.rushDays());
         d->m_peakEnabled = true;
     } else {
         d->m_peakEnabled = false;
@@ -193,7 +170,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
     const QDateTime lastSync = profile->lastSyncTime();
 
     result.setScheduleEnabled(d->m_enabled);
-    result.setDays(daysToQtDaySet(d->m_days));
+    result.setDays(Buteo::SyncSchedule::Days(QFlags<AccountSyncSchedule::Day>::Int(d->m_days)));
     result.setTime(d->m_dailySyncTime);
 
     switch (d->m_longInterval) {
@@ -213,7 +190,7 @@ Buteo::SyncSchedule AccountSyncSchedulePrivate::toButeoSchedule(AccountSyncSched
 
     result.setRushEnabled(d->m_peakEnabled);
     result.setSyncExternallyDuringRush(d->m_externalPeakEnabled);
-    result.setRushDays(daysToQtDaySet(d->m_peakDays));
+    result.setRushDays(Buteo::SyncSchedule::Days(QFlags<AccountSyncSchedule::Day>::Int(d->m_peakDays)));
     result.setRushTime(d->m_peakStartTime, d->m_peakEndTime);
     result.setRushInterval(intervalToMinutes(d->m_peakInterval));
     result.setScheduleConfiguredTime(QDateTime::currentDateTime());
