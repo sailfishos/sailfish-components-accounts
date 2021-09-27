@@ -21,19 +21,6 @@ const AccountSyncOptions::PastSyncPeriod DefaultPastSyncPeriod = AccountSyncOpti
 const AccountSyncOptions::Direction DefaultDirection = AccountSyncOptions::TwoWaySync;
 const bool DefaultAutomaticSync = true;
 
-QList<AccountSyncSchedule::Day> getDayList()
-{
-    QList<AccountSyncSchedule::Day> days;
-    days << AccountSyncSchedule::Monday
-         << AccountSyncSchedule::Tuesday
-         << AccountSyncSchedule::Wednesday
-         << AccountSyncSchedule::Thursday
-         << AccountSyncSchedule::Friday
-         << AccountSyncSchedule::Saturday
-         << AccountSyncSchedule::Sunday;
-    return days;
-}
-
 } // anon namespace
 
 
