@@ -2,7 +2,6 @@ Name:       sailfish-components-accounts-qt5
 Summary:    Sailfish Accounts Components
 Version:    0.2.49
 Release:    1
-Group:      System/Libraries
 License:    Proprietary
 URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
@@ -11,7 +10,6 @@ BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  pkgconfig(Qt5Gui)
-BuildRequires:  pkgconfig(Qt5OpenGL)
 BuildRequires:  pkgconfig(Qt5DBus)
 BuildRequires:  pkgconfig(libsignon-qt5)
 BuildRequires:  pkgconfig(accounts-qt5) >= 1.16
@@ -32,7 +30,6 @@ Sailfish Accounts UI Components
 
 %package tests
 Summary:    Unit tests for Sailfish Accounts UI Components
-Group:      System/Libraries
 BuildRequires:  pkgconfig(Qt5Test)
 Requires:   %{name} = %{version}-%{release}
 Requires:   qt5-qtdeclarative-devel-tools
@@ -43,7 +40,6 @@ This package contains QML unit tests for Sailfish Accounts UI Components
 
 %package devel
 Summary:    Development package for Sailfish Accounts
-Group:      System/Libraries
 Requires:   %{name} = %{version}-%{release}
 
 %description devel
@@ -51,14 +47,12 @@ Development package which provides libsailfishaccounts (package config and heade
 
 %package ts-devel
 Summary:   Translation source for sailfish-components-accounts
-Group:     System/Libraries
 
 %description ts-devel
 Translation source for sailfish-components-accounts
 
 %package doc
 Summary: Documentation for %{name}
-Group: Documentation
 BuildRequires: qt5-qttools-qthelp-devel
 BuildRequires: qt5-tools
 BuildRequires: qt5-plugin-platform-minimal
@@ -69,7 +63,6 @@ BuildRequires: qt5-plugin-sqldriver-sqlite
 
 %package tools
 Summary: Development tools for %{name}
-Group: Applications/System
 Requires: %{name} = %{version}-%{release}
 
 %description tools
