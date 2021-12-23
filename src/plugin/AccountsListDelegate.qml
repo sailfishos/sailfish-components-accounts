@@ -94,7 +94,7 @@ ListItem {
     AccountIcon {
         id: icon
         x: Theme.horizontalPageMargin
-        anchors.verticalCenter: column.verticalCenter
+        y: Math.max(Theme.paddingSmall, -height / 2 + column.y + column.height / 2)
         source: model.accountIcon
     }
     BusyIndicator {
