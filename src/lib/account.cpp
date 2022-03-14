@@ -967,7 +967,9 @@ void AccountPrivate::handleCredentialsFailed(const SignOn::Error &err)
     if (signInCredentials.creatingSignInCredentials || signInCredentials.updatingSignInCredentials) {
         Account::ErrorType errType = signOnErrorToErrorType(err.type());
         QString providerName = account->providerName();
-        signInCredentials.cleanup(signInCredentials.creatingSignInCredentials); // delete identity if creating.
+        const bool removeIdentity = signInCredentials.creatingSignInCredentials
+                && (err.type() != SignOn::Error::IdentityNotFound);
+        signInCredentials.cleanup(removeIdentity); // delete identity if creating.
         setStatus(Account::Synced);
         //: Error emitted if account credentials save failed at the database level
         //% "Unable to save credentials for %1 account in database: %2"
