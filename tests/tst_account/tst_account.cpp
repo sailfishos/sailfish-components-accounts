@@ -883,6 +883,7 @@ void tst_Account::credentialsFunctions()
     newA->setEnabled(true);
     newA->sync();
     QTRY_VERIFY(newASyncedSpy.count() > 0);
+    Accounts::Watch * watch = newA->watchKey(ACCOUNTS_KEY_CREDENTIALS_ID);
 
     QScopedPointer<Account> account(new Account);
     account->classBegin();
@@ -897,10 +898,12 @@ void tst_Account::credentialsFunctions()
     QSignalSpy sicuSpy(account.data(), SIGNAL(signInCredentialsUpdated(QVariantMap)));
     QSignalSpy sirSpy(account.data(), SIGNAL(signInResponse(QVariantMap)));
     QSignalSpy sieSpy(account.data(), SIGNAL(signInError(QString, int)));
+    QSignalSpy watchSpy(watch, SIGNAL(notify(const char *)));
     int siccCount = siccSpy.count();
     int sicuCount = sicuSpy.count();
     int sirCount = sirSpy.count();
     int sieCount = sieSpy.count();
+    int watchCount = watchSpy.count();
 
     // Create credentials (oauth2)
     SignInParameters *sip = account->signInParameters("test-service-oauth");
@@ -996,6 +999,7 @@ void tst_Account::credentialsFunctions()
     QCOMPARE(newA->credentialsId(), firstOAuthIdentityId); // default still exists
 
     // remove first oauth2 credentials -> should result in the default being unset, as no more usages.
+    watchCount = watchSpy.count();
     account->removeSignInCredentials("test", "test");
     QCOMPARE(account->status(), Account::SyncInProgress);
     QTRY_COMPARE(account->status(), Account::Synced);
@@ -1003,6 +1007,7 @@ void tst_Account::credentialsFunctions()
     secondOAuthIdentityId = account->configurationValues("").value(configKeyTwo).toInt();
     QCOMPARE(secondOAuthIdentityId, nullCredentials); // removed
     QCOMPARE(firstOAuthIdentityId, nullCredentials); // removed
+    QTRY_COMPARE(watchSpy.count(), watchCount+1);
     QCOMPARE(newA->credentialsId(), nullCredentials); // default removed
 
     //--------------------------------------------------
@@ -1044,6 +1049,7 @@ void tst_Account::credentialsFunctions()
     QTRY_COMPARE(account->status(), Account::Synced); // should transition to synced after either successful or failed sign in
 
     // Create credentials (non-oauth2) without symmetric key
+    watchCount = watchSpy.count();
     siccCount = siccSpy.count();
     SignInParameters *sip4 = account->signInParameters("test-service2", "userFour", "passFour");
     account->createSignInCredentials("testFour", "testFour", sip4);
@@ -1059,6 +1065,7 @@ void tst_Account::credentialsFunctions()
     // ensure that it was set as default for the service
     newA->selectService(whichSrv);
     // the synced signal may be emitted from the account before the change propagates to other account instances.
+    QTRY_COMPARE(watchSpy.count(), watchCount+1);
     QTRY_VERIFY(newA->credentialsId() != nullCredentials);
     quint32 specifiedCredentials = newA->credentialsId();
     newA->selectService(Accounts::Service());
@@ -1221,6 +1228,8 @@ void tst_Account::expectedUsage()
     Accounts::Manager manager;
     QScopedPointer<Accounts::Account> newA(manager.createAccount("test-provider"));
     QSignalSpy newASyncedSpy(newA.data(), SIGNAL(synced()));
+    QSignalSpy dnSpy(newA.data(), SIGNAL(displayNameChanged(const QString &)));
+    int dnCount = dnSpy.count();
     QList<QVariant> spyArgs;
     newA->setDisplayName("test");
     newA->setEnabled(false);
@@ -1231,6 +1240,7 @@ void tst_Account::expectedUsage()
     QScopedPointer<Account> newAccount(new Account); // we reuse it in the existing test
     newAccount->classBegin();
     newAccount->setIdentifier(newA->id());
+    dnCount = dnSpy.count();
     newAccount->setDisplayName("test-account");
     QCOMPARE(newAccount->status(), Account::Initializing);
     newAccount->componentComplete();
@@ -1238,6 +1248,7 @@ void tst_Account::expectedUsage()
     newAccount->enableWithService("test-service2");
     newAccount->sync(); // common case is to trigger sync after completes.
     QTRY_COMPARE(newAccount->status(), Account::Synced);
+    QTRY_COMPARE(dnSpy.count(), dnCount+1);
     QCOMPARE(newAccount->providerName(), QString(QLatin1String("test-provider")));
     QCOMPARE(newAccount->displayName(), QString(QLatin1String("test-account")));
     QCOMPARE(newAccount->enabled(), false); // disabled by default.
