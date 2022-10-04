@@ -124,18 +124,25 @@ QVariant sanitiseValue(const QVariant &value)
 {
     QVariant retn;
     int valueType = value.type();
-    if (valueType == QVariant::List) {
+    if (valueType == QMetaType::QVariantList) {
         retn = value.toStringList();
-    } else if (valueType == QVariant::Map) {
-        // TODO: sanitise each element in the map.
-        retn = value;
-    } else if (valueType == QVariant::Bool
-            || valueType == QVariant::Int
-            || valueType == QVariant::UInt
-            || valueType == QVariant::LongLong
-            || valueType == QVariant::ULongLong
-            || valueType == QVariant::String
-            || valueType == QVariant::StringList) {
+    } else if (valueType == QMetaType::QVariantMap) {
+        QVariantMap map = value.toMap();
+        for (auto it = map.begin(); it != map.end(); ++it) {
+            QVariant ret = sanitiseValue(*it);
+            if (ret.isValid())
+                *it = ret;
+            else
+                return QVariant();
+        }
+        retn = QVariant::fromValue(map);
+    } else if (valueType == QMetaType::Bool
+            || valueType == QMetaType::Int
+            || valueType == QMetaType::UInt
+            || valueType == QMetaType::LongLong
+            || valueType == QMetaType::ULongLong
+            || valueType == QMetaType::QString
+            || valueType == QMetaType::QStringList) {
         // valid value.
         retn = value;
     }
@@ -324,6 +331,11 @@ void SignInParameters::setParameter(const QString &parameterName, const QVariant
 
     m_parameters.insert(parameterName, value);
     emit parametersChanged();
+}
+
+void SignInParameters::setParameter(const QString &parameterName, const QVariantMap &parameterValue)
+{
+    setParameter(parameterName, QVariant(parameterValue));
 }
 
 void SignInParameters::setParameter(const QString &parameterName, const QString &parameterValue)
