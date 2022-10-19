@@ -69,6 +69,7 @@ public:
     Q_INVOKABLE void setParameter(const QString &parameterName, const QUrl &parameterValue);
     Q_INVOKABLE void setParameter(const QString &parameterName, int parameterValue);
     Q_INVOKABLE void setParameter(const QString &parameterName, bool parameterValue);
+    Q_INVOKABLE void setParameter(const QString &parameterName, const QVariantMap &parameterValue);
     Q_INVOKABLE void removeParameter(const QString &parameterName);
 
 Q_SIGNALS:
