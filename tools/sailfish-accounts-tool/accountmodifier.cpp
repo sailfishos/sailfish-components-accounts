@@ -655,10 +655,9 @@ bool AccountModifier::profileDirReadable() const
     // and then overwrite it through msyncd.
     // Don't use QDir::isReadable() and QFileInfo::isReadable() as they don't work for this check,
     // possibly because privileged permissions are special.
-    QString syncFilesPath = Sync::syncCacheDir()
-            + QDir::separator() + QStringLiteral("sync");
+    QString syncFilesPath = Sync::syncConfigDir() + QStringLiteral("/sync");
     if (!QFile::exists(syncFilesPath)) {
-        qWarning() << "Don't have permission to read profiles from" << Sync::syncCacheDir();
+        qWarning() << "Don't have permission to read profiles from" << Sync::syncConfigDir();
         return false;
     }
     return true;

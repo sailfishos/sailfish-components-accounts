@@ -168,7 +168,7 @@ bool AccountSyncProfileManagerPrivate::startSync(const QString &profileId)
 
 bool AccountSyncProfileManagerPrivate::syncProfileFileExists(const QString &profileId) const
 {
-    QString path = Sync::syncCacheDir()
+    QString path = Sync::syncConfigDir()
             + QDir::separator() + QStringLiteral("sync")
             + QDir::separator() + profileId + QStringLiteral(".xml");
     return QFile::exists(path);
@@ -499,9 +499,7 @@ bool AccountSyncManager::checkProfile(const QString &templateProfileName,
         return false;
     }
     QString expectedProfileName = QStringLiteral("%1-%2").arg(templateProfileName).arg(account->id());
-    QString fullPath = QStringLiteral("%1/.cache/msyncd/sync/%2.xml")
-            .arg(QStandardPaths::writableLocation(QStandardPaths::HomeLocation))
-            .arg(expectedProfileName);
+    QString fullPath = Sync::syncConfigDir() + QStringLiteral("/sync/%2.xml").arg(expectedProfileName);
 
     if (!d->syncProfileFileExists(expectedProfileName)) {
         // profile does not exist
