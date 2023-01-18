@@ -14,9 +14,11 @@ SOURCES += $$PWD/plugin.cpp
 
 OTHER_FILES += \
         $$PWD/qmldir \
+        $$PWD/plugins.qmltypes \
         $$PWD/*.qml
 
 import.files = $$PWD/qmldir \
+                $$PWD/plugins.qmltypes \
                 $$PWD/AccountIcon.qml \
                 $$PWD/AccountProviderPicker.qml \
                 $$PWD/AccountProviderPickerDelegate.qml \
@@ -27,3 +29,15 @@ import.path = $$TARGETPATH
 target.path = $$TARGETPATH
 
 INSTALLS += target import
+
+# Invoke directly to deal with circular dependency with silica submodules - keep
+# just the Sailfish.Silica.private dependency to break the cycle.
+qtPrepareTool(QMLIMPORTSCANNER, qmlimportscanner)
+qmltypes.commands = \
+    echo -e $$shell_quote('import Sailfish.Accounts 1.0\nQtObject{}\n') \
+        |$$QMLIMPORTSCANNER -qmlFiles - -importPath $$[QT_INSTALL_QML] \
+        |sed -e $$shell_quote('/"Sailfish.Silica"/,/{/d') \
+        |sed -e $$shell_quote('/"Sailfish.Silica.Background"/,/{/d') > dependencies.json && \
+    qmlplugindump -nonrelocatable -dependencies dependencies.json \
+         Sailfish.Accounts 1.0 > $$PWD/plugins.qmltypes
+QMAKE_EXTRA_TARGETS += qmltypes
