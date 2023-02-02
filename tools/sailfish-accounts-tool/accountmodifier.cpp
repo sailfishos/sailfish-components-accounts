@@ -110,13 +110,28 @@ void AccountModifier::start()
     }
     if (runningMultipleCommands) {
         if (m_commands.isEmpty() && runScheduledCommands) {
+            // FIXME: oldFile and its logic can be removed once we've fully transitioned
+            // to the new file path. (After next stop release after "Sauna")
             QFile file(markerFilePath());
+            QFile oldFile(oldMarkerFilePath());
+            bool couldOpenOld = true;
+            bool couldOpenNew = true;
+            if (!oldFile.open(QIODevice::ReadOnly)) {
+                qWarning() << "Cannot open" << oldFile.fileName() << "to run commands!";
+                couldOpenOld = false;
+            }
             if (!file.open(QIODevice::ReadOnly)) {
                 qWarning() << "Cannot open" << file.fileName() << "to run commands!";
-                done();
-                return;
+                if (!couldOpenOld) {
+                    done();
+                    return;
+                }
+                couldOpenNew = false;
             }
-            m_commands = loadScheduledCommands(&file);
+            if (couldOpenOld)
+                m_commands = loadScheduledCommands(&oldFile);
+            if (couldOpenNew)
+                m_commands.append(loadScheduledCommands(&file));
             if (m_commands.isEmpty()) {
                 qWarning() << "No scheduled commands to run";
                 done();
@@ -250,6 +265,7 @@ void AccountModifier::next()
             } else if (runScheduledCommands) {
                 // no more commands to run, clean up our schedule file before emitting done().
                 QFile::remove(markerFilePath());
+                QFile::remove(oldMarkerFilePath()); // FIXME: Remove line when no longer needed.
             } // ran multiple commands but didn't take them from the schedule file, so finished
               // and don't need to cleanup anything.
         }
@@ -745,13 +761,25 @@ QList<AccountModifier::Mode> AccountModifier::loadScheduledCommands(QFile *file)
     return cmds;
 }
 
-QString AccountModifier::markerFilePath()
+// FIXME: Remove this function (and everything that uses it) once we've transitioned
+// to the new file path. (Next stop release after "Sauna").
+QString AccountModifier::oldMarkerFilePath()
 {
     QStringList homePaths = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
     if (homePaths.count()) {
         return homePaths[0] + QDir::separator() + AccountToolMarkerFilename;
     }
     qWarning() << "Error: QStandardPaths cannot find HomeLocation!";
+    return QString();
+}
+
+QString AccountModifier::markerFilePath()
+{
+    QStringList confPaths = QStandardPaths::standardLocations(QStandardPaths::ConfigLocation);
+    if (confPaths.count()) {
+        return confPaths[0] + QDir::separator() + AccountToolMarkerFilename;
+    }
+    qWarning() << "Error: QStandardPaths cannot find ConfigLocation!";
     return QString();
 }
 
