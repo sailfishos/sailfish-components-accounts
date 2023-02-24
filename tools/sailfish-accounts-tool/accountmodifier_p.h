@@ -100,6 +100,7 @@ private:
     QString formatAllValues() const;
 
     static QString markerFilePath();
+    static QString oldMarkerFilePath(); // FIXME: Remove when no longer needed
 
     Accounts::Manager *m_accountManager;
     Accounts::AccountIdList m_allAccountIds;
