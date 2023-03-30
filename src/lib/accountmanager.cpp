@@ -276,6 +276,7 @@ ServiceType *AccountManager::serviceType(const QString &serviceTypeName) const
 }
 
 /*!
+    \qmlmethod Service* AccountManager::service(const QString& serviceName)
     Returns the service identified by the given \a serviceName.
     The AccountManager has ownership of the Service adapter, and will
     delete it automatically on destruction.
