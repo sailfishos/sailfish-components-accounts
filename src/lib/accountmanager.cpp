@@ -159,7 +159,7 @@ void AccountManager::componentComplete()
 }
 
 /*!
-    \qmlproperty QStringList AccountManager::serviceTypeNames
+    \qmlproperty list AccountManager::serviceTypeNames
     Holds the service type names which may be used as filter values.
 
     The values are derived from examination of the service type of
@@ -173,7 +173,7 @@ QStringList AccountManager::serviceTypeNames() const
 }
 
 /*!
-    \qmlproperty QStringList AccountManager::providerNames
+    \qmlproperty list AccountManager::providerNames
     Holds the names of all providers which exist in the system
     accounts database, which match the service type filter.
 */
@@ -184,7 +184,7 @@ QStringList AccountManager::providerNames() const
 }
 
 /*!
-    \qmlproperty QStringList AccountManager::serviceNames
+    \qmlproperty list AccountManager::serviceNames
     Holds the names of all services which exist in the system
     accounts database, which match the service type filter.
 */
@@ -195,7 +195,7 @@ QStringList AccountManager::serviceNames() const
 }
 
 /*!
-    \qmlproperty QList<int> AccountManager::accountIdentifiers
+    \qmlproperty list AccountManager::accountIdentifiers
     Holds the identifiers of all accounts which exist in the
     system accounts database.
 */
@@ -206,7 +206,7 @@ QList<int> AccountManager::accountIdentifiers() const
 }
 
 /*!
-    \qmlmethod QList<int> AccountManager::providerAccountIdentifiers(const QString &providerName)
+    \qmlmethod list AccountManager::providerAccountIdentifiers(string providerName)
 
     Returns the list of ids of accounts provided by the provider with the
     given \a providerName (or all providers, if the given \a providerName
@@ -229,12 +229,30 @@ QList<int> AccountManager::providerAccountIdentifiers(const QString &providerNam
 }
 
 /*!
-    \qmlmethod bool AccountManager::createAccount(const QString &providerName)
+    \qmlsignal AccountManager::accountCreated(int accountId, string providerName)
+
+    Emitted when account has been created.
+
+    The \a accountId parameter contains the id of the account that was created.
+    The \a providerName parameter contains the name of the account provider.
+*/
+
+/*!
+    \qmlsignal AccountManager::accountCreationFailed(string message, string providerName)
+
+    Emitted if account creation fails.
+
+    The \a message parameter contains an error message which can be displayed to user.
+    The \a providerName parameter contains the name of the account provider.
+*/
+
+/*!
+    \qmlmethod bool AccountManager::createAccount(string providerName)
 
     Creates a new, disabled Account with the provider identified by the given
     \a providerName and stores it to the database.  The operation is
-    asynchronous and on success, the \l accountCreated() signal will be
-    emitted.  On failure, the \l accountCreationFailed() signal will be
+    asynchronous and on success, the accountCreated() signal will be
+    emitted.  On failure, the accountCreationFailed() signal will be
     emitted.
 
     Returns true if the account creation process is triggered, or false if
@@ -263,7 +281,7 @@ bool AccountManager::createAccount(const QString &providerName)
 }
 
 /*!
-    \qmlmethod ServiceType* AccountManager::serviceType(const QString &serviceTypeName)
+    \qmlmethod ServiceType AccountManager::serviceType(string serviceTypeName)
     Returns the service type identified by the given \a serviceTypeName.
     The AccountManager owns the returned instance and will delete it on destruction.
 */
@@ -276,7 +294,7 @@ ServiceType *AccountManager::serviceType(const QString &serviceTypeName) const
 }
 
 /*!
-    \qmlmethod Service* AccountManager::service(const QString& serviceName)
+    \qmlmethod Service AccountManager::service(string serviceName)
     Returns the service identified by the given \a serviceName.
     The AccountManager has ownership of the Service adapter, and will
     delete it automatically on destruction.
@@ -290,7 +308,7 @@ Service *AccountManager::service(const QString &serviceName) const
 }
 
 /*!
-    \qmlmethod Provider* AccountManager::provider(const QString &providerName)
+    \qmlmethod Provider AccountManager::provider(string providerName)
     Returns the provider identified by the given \a providerName.
     The AccountManager has ownership of the Provider adapter, and will
     delete it automatically on destruction.
@@ -329,7 +347,7 @@ Provider *AccountManager::providerForAccount(int accountId) const
 }
 
 /*!
-    \qmlmethod Account* AccountManager::account(int accountId)
+    \qmlmethod Account AccountManager::account(int accountIdentifier)
 
     Returns the account identified by the given \a accountIdentifier.
     The AccountManager has ownership of the Account adapter, and will
@@ -353,9 +371,10 @@ Account *AccountManager::account(int accountIdentifier) const
 }
 
 /*!
-    \qmlmethod Account* AccountManager::credentialsNeedUpdate(int accountId)
+    \qmlmethod bool AccountManager::credentialsNeedUpdate(int accountId)
 
-    Returns true if account's global service has CredentialsNeedUpadate flag and it is set.
+    Returns true if the global service of the account identified by
+    \a accountId has \c CredentialsNeedUpdate flag and it is set.
 */
 bool AccountManager::credentialsNeedUpdate(int accountId)
 {

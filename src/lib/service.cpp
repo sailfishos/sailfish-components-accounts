@@ -84,7 +84,7 @@ QString Service::iconName() const
 }
 
 /*!
-    \qmlproperty QStringList Service::tags
+    \qmlproperty list Service::tags
     This property holds the tags which have been associated with the service.
 */
 

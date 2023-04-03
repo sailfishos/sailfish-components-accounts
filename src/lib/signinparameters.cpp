@@ -11,10 +11,10 @@
 /*!
     \qmltype SignInParameters
     \instantiates SignInParameters
-    \inqmlmodule Sailfish.Accounts 1
+    \inqmlmodule Sailfish.Accounts
     \brief Provides access to sign-in parameters applicable to a service
 
-    The \c{Account::signIn()} function requires clients to pass in
+    The Account::signIn() function requires clients to pass in
     SignInParameters which allow the application to sign in using
     the specified credentials.  These parameters include the authentication
     method and mechanism associated with a service (for example,
@@ -81,8 +81,8 @@
                 if (status == Account.Initialized) {
                     if (!hasSignInCredentials("MyApp", "MyCredentials")) {
                         // ... request username/password from user via UI
-                        var usernameFromUI = ...
-                        var passwordFromUI = ...
+                        // var usernameFromUI = ...
+                        // var passwordFromUI = ...
                         // once we have those, create the SignInParameters:
                         var siParams = signInParameters("jabber", usernameFromUI, passwordFromUI)
                         createSignInCredentials("MyApp", "JabberCredentials", "MySecretKey", siParams)
@@ -171,7 +171,7 @@ QString SignInParameters::method() const
 }
 
 /*!
-    \qmlproperty QStringList SignInParameters::mechanisms
+    \qmlproperty string SignInParameters::mechanism
     The mechanisms used to authenticate with the service
 */
 
@@ -181,10 +181,8 @@ QString SignInParameters::mechanism() const
 }
 
 /*!
-    \qmlproperty QVariantMap SignInParameters::parameters
+    \qmlproperty object SignInParameters::parameters
     The parameters used during authentication with the service.
-    These parameters can be used as SessionData when invoking
-    \c{Account::signIn()}.
 */
 
 QVariantMap SignInParameters::parameters() const
@@ -193,7 +191,7 @@ QVariantMap SignInParameters::parameters() const
 }
 
 /*!
-    \qmlproperty QString SignInParameters::username
+    \qmlproperty string SignInParameters::username
     The username to be used during authentication with the service.
 
     This property should only be set during credentials creation;
@@ -207,7 +205,7 @@ QString SignInParameters::username() const
 }
 
 /*!
-    \qmlproperty QString SignInParameters::password
+    \qmlproperty string SignInParameters::password
     The password to be used during authentication with the service.
     It is only applicable to services which use password-based
     authentication methods, and does not affect OAuth-based services
@@ -224,23 +222,25 @@ QString SignInParameters::password() const
 }
 
 /*!
-    \qmlmethod void SignInParameters::setParameter(const QString &parameterName, const QVariant &parameterValue)
+    \qmlmethod void SignInParameters::setParameter(string parameterName, parameterValue)
 
     Sets the value of the parameter specified by the given \a parameterName to
     the given \a parameterValue.  This does not affect the method, mechanism,
     username or password parameters.
 
-    Only QString, QStringList, int and bool values are recognised.
+    Only string, string[], int and bool values are recognised.
 
     Example:
-    \qml
+    \code
     var params = account.signInParameters("facebook-sharing")
     params.setParameter("ClientId", "123456789abcdef")
     // application can now sign in to Facebook with these parameters
-    \endqml
+    \endcode
 
     Different services accept different parameters.  Valid parameter names
-    may be ascertained by inspecting account provider \c{.service} files,
+    may be ascertained by inspecting
+    \l {https://docs.sailfishos.org/Reference/Core_Areas_and_APIs/Apps_and_MW/Accounts_and_SSO/Providers_and_Services}
+    {account provider} \c{.service} files,
     and some commonly-used parameter names are included below for information
     purposes:
 
@@ -287,12 +287,12 @@ QString SignInParameters::password() const
     for sync use-cases (where \c NoUserInteractionPolicy) should generally be
     defined.  For example:
 
-    \qml
+    \code
     var params = account.signInParameters("facebook-sync")
     params.setParameter("ClientId", "123456789abcdef")
     params.setParameter("UiPolicy", SignInParameters.NoUserInteractionPolicy)
     // application can now sign in to Facebook with these parameters
-    \endqml
+    \endcode
 
     Further, the "CredentialsPolicy" parameter is applicable for OAuth services.
     The value of this parameter may be:
@@ -308,14 +308,14 @@ QString SignInParameters::password() const
     case (due to the error message which is returned from the server).
     For example:
 
-    \qml
+    \code
     var params = account.signInParameters("google-sync")
     params.setParameter("ClientId", "123456789abcdef")
     params.setParameter("ClientSecret", "abcdef123456789")
     params.setParameter("UiPolicy", SignInParameters.NoUserInteractionPolicy)
     params.setParameter("CredentialsPolicy", SignInParameters.RefreshCredentialsPolicy)
     // signing in will return refreshed tokens (if they are able to be refreshed)
-    \endqml
+    \endcode
 
     The \c CredentialsPolicy parameter is ignored if the service is not an
     OAuth-enabled service.
@@ -364,18 +364,18 @@ void SignInParameters::setParameter(const QString &parameterName, bool parameter
 }
 
 /*!
-    \qmlmethod void SignInParameters::removeParameter(const QString &parameterName)
+    \qmlmethod void SignInParameters::removeParameter(string parameterName)
 
     Unsets the value of the parameter specified by the given \a parameterName.
     This does not affect the method, mechanism, username or password
     parameters.
 
     Example:
-    \qml
+    \code
     var params = account.signInParameters("facebook-sharing")
     params.removeParameter("Scope")
     // no scopes (permissions) will be requested during sign in
-    \endqml
+    \endcode
 */
 
 void SignInParameters::removeParameter(const QString &parameterName)
@@ -387,7 +387,7 @@ void SignInParameters::removeParameter(const QString &parameterName)
 }
 
 /*!
-    \qmlmethod void SignInParameters::setParameters(const QVariantMap &params)
+    \qmlmethod void SignInParameters::setParameters(params)
 
     Removes all existing parameters, and then calls setParameter() for each
     parameter in the specified \a params map.

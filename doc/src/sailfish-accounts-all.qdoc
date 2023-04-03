@@ -1,7 +1,6 @@
 /****************************************************************************************
 **
-** Copyright (C) 2013 Jolla Ltd.
-** Contact: Chris Adams <chris.adams@jollamobile.com>
+** Copyright (C) 2023 Jolla Ltd.
 ** All rights reserved.
 **
 ** This file is part of Sailfish Accounts component package.
@@ -33,37 +32,9 @@
 ****************************************************************************************/
 
 /*!
-    \qmltype AccountProviderPickerDialog
-    \inherits Dialog
-    \ingroup sailfish-accounts
+\qmlmodule Sailfish.Accounts 1.0
+\title Sailfish Accounts QML Types
 
-    \brief A dialog containing a list of selectable account providers
+This is the alphabetical listing of all QML types from the Sailfish Accounts module.
 
-    The AccountProviderPickerDialog type provides a dialog page which allows selection
-    of account providers.  The dialog may only be accepted if the user has selected
-    at least one provider; otherwise, the user may only reject the dialog.
-*/
-
-/*!
-    \qmlproperty int AccountProviderPickerDialog::providerCount
-
-    This property contains the number of providers in the ProviderModel
-*/
-
-/*!
-    \qmlsignal AccountProviderPickerDialog::providerSelected(int index, string providerName)
-
-    This signal is emitted by the list view when the user
-    selects an account provider.  The \a index is the index into
-    the ProviderModel corresponding to the account provider selected
-    by the user, and the \a providerName is the name of the provider.
-*/
-
-/*!
-    \qmlsignal AccountProviderPickerDialog::providerDeselected(int index, string providerName)
-
-    This signal is emitted by the list view when the user
-    deselects an account provider.  The \a index is the index into
-    the ProviderModel corresponding to the account provider deselected
-    by the user, and the \a providerName is the name of the provider.
 */

@@ -414,6 +414,19 @@ AccountModel::~AccountModel()
 {
 }
 
+/*!
+    \qmlproperty enumeration AccountModel::filterType
+    Enables filtering of the accounts presented by the model according to
+    the value of the property of the account associated with the
+    given filter type.
+
+    Valid filter types are:
+    \value AccountModel.NoFilter
+    \value AccountModel.ProviderFilter
+    \value AccountModel.ServiceFilter
+    \value AccountModel.ServiceTypeFilter
+    \value AccountModel.ProvisionedFilter
+*/
 AccountModel::FilterType AccountModel::filterType() const
 {
     Q_D(const AccountModel);
@@ -431,6 +444,20 @@ void AccountModel::setFilterType(FilterType filterType)
     }
 }
 
+/*!
+    \qmlproperty string AccountModel::filter
+
+    If the filter value is set, the model will only
+    present those accounts whose property associated
+    with the \c filterType matches the given filter
+    value.
+
+    For example, if \c filterType is set to
+    \c{AccountModel.ProviderFilter} and \c filter is
+    set to \c{"facebook"} then only accounts provided
+    by the \c{"facebook"} provider will be presented
+    in the model.
+*/
 QString AccountModel::filter() const
 {
     Q_D(const AccountModel);
