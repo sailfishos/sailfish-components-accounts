@@ -74,7 +74,6 @@ The Sailfish Accounts module also provides some UI elements which allow accounts
 to be selected for further use:
 \list
 \li \l{AccountProviderPicker}
-\li \l{AccountProviderPickerDialog}
 \li \l{AccountsListView}
 \endlist
 

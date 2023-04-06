@@ -1,7 +1,6 @@
 /****************************************************************************************
 **
-** Copyright (C) 2013 Jolla Ltd.
-** Contact: Chris Adams <chris.adams@jollamobile.com>
+** Copyright (C) 2013-2023 Jolla Ltd.
 ** All rights reserved.
 **
 ** This file is part of Sailfish Accounts component package.
@@ -36,6 +35,7 @@
     \qmltype AccountProviderPicker
     \inherits ListView
     \ingroup sailfish-accounts
+    \inqmlmodule Sailfish.Accounts
 
     \brief A list of selectable account providers
 
@@ -53,10 +53,14 @@
 */
 
 /*!
-    \qmlsignal AccountProviderPicker::providerDeselected(int index, string providerName)
+    \qmlproperty list AccountProviderPicker::serviceFilter
 
-    This signal is emitted by the list view when the user
-    deselects an account provider.  The \a index is the index into
-    the ProviderModel corresponding to the account provider deselected
-    by the user, and the \a providerName is the name of the provider.
+    Controls the providers that are listed. This is a list of strings of the services
+    that must be supported by the listed providers.
+
+    For example, if the serviceFilter is ["e-mail", "IM"], then only providers with
+    "e-mail" or "IM" services will be included. The service string comparison is case-insensitive.
+
+    If the serviceFilter is an empty string, then all providers are included in the model regardless
+    of their supported services. This is the default value.
 */

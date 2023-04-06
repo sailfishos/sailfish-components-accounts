@@ -27,7 +27,7 @@
     This type is purely informational, and reports information
     about the provider of the account.  The information is
     specified in the \c{.provider} file installed by the
-    account provider plugin.
+    \l {https://docs.sailfishos.org/Reference/Core_Areas_and_APIs/Apps_and_MW/Accounts_and_SSO/Providers_and_Services} {account provider plugin}.
 */
 
 Provider::Provider(const Accounts::Provider &provider, QObject *parent)
@@ -79,7 +79,7 @@ QString Provider::iconName() const
 }
 
 /*!
-    \qmlproperty QStringList Provider::serviceNames
+    \qmlproperty list Provider::serviceNames
     The names of services provided by this provider.
 */
 

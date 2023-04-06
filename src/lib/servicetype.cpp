@@ -62,7 +62,7 @@ QString ServiceType::iconName() const
 }
 
 /*!
-    \qmlproperty QStringList ServiceType::tags
+    \qmlproperty list ServiceType::tags
     This property holds the tags which have been associated with the service type.
 */
 

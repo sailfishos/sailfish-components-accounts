@@ -1426,7 +1426,7 @@ void Account::remove()
 
 
 /*!
-    \qmlmethod QVariantMap Account::configurationValues(const QString &serviceName)
+    \qmlmethod Account::configurationValues(string serviceName)
 
     Returns the configuration settings for the account which apply
     specifically to the service with the specified \a serviceName.
@@ -1463,7 +1463,7 @@ QVariantMap Account::configurationValues(const QString &serviceName) const
 }
 
 /*!
-    \qmlmethod QVariant Account::configurationValue(const QString &serviceName, const QString &key)
+    \qmlmethod Account::configurationValue(string serviceName, string key)
 
     Returns the individual configuration value for the account
     which applies specifically to the service with the specified
@@ -1477,8 +1477,8 @@ QVariantMap Account::configurationValues(const QString &serviceName) const
     account's global configuration settings will be retrieved
     instead, if it exists.
 
-    If the key does not exist for the given account and service, a
-    null QVariant will be returned.
+    If the key does not exist for the given account and service,
+    undefined will be returned.
 
     The configuration values are retrieved asynchronously after
     account construction.  Clients should wait until the account
@@ -1499,12 +1499,11 @@ QVariant Account::configurationValue(const QString &serviceName, const QString &
 }
 
 /*!
-    \qmlmethod void Account::setConfigurationValue(const QString &serviceName, const QString &key, const QVariant &value)
+    \qmlmethod void Account::setConfigurationValue(string serviceName, string key, value)
 
     Sets the configuration setting named \a key for the account which applies
     specifically to the service with the specified \a serviceName to the
-    given \a value. The \a value must be of a supported type; see setConfigurationValues() for
-    the list of types that are supported.
+    given \a value. The \a value must be of a supported type: int, string, or an array of strings.
 
     The value will only be set to be updated if it is different from the value
     collected at the last sync. This is to ensure any changes made by other
@@ -1555,7 +1554,7 @@ void Account::setConfigurationValue(const QString &serviceName, const QString &k
 }
 
 /*!
-    \qmlmethod void Account::removeConfigurationValue(const QString &serviceName, const QString &key)
+    \qmlmethod void Account::removeConfigurationValue(string serviceName, string key)
 
     Removes the configuration setting named \a key for the account which applies
     specifically to the service with the specified \a serviceName.
@@ -1583,7 +1582,7 @@ void Account::removeConfigurationValue(const QString &serviceName, const QString
 }
 
 /*!
-    \qmlmethod bool Account::isEnabledWithService(const QString &serviceName)
+    \qmlmethod bool Account::isEnabledWithService(string serviceName)
 
     Returns true if the account is enabled with the specified service.
     Returns false if the account is not enabled with the specified service,
@@ -1613,7 +1612,16 @@ bool Account::isEnabledWithService(const QString &serviceName) const
 }
 
 /*!
-    \qmlmethod void Account::enableWithService(const QString &serviceName)
+    \qmlsignal Account::enabledWithServiceChanged(string serviceName)
+
+    Emitted when account has been enabled or disabled with a service.
+
+    See enableWithService() and disableWithService() for further details.
+*/
+
+
+/*!
+    \qmlmethod void Account::enableWithService(string serviceName)
 
     Enables the account with the service identified by the given \a serviceName.
 
@@ -1655,7 +1663,7 @@ void Account::enableWithService(const QString &serviceName)
 
 
 /*!
-    \qmlmethod void Account::disableWithService(const QString &serviceName)
+    \qmlmethod void Account::disableWithService(string serviceName)
 
     Disables the account with the service identified by the given \a serviceName.
 
@@ -1697,7 +1705,7 @@ void Account::disableWithService(const QString &serviceName)
 
 
 /*!
-    \qmlmethod SignInParameters *Account::signInParameters(const QString &serviceName, const QString &username = QString(), const QString &password = QString())
+    \qmlmethod SignInParameters Account::signInParameters(string serviceName, string username, string password)
 
     Returns the \l SignInParameters which can be used to sign into the service
     identified by the given \a serviceName.  This includes the sign-in
@@ -1741,7 +1749,7 @@ SignInParameters *Account::signInParameters(const QString &serviceName, const QS
 }
 
 /*!
-    \qmlmethod Account::hasSignInCredentials(const QString &applicationName, const QString &credentialsName) const
+    \qmlmethod bool Account::hasSignInCredentials(string applicationName, string credentialsName) const
 
     Returns true if the application named \a applicationName has created
     sign-in credentials with this account named \a credentialsName.  If
@@ -1765,7 +1773,26 @@ bool Account::hasSignInCredentials(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::createSignInCredentials(const QString &applicationName, const QString &credentialsName, SignInParameters *parameters, const QString &symmetricKey = QString())
+    \qmlsignal Account::signInCredentialsCreated(data)
+
+    Emitted when credential creation has completed succesfully.
+
+    \a data contains the response data.
+
+    See createSignInCredentials() for further details.
+*/
+
+/*!
+    \qmlsignal Account::signInError(string message, int errorType)
+
+    Emitted when an error occurs in sign in signing in, or creating or updating credentials.
+
+    \a message contains an error message which can be displayed to user.
+    \a errorType contains error code.
+*/
+
+/*!
+    \qmlmethod void Account::createSignInCredentials(string applicationName, string credentialsName, SignInParameters parameters, string symmetricKey)
 
     Creates sign-in credentials with this account for the application with
     the given \a applicationName named \a credentialsName (or named "default"
@@ -1790,8 +1817,8 @@ bool Account::hasSignInCredentials(const QString &applicationName,
     the account with that service.
 
     Once creation of credentials completes successfully the
-    \c signInCredentialsCreated() signal will be emitted.  If creation of the
-    credentials encounters an error then the \c signInError() signal will
+    signInCredentialsCreated() signal will be emitted.  If creation of the
+    credentials encounters an error then the signInError() signal will
     be emitted.  The account will transition to the \c Synced state just prior
     to emission of the success or error signals.
 
@@ -1995,7 +2022,15 @@ void Account::createSignInCredentials(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::updateSignInCredentials(const QString &applicationName, const QString &credentialsName, SignInParameters *parameters, const QString &symmetricKey)
+    \qmlsignal Account::signInCredentialsUpdated(data)
+
+    Emitted when sign in credentials have been updated.
+
+    See updateSignInCredentials() for further details.
+*/
+
+/*!
+    \qmlmethod void Account::updateSignInCredentials(string applicationName, string credentialsName, SignInParameters parameters, string symmetricKey)
 
     Updates the existing credentials with the given \a credentialsName
     for the application with the given \a applicationName.
@@ -2014,8 +2049,8 @@ void Account::createSignInCredentials(const QString &applicationName,
     \a symmetricKey is non-empty, it will be used to encrypt the
     username and password before being stored.
 
-    On success the \l signInCredentialsUpdated() signal will be emitted.
-    On failure the \l signInError() signal will be emitted.  The account
+    On success the signInCredentialsUpdated() signal will be emitted.
+    On failure the signInError() signal will be emitted.  The account
     will transition to the \c Synced state just prior to the success or
     error signals being emitted.
 */
@@ -2170,7 +2205,7 @@ void Account::updateSignInCredentials(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::removeSignInCredentials(const QString &applicationName, const QString &credentialsName)
+    \qmlmethod void Account::removeSignInCredentials(string applicationName, string credentialsName)
 
     Removes the sign-in credentials for the application with the given
     \a applicationName from the account, where the credentials are
@@ -2261,7 +2296,15 @@ void Account::removeSignInCredentials(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::signIn(const QString &applicationName, const QString &credentialsName, SignInParameters *parameters, const QString &symmetricKey = QString())
+    \qmlsignal Account::signInResponse(data)
+
+    Emitted when sign in response has been received.
+
+    \a data contains the response data.
+*/
+
+/*!
+    \qmlmethod void Account::signIn(string applicationName, string credentialsName, SignInParameters parameters, string symmetricKey)
 
     Signs the application with the given \a applicationName into the account
     using the per-application credentials identified by the given
@@ -2279,7 +2322,7 @@ void Account::removeSignInCredentials(const QString &applicationName,
     the ClientId or ConsumerKey specified in the \a parameters will be
     read from the database.
 
-    Emits \c signInResponseReceived() on success, or \c signInError() on
+    Emits signInResponse() on success, or signInError() on
     failure.
 
     Calling this function will have no effect if the account is not
@@ -2370,7 +2413,7 @@ void Account::signIn(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::signOut(const QString &applicationName, const QString &credentialsName)
+    \qmlmethod void Account::signOut(string applicationName, string credentialsName)
 
     Signs the account out of the service where it had previously been
     signed in using the credentials named the given \a credentialsName
@@ -2406,7 +2449,7 @@ void Account::signOut(const QString &applicationName,
 }
 
 /*!
-    \qmlmethod Account::cancelSignInOperation()
+    \qmlmethod void Account::cancelSignInOperation()
 
     Cancels the sign-in operation started by a call to createSignInCredentials(),
     updateSignInCredentials() or signIn(). Upon cancellation, the signInError() is emitted with
@@ -2566,7 +2609,7 @@ bool Account::limited() const
 }
 
 /*!
-    \qmlproperty QStringList Account::supportedServiceNames
+    \qmlproperty Array Account::supportedServiceNames
     This property contains the names of services supported by the account
 
     Every service provided by a provider has a service name which is
