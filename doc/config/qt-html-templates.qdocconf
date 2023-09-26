@@ -23,7 +23,7 @@ HTML.footer = \
     "</div> \n" \
     "<div class=\"footer\">\n" \
     "  <p>\n" \
-    "     <acronym title=\"Copyright\">&copy;</acronym> 2012 Jolla OY\n" \
+    "     <acronym title=\"Copyright\">&copy;</acronym> 2012 - 2023 Jolla Ltd.\n" \
     "  <p>\n" \
     "     All other trademarks are property of their respective owners.\n" \
     "  <br />\n" \
