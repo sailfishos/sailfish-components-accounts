@@ -2,8 +2,8 @@ Name:       sailfish-components-accounts-qt5
 Summary:    Sailfish Accounts Components
 Version:    0.2.50
 Release:    1
-License:    Proprietary
-URL:        https://bitbucket.org/jolla/ui-sailfish-components-accounts
+License:    BSD
+URL:        https://github.com/sailfishos/sailfish-components-accounts
 Source0:    %{name}-%{version}.tar.bz2
 Source1:    %{name}.privileges
 BuildRequires:  pkgconfig(Qt5Core)
@@ -88,6 +88,7 @@ install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
 
 %files
 %defattr(-,root,root,-)
+%license LICENSE.BSD
 %{_libdir}/libsailfishaccounts.so.*
 %{_libdir}/qt5/qml/Sailfish/Accounts
 %{_datadir}/translations/*.qm
