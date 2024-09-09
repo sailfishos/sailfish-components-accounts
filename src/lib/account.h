@@ -50,11 +50,6 @@
 #include <Accounts/Account>
 #include <Accounts/Error>
 
-//libsignon-qt
-#include <SignOn/Identity>
-#include <SignOn/SessionData>
-#include <SignOn/AuthSession>
-
 class SignInParameters;
 class AccountPrivate;
 
