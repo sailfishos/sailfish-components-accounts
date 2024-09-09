@@ -115,7 +115,8 @@ public:
         qmlRegisterType<AccountSyncOptions>("Sailfish.Accounts", 1, 0, "AccountSyncOptions");
         qmlRegisterType<AccountSyncSchedule>("Sailfish.Accounts", 1, 0, "AccountSyncSchedule");
         qmlRegisterType<AccountAuthenticator>("Sailfish.Accounts", 1, 0, "AccountAuthenticator");
-        qmlRegisterUncreatableType<AccountAuthenticatorCredentials>("Sailfish.Accounts", 1, 0, "AccountAuthenticatorCredentials", "");
+        qmlRegisterUncreatableType<AccountAuthenticatorCredentials>("Sailfish.Accounts", 1, 0,
+                                                                    "AccountAuthenticatorCredentials", "");
         qmlRegisterType<AccountValue>("Sailfish.Accounts", 1, 0, "AccountValue");
     }
 };

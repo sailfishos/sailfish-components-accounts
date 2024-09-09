@@ -44,6 +44,7 @@ ListItem {
 
     AccountIcon {
         id: icon
+
         x: Theme.horizontalPageMargin
         anchors.verticalCenter: parent.verticalCenter
         source: model.providerIcon
