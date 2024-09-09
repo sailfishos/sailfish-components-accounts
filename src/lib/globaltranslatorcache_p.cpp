@@ -58,11 +58,13 @@ void initLibTranslator()
 {
     if (!libEngEngTranslator) {
         libEngEngTranslator = new QTranslator(qApp);
-        libEngEngTranslator->load(QString::fromLatin1("sailfishaccounts_eng_en"), QString::fromLatin1("/usr/share/translations"));
+        libEngEngTranslator->load(QString::fromLatin1("sailfishaccounts_eng_en"),
+                                  QString::fromLatin1("/usr/share/translations"));
         qApp->installTranslator(libEngEngTranslator);
 
         libTranslator = new QTranslator(qApp);
-        libTranslator->load(QLocale(), QString::fromLatin1("sailfishaccounts"), QString::fromLatin1("-"), QString::fromLatin1("/usr/share/translations"));
+        libTranslator->load(QLocale(), QString::fromLatin1("sailfishaccounts"), QString::fromLatin1("-"),
+                            QString::fromLatin1("/usr/share/translations"));
         qApp->installTranslator(libTranslator);
     }
 }

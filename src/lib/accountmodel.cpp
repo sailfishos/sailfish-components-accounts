@@ -338,7 +338,8 @@ public:
 };
 
 namespace {
-    bool displayDataLessThan(const QString &thisDisplayName, const QString &thisProviderDisplayName, Accounts::Account *account, DisplayData *otherDisplayData)
+    bool displayDataLessThan(const QString &thisDisplayName, const QString &thisProviderDisplayName,
+                             Accounts::Account *account, DisplayData *otherDisplayData)
     {
         QString otherProviderDisplayName = otherDisplayData->account->provider().isValid()
                                          ? SailfishAccounts::translatedDisplayName(otherDisplayData->account->provider())
@@ -352,7 +353,8 @@ namespace {
             } else if (thisDisplayName == otherDisplayName) {
                 account->selectService(Accounts::Service());
                 otherDisplayData->account->selectService(Accounts::Service());
-                if (account->value(AccountDefaultCredentialsUserName).toString() < otherDisplayData->account->value(AccountDefaultCredentialsUserName).toString()) {
+                if (account->value(AccountDefaultCredentialsUserName).toString()
+                        < otherDisplayData->account->value(AccountDefaultCredentialsUserName).toString()) {
                     return true;
                 }
             }
@@ -430,6 +432,7 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountReadOnlyRole, "accountReadOnly");
     d->headerData.insert(AccountProvisionedRole, "accountProvisioned");
     d->headerData.insert(AccountLimitedRole, "accountLimited");
+
     QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
                      this, SLOT(accountCreated(Accounts::AccountId)));
     QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),

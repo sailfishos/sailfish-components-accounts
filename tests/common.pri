@@ -3,7 +3,6 @@ INCLUDEPATH += $$SRCDIR
 DEPENDPATH = $$INCLUDEPATH
 QT += testlib
 TEMPLATE = app
-CONFIG -= app_bundle
 
 CONFIG += link_pkgconfig
 

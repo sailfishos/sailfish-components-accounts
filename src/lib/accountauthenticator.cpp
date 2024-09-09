@@ -85,12 +85,16 @@ void AccountAuthenticator::signIn(int accountId, const QString &serviceName)
     d->signIn(accountId, serviceName);
 }
 
-void AccountAuthenticator::sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors)
+void AccountAuthenticator::sendAuthenticatedRequest(const QUrl &url,
+                                                    const AccountAuthenticatorCredentials &credentials,
+                                                    bool ignoreSslErrors)
 {
     d->sendAuthenticatedRequest(url, credentials, ignoreSslErrors);
 }
 
-void AccountAuthenticator::sendOcsUserRequest(int accountId, const QString &serviceName, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors)
+void AccountAuthenticator::sendOcsUserRequest(int accountId, const QString &serviceName,
+                                              const AccountAuthenticatorCredentials &credentials,
+                                              bool ignoreSslErrors)
 {
     d->sendOcsUserRequest(accountId, serviceName, credentials, ignoreSslErrors);
 }
@@ -173,7 +177,9 @@ void AccountAuthenticatorPrivate::signIn(int accountId, const QString &serviceNa
         return;
     }
 
-    SignOn::Identity *ident = account->credentialsId() > 0 ? SignOn::Identity::existingIdentity(account->credentialsId()) : 0;
+    SignOn::Identity *ident = account->credentialsId() > 0
+            ? SignOn::Identity::existingIdentity(account->credentialsId())
+            : 0;
     if (!ident) {
         account->deleteLater();
         emit q->signInError(accountId,
@@ -316,7 +322,9 @@ void AccountAuthenticatorPrivate::signOnError(const SignOn::Error &error)
     emit q->signInError(accountId, QString(), errorString);
 }
 
-void AccountAuthenticatorPrivate::sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors)
+void AccountAuthenticatorPrivate::sendAuthenticatedRequest(const QUrl &url,
+                                                           const AccountAuthenticatorCredentials &credentials,
+                                                           bool ignoreSslErrors)
 {
     if (!m_networkAccessManager) {
         m_networkAccessManager = new QNetworkAccessManager(this);
@@ -395,7 +403,9 @@ void AccountAuthenticatorPrivate::authenticatedRequestSslErrors(const QList<QSsl
     }
 }
 
-void AccountAuthenticatorPrivate::sendOcsUserRequest(int accountId, const QString &serviceName, const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors)
+void AccountAuthenticatorPrivate::sendOcsUserRequest(int accountId, const QString &serviceName,
+                                                     const AccountAuthenticatorCredentials &credentials,
+                                                     bool ignoreSslErrors)
 {
     if (!m_networkAccessManager) {
         m_networkAccessManager = new QNetworkAccessManager(this);
@@ -523,7 +533,9 @@ bool AccountAuthenticatorPrivate::setCredentialsNeedUpdate(int accountId, const 
     return false;
 }
 
-QNetworkRequest AccountAuthenticatorPrivate::networkRequest(const QUrl &serverAddress, const AccountAuthenticatorCredentials &credentials, const QString &path)
+QNetworkRequest AccountAuthenticatorPrivate::networkRequest(const QUrl &serverAddress,
+                                                            const AccountAuthenticatorCredentials &credentials,
+                                                            const QString &path)
 {
     const bool isOcsRequest = path.startsWith(QStringLiteral("/ocs/"));
 

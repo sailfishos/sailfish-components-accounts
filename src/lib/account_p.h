@@ -48,7 +48,9 @@
 #include <Accounts/Manager>
 
 //libsignon-qt
+#include <SignOn/Identity>
 #include <SignOn/IdentityInfo>
+#include <SignOn/AuthSession>
 
 static const auto AccountReadOnlyKey = QStringLiteral("readonly");
 static const auto AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.

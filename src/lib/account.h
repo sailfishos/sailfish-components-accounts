@@ -50,11 +50,6 @@
 #include <Accounts/Account>
 #include <Accounts/Error>
 
-//libsignon-qt
-#include <SignOn/Identity>
-#include <SignOn/SessionData>
-#include <SignOn/AuthSession>
-
 class SignInParameters;
 class AccountPrivate;
 
@@ -212,7 +207,8 @@ protected:
 // the following should be protected, but are public to allow AccountFactory
 // (from jolla-settings-accounts) to use them during account creation.
 public:
-    Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent, const QVariantMap &serviceConfigValues = QVariantMap());
+    Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent,
+            const QVariantMap &serviceConfigValues = QVariantMap());
     Accounts::Account *account();
 
 protected:

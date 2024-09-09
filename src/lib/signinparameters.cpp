@@ -134,7 +134,9 @@
     \endqml
 */
 
-SignInParameters::SignInParameters(const QString &serviceName, const QString &method, const QString &mechanism, const QVariantMap &parameters, const QString &username, const QString &password, QObject *parent)
+SignInParameters::SignInParameters(const QString &serviceName, const QString &method, const QString &mechanism,
+                                   const QVariantMap &parameters, const QString &username, const QString &password,
+                                   QObject *parent)
     : QObject(parent)
     , m_serviceName(serviceName)
     , m_method(method)

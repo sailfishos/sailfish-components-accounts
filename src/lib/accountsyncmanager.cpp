@@ -93,12 +93,14 @@ bool profileMatchesBackupOperation(const QString &profileId, AccountSyncManager:
     return profileId.contains(QString(".%1-").arg(profileMarkerForBackupOperationType(operation)));
 }
 
-QString profileForBackupOperationType(int accountId, const QString &accountProviderName, AccountSyncManager::BackupOperationType operation)
+QString profileForBackupOperationType(int accountId, const QString &accountProviderName,
+                                      AccountSyncManager::BackupOperationType operation)
 {
     return QString("%1.%2-%3").arg(accountProviderName).arg(profileMarkerForBackupOperationType(operation)).arg(accountId);
 }
 
-QString templateProfileForBackupOperationType(const QString &accountProviderName, AccountSyncManager::BackupOperationType operation)
+QString templateProfileForBackupOperationType(const QString &accountProviderName,
+                                              AccountSyncManager::BackupOperationType operation)
 {
     return QString("%1.%2").arg(accountProviderName).arg(profileMarkerForBackupOperationType(operation));
 }
@@ -129,12 +131,15 @@ public:
     AccountSyncProfileManagerPrivate(AccountSyncManager *parent = 0);
     ~AccountSyncProfileManagerPrivate();
 
-    void finalizeProfileCreation(Accounts::Account *account, const QString &serviceName, const QString &profileId);
-    void finalizeProfileCreation(Accounts::Account *account, const QHash<QString, QStringList> &multipleCreatedProfiles);
+    void finalizeProfileCreation(Accounts::Account *account,
+                                 const QString &serviceName, const QString &profileId);
+    void finalizeProfileCreation(Accounts::Account *account,
+                                 const QHash<QString, QStringList> &multipleCreatedProfiles);
     bool startSync(const QString &profileId);
 
     bool syncProfileFileExists(const QString &profileId) const;
-    QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfileMatch = QString()) const;
+    QStringList syncProfileIds(Accounts::Account *account, const Accounts::Service &srv,
+                               const QString &templateProfileMatch = QString()) const;
 
     QList<ProfileCreationDetails> profilesUnderCreation;
     AccountSyncManager *q;
@@ -170,7 +175,8 @@ AccountSyncProfileManagerPrivate::~AccountSyncProfileManagerPrivate()
     delete m_buteoClient;
 }
 
-void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account *account, const QString &serviceName, const QString &profileId)
+void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account *account,
+                                                               const QString &serviceName, const QString &profileId)
 {
     ProfileCreationDetails details(profileId, account->id(), serviceName);
     profilesUnderCreation.append(details);
@@ -179,7 +185,8 @@ void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account
     account->sync();
 }
 
-void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account *account, const QHash<QString, QStringList> &multipleCreatedProfiles)
+void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account *account,
+                                                               const QHash<QString, QStringList> &multipleCreatedProfiles)
 {
     ProfileCreationDetails details(account->id(), multipleCreatedProfiles);
     profilesUnderCreation.append(details);
@@ -204,7 +211,9 @@ bool AccountSyncProfileManagerPrivate::syncProfileFileExists(const QString &prof
     return QFile::exists(path);
 }
 
-QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfileMatch) const
+QStringList AccountSyncProfileManagerPrivate::syncProfileIds(Accounts::Account *account,
+                                                             const Accounts::Service &srv,
+                                                             const QString &templateProfileMatch) const
 {
     if (!account || !srv.isValid()) {
         return QStringList();
@@ -257,7 +266,8 @@ void AccountSyncProfileManagerPrivate::handleAccountSyncError()
     }
 }
 
-void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId, int status, const QString &message, int statusDetails)
+void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId, int status, const QString &message,
+                                                        int statusDetails)
 {
     switch (status) {
     case Sync::SYNC_QUEUED:
@@ -287,7 +297,8 @@ void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId
     }
 }
 
-AccountSyncProfileManagerPrivate::ProfileCreationDetails AccountSyncProfileManagerPrivate::popProfileCreationDetails(Accounts::Account *account)
+AccountSyncProfileManagerPrivate::ProfileCreationDetails
+AccountSyncProfileManagerPrivate::popProfileCreationDetails(Accounts::Account *account)
 {
     if (account) {
         int accountId = account->id();
@@ -633,7 +644,8 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
     return profile;
 }
 
-bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVariantMap &properties, AccountSyncOptions *options)
+bool AccountSyncManager::updateSyncProfile(const QString &profileId, const QVariantMap &properties,
+                                           AccountSyncOptions *options)
 {
     if (profileId.isEmpty()) {
         qWarning() << "Invalid profileId";
@@ -676,7 +688,9 @@ QString AccountSyncManager::findBackupOperationProfile(int accountId, BackupOper
         return QString();
     }
 
-    Buteo::SyncProfile *syncProfile = d->m_profileManager->syncProfile(profileForBackupOperationType(accountId, account->providerName(), operation));
+    Buteo::SyncProfile *syncProfile
+            = d->m_profileManager->syncProfile(profileForBackupOperationType(accountId, account->providerName(),
+                                                                             operation));
     if (syncProfile) {
         return syncProfile->name();
     }

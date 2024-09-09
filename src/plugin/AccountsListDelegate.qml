@@ -40,6 +40,7 @@ import Sailfish.Accounts 1.0
 
 ListItem {
     id: delegateItem
+
     property bool entriesInteractive
     property bool allowRemoveOnly
 
@@ -51,7 +52,9 @@ ListItem {
     signal accountClicked(int accountId, string providerName)
 
     contentHeight: visible
-                   ? Math.max(icon.height, column.height + (errorLabel.visible ? errorLabel.height : 0)) + 2*Theme.paddingSmall
+                   ? Math.max(icon.height,
+                              column.height + (errorLabel.visible ? errorLabel.height : 0))
+                     + 2*Theme.paddingSmall
                    : 0
     menu: entriesInteractive ? menuComponent : null
 
@@ -78,14 +81,17 @@ ListItem {
                 visible: model.accountReadOnly || model.accountLimited
             }
             MenuItem {
-                visible: model.providerName !== "jolla" && !model.accountReadOnly && !model.accountLimited && !delegateItem.allowRemoveOnly
+                visible: model.providerName !== "jolla"
+                         && !model.accountReadOnly
+                         && !model.accountLimited
+                         && !delegateItem.allowRemoveOnly
                 text: model.accountEnabled
-                        //: Disables a user account
+                      ? //: Disables a user account
                         //% "Disable"
-                      ? qsTrId("components_accounts-me-disable")
-                        //: Enables a user account
+                        qsTrId("components_accounts-me-disable")
+                      : //: Enables a user account
                         //% "Enable"
-                      : qsTrId("components_accounts-me-enable")
+                        qsTrId("components_accounts-me-enable")
                 onClicked: {
                     accountModel.setAccountEnabled(model.accountId, !accountEnabled)
                 }
@@ -104,7 +110,8 @@ ListItem {
                 //% "Sync"
                 text: qsTrId("components_accounts-me-sync")
                 visible: !notSignedIn && model.accountEnabled
-                         && (model.providerName === "activesync" || accountSyncManager.profileIds(model.accountId).length > 0)
+                         && (model.providerName === "activesync"
+                             || accountSyncManager.profileIds(model.accountId).length > 0)
                          && !delegateItem.allowRemoveOnly
 
                 onClicked: {
@@ -129,12 +136,14 @@ ListItem {
 
     AccountIcon {
         id: icon
+
         x: Theme.horizontalPageMargin
         y: Math.max(Theme.paddingSmall, -height / 2 + column.y + column.height / 2)
         source: model.accountIcon
     }
     BusyIndicator {
         id: syncIndicator
+
         anchors.centerIn: icon
         size: BusyIndicatorSize.Small
         height: width
@@ -142,13 +151,14 @@ ListItem {
     }
     Column {
         id: column
+
         anchors {
             left: icon.right
             leftMargin: Theme.paddingLarge
             right: parent.right
             rightMargin: Theme.horizontalPageMargin
             verticalCenter: parent.verticalCenter
-            verticalCenterOffset: errorLabel.visible ? -(errorLabel.height/2) : 0
+            verticalCenterOffset: errorLabel.visible ? -(errorLabel.height / 2) : 0
         }
         Label {
             width: parent.width
@@ -188,6 +198,7 @@ ListItem {
 
     Label {
         id: errorLabel
+
         anchors {
             left: icon.right
             leftMargin: Theme.paddingLarge

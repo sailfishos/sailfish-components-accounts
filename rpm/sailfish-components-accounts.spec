@@ -74,11 +74,10 @@ Requires: %{name} = %{version}-%{release}
 
 %build
 %qmake5 "VERSION=%{version}" 
-make %{?_smp_mflags}
+%make_build
 make docs
 
 %install
-rm -rf %{buildroot}
 %qmake5_install
 mkdir -p %{buildroot}/%{_docdir}/%{name}
 cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
@@ -86,15 +85,17 @@ cp -R doc/html/* %{buildroot}/%{_docdir}/%{name}/
 mkdir -p %{buildroot}%{_datadir}/mapplauncherd/privileges.d
 install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
 
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
 %files
-%defattr(-,root,root,-)
 %license LICENSE.BSD
 %{_libdir}/libsailfishaccounts.so.*
 %{_libdir}/qt5/qml/Sailfish/Accounts
 %{_datadir}/translations/*.qm
 
 %files tests
-%defattr(-,root,root,-)
 /opt/tests/Sailfish/Accounts
 %{_datadir}/accounts/providers/test-provider.provider
 %{_datadir}/accounts/services/test-service2.service
@@ -102,26 +103,16 @@ install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
 %{_datadir}/accounts/service_types/test-service-type2.service-type
 
 %files devel
-%defattr(-,root,root,-)
 %{_libdir}/libsailfishaccounts.so
 %{_libdir}/pkgconfig/sailfishaccounts.pc
 %{_includedir}/libsailfishaccounts
 
 %files ts-devel
-%defattr(-,root,root,-)
 %{_datadir}/translations/source/*.ts
 
 %files doc
-%defattr(-,root,root,-)
 %{_docdir}/%{name}
 
 %files tools
-%defattr(-,root,root,-)
 %{_bindir}/sailfish-accounts-tool
 %{_datadir}/mapplauncherd/privileges.d/*
-
-%post
-/sbin/ldconfig
-
-%postun
-/sbin/ldconfig

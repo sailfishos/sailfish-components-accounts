@@ -43,8 +43,6 @@
 #include <QStringList>
 #include <QVariant>
 
-#include <SignOn/SessionData>
-
 class Account;
 class Q_DECL_EXPORT SignInParameters : public QObject
 {
@@ -60,11 +58,13 @@ class Q_DECL_EXPORT SignInParameters : public QObject
     Q_ENUMS(CredentialsPolicy)
 
 public:
+    // Matching libsignon enum values, but avoiding using them directly so we don't need
+    // to expose dependency on the API just because of this thing
     enum UiPolicy {
-        DefaultPolicy           = SignOn::DefaultPolicy,
-        RequestPasswordPolicy   = SignOn::RequestPasswordPolicy,
-        NoUserInteractionPolicy = SignOn::NoUserInteractionPolicy,
-        ValidationPolicy        = SignOn::ValidationPolicy
+        DefaultPolicy           = 0, // SignOn::DefaultPolicy,
+        RequestPasswordPolicy   = 1, // SignOn::RequestPasswordPolicy,
+        NoUserInteractionPolicy = 2, // SignOn::NoUserInteractionPolicy,
+        ValidationPolicy        = 3  // SignOn::ValidationPolicy
     };
 
     enum CredentialsPolicy {

@@ -567,7 +567,8 @@ void AccountPrivate::updateStoreRepositories(bool enable)
     ssuInterface.call("updateRepos");
 }
 
-void AccountPrivate::updateServiceKey(const ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline, const QString &key)
+void AccountPrivate::updateServiceKey(const ConfigStateMap &states, const QVariantMap &values,
+                                      QVariantMap &baseline, const QString &key)
 {
     const ConfigState state = states.value(key, ConfigState::Default);
     QVariant currValue = values.value(key);
@@ -589,7 +590,8 @@ void AccountPrivate::updateServiceKey(const ConfigStateMap &states, const QVaria
     }
 }
 
-void AccountPrivate::updateServiceKeys(const Accounts::Service &service, ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline)
+void AccountPrivate::updateServiceKeys(const Accounts::Service &service, ConfigStateMap &states,
+                                       const QVariantMap &values, QVariantMap &baseline)
 {
     account->selectService(service);
     // It'll be faster to go through the lists separately than to join them
@@ -629,7 +631,8 @@ bool AccountPrivate::prepareSync()
     }
 
     // set the user name
-    if (!defaultCredentialsUserName.isEmpty() && configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString().isEmpty()) {
+    if (!defaultCredentialsUserName.isEmpty()
+            && configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString().isEmpty()) {
         account->setValue(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY, defaultCredentialsUserName);
     }
 
@@ -731,7 +734,8 @@ void AccountPrivate::handleSynced()
                     setStatus(Account::Synced);
                     //: Error emitted if unable to decrypt the stored encrypted credentials
                     //% "Unable to decrypt stored credentials - aborting credentials creation"
-                    emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"), Account::SignInPermissionDeniedError);
+                    emit q->signInError(qtTrId("sailfish_accounts-account-decryption_failed"),
+                                        Account::SignInPermissionDeniedError);
                 }
             } else {
                 // "oauth2" method - we just emit the cached response data.
@@ -766,7 +770,8 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
         setStatus(Account::Synced);
         //: Error emitted if an error occurred while creating a signon session after storing the credentials
         //% "Unable to create signon session after storing credentials"
-        emit q->signInError(qtTrId("sailfish_accounts-account-session_create_after_store_credentials_failed"), Account::SignInUnknownError);
+        emit q->signInError(qtTrId("sailfish_accounts-account-session_create_after_store_credentials_failed"),
+                            Account::SignInUnknownError);
         return;
     }
 
@@ -889,7 +894,8 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
         }
 
         // then update the account with the credentials information.
-        QString credName = signInCredentials.credentialsName.isEmpty() ? QLatin1String("default") : signInCredentials.credentialsName;
+        QString credName = signInCredentials.credentialsName.isEmpty() ? QLatin1String("default")
+                                                                       : signInCredentials.credentialsName;
         QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(signInCredentials.applicationName, credName);
         account->selectService(Accounts::Service());
         account->setValue(configurationValueKey, signInCredentials.identity->id());
@@ -1052,13 +1058,16 @@ void AccountPrivate::handleAccountError()
         setStatus(Account::Synced);
         //: Error emitted if account creation failed at the database level
         //% "Unable to save %1 account in database"
-        emit q->signInError(qtTrId("sailfish_accounts-account-account_database_failed").arg(providerName), Account::DatabaseError);
+        emit q->signInError(qtTrId("sailfish_accounts-account-account_database_failed").arg(providerName),
+                            Account::DatabaseError);
     } else {
         qWarning() << Q_FUNC_INFO << "sync failed or other error occurred"; // XXX TODO: properly manage this (eg, emit error)
     }
 }
 
-QVariantMap AccountPrivate::plainTextResponseData(const QString &method, const QVariantMap &encryptedResponseData, const QString &symmetricKey, const QString &applicationName, bool *succeeded) const
+QVariantMap AccountPrivate::plainTextResponseData(const QString &method, const QVariantMap &encryptedResponseData,
+                                                  const QString &symmetricKey, const QString &applicationName,
+                                                  bool *succeeded) const
 {
     QVariantMap retn;
     *succeeded = true;
@@ -1966,7 +1975,8 @@ void Account::createSignInCredentials(const QString &applicationName,
             if (d->signInCredentials.identity == NULL) {
                 //: Error emitted if identity creation fails
                 //% "Failed to create credentials"
-                emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"), Account::SignInInvalidCredentialsError);
+                emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"),
+                                 Account::SignInInvalidCredentialsError);
                 return;
             }
 
@@ -2399,7 +2409,8 @@ void Account::signIn(const QString &applicationName,
     if (signInIdentity == NULL) {
         //: Error emitted if signon credentials could not be loaded from the database
         //% "Credentials with id %1 could not be loaded"
-        emit signInError(qtTrId("sailfish_accounts-account-load_credentials_error").arg(identityId), Account::SignInInvalidCredentialsError);
+        emit signInError(qtTrId("sailfish_accounts-account-load_credentials_error").arg(identityId),
+                         Account::SignInInvalidCredentialsError);
         return;
     }
 
