@@ -91,4 +91,3 @@ public:
 };
 
 #include "plugin.moc"
-

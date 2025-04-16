@@ -116,7 +116,7 @@ const QVariant convertValue(const QVariant &value)
             || value.type() == QVariant::StringList) {
         return value;
     } else if (value.type() == QVariant::List) {
-        return  value.toStringList();
+        return value.toStringList();
     } else if (value.userType() == QMetaType::type("QJSValue")) {
         QVariant convertedValue = value.value<QJSValue>().toVariant();
         if (convertedValue.isValid()) {
@@ -178,11 +178,11 @@ void AccountPrivate::setModified(bool &pendingInit)
 
 void SignInCredentials::cleanup(bool removeIdentity)
 {
-    if (identity != NULL) {
-        if (session != NULL) {
+    if (identity) {
+        if (session) {
             session->disconnect();
             identity->destroySession(session);
-            session = NULL;
+            session = nullptr;
         }
 
         if (removeIdentity == true) {
@@ -192,7 +192,7 @@ void SignInCredentials::cleanup(bool removeIdentity)
 
         identity->disconnect();
         identity->deleteLater();
-        identity = NULL;
+        identity = nullptr;
     }
 
     creatingSignInCredentials = false;
@@ -991,7 +991,7 @@ void AccountPrivate::handleSignOnError(const SignOn::Error &err)
     //% "No cached credentials exist"
     QString noCachedCredentials = qtTrId("sailfish_accounts-account-no_cached_creds");
 
-    bool sessionWasRunning = (signInCredentials.session != NULL);
+    bool sessionWasRunning = (signInCredentials.session != nullptr);
     if (signInCredentials.creatingSignInCredentials || signInCredentials.updatingSignInCredentials) {
         signInCredentials.cleanup(signInCredentials.creatingSignInCredentials); // delete identity if creating.
     } else {
@@ -1290,6 +1290,7 @@ Account::~Account()
 
 // QQmlParserStatus
 void Account::classBegin() { }
+
 void Account::componentComplete()
 {
     if (!d->account) {
@@ -1307,9 +1308,15 @@ void Account::componentComplete()
 }
 
 // helpers for AccountFactory only.
-Accounts::Account *Account::account() { return d->account; }
-Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent, const QVariantMap &serviceConfigValues)
-    : QObject(parent), d(new AccountPrivate(this, account, queryInfoOnCreation))
+Accounts::Account *Account::account()
+{
+    return d->account;
+}
+
+Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent,
+                 const QVariantMap &serviceConfigValues)
+    : QObject(parent)
+    , d(new AccountPrivate(this, account, queryInfoOnCreation))
 {
     if (!serviceConfigValues.isEmpty()) {
         d->configurationStates.clear();
@@ -1329,8 +1336,7 @@ Account::Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *
                 const QVariant sanitizedValue = convertValue(currValue);
                 if (sanitizedValue.isValid()) {
                     sanitizedConfig.insert(key, sanitizedValue);
-                }
-                else {
+                } else {
                     qWarning() << Q_FUNC_INFO << "Unsupported configuration value" << currValue << "for key" << key;
                 }
             }
@@ -1430,7 +1436,6 @@ void Account::remove()
         d->invalidate();
     }
 }
-
 
 /*!
     \qmlmethod Account::configurationValues(string serviceName)
@@ -1546,14 +1551,14 @@ void Account::setConfigurationValue(const QString &serviceName, const QString &k
     const bool sameValues = (baselineValue.type() == validValue.type()) && (baselineValue == validValue);
     if (serviceName.isEmpty()) {
         d->configurationValues[key] = validValue;
-        if (!sameValues || (d->configurationStates[key]
-                            != AccountPrivate::ConfigState::Default)) {
+        if (!sameValues
+                || (d->configurationStates[key] != AccountPrivate::ConfigState::Default)) {
             d->configurationStates[key] = AccountPrivate::ConfigState::Change;
         }
     } else {
         d->serviceConfigurationValues[serviceName][key] = validValue;
-        if (!sameValues || (d->serviceConfigurationStates[serviceName][key]
-                            != AccountPrivate::ConfigState::Default)) {
+        if (!sameValues
+                || (d->serviceConfigurationStates[serviceName][key] != AccountPrivate::ConfigState::Default)) {
             d->serviceConfigurationStates[serviceName][key] = AccountPrivate::ConfigState::Change;
         }
     }
@@ -1626,7 +1631,6 @@ bool Account::isEnabledWithService(const QString &serviceName) const
     See enableWithService() and disableWithService() for further details.
 */
 
-
 /*!
     \qmlmethod void Account::enableWithService(string serviceName)
 
@@ -1668,7 +1672,6 @@ void Account::enableWithService(const QString &serviceName)
     }
 }
 
-
 /*!
     \qmlmethod void Account::disableWithService(string serviceName)
 
@@ -1709,7 +1712,6 @@ void Account::disableWithService(const QString &serviceName)
         }
     }
 }
-
 
 /*!
     \qmlmethod SignInParameters Account::signInParameters(string serviceName, string username, string password)
@@ -1844,7 +1846,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         return;
     }
 
-    if (parameters == NULL) {
+    if (parameters == nullptr) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
         emit signInError(qtTrId("sailfish_accounts-account-csic_invalid_params"), Account::SignInMissingDataError);
@@ -1940,7 +1942,7 @@ void Account::createSignInCredentials(const QString &applicationName,
             methodMechanisms.insert(parameters->method(), QStringList(parameters->mechanism()));
             d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, parameters->username(), methodMechanisms);
             d->signInCredentials.identity = SignOn::Identity::newIdentity(d->signInCredentials.identityInfo);
-            if (d->signInCredentials.identity == NULL) {
+            if (d->signInCredentials.identity == nullptr) {
                 //: Error emitted if identity creation fails
                 //% "Failed to create credentials"
                 emit signInError(qtTrId("sailfish_accounts-account-oauth_identity_failed"),
@@ -1997,7 +1999,7 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.identityInfo = SignOn::IdentityInfo(applicationName, identityUsername, methodMechanisms);
         d->signInCredentials.identityInfo.setSecret(identitySecret);
         d->signInCredentials.identity = SignOn::Identity::newIdentity(d->signInCredentials.identityInfo);
-        if (d->signInCredentials.identity == NULL) {
+        if (d->signInCredentials.identity == nullptr) {
             //: Error emitted if identity creation fails
             //% "Failed to create credentials"
             emit signInError(qtTrId("sailfish_accounts-account-unpw_identity_failed"), Account::SignInUnknownError);
@@ -2079,7 +2081,7 @@ void Account::updateSignInCredentials(const QString &applicationName,
         return;
     }
 
-    if (parameters == NULL) {
+    if (parameters == nullptr) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
         emit signInError(qtTrId("sailfish_accounts-account-usic_invalid_params"), Account::SignInMissingDataError);
@@ -2113,9 +2115,10 @@ void Account::updateSignInCredentials(const QString &applicationName,
     QString credName = credentialsName.isEmpty() ? QLatin1String("default") : credentialsName;
     QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(applicationName, credName);
     quint32 identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
-    SignOn::Identity *updateIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId, this);
+    SignOn::Identity *updateIdentity = identityId == 0 ? nullptr
+                                                       : SignOn::Identity::existingIdentity(identityId, this);
 
-    if (updateIdentity == NULL) {
+    if (updateIdentity == nullptr) {
         //: Error emitted if identity could not be loaded in order to update it
         //% "Failed to load credentials to update"
         emit signInError(qtTrId("sailfish_accounts-account-update_load_failed"), Account::SignInInvalidCredentialsError);
@@ -2275,8 +2278,9 @@ void Account::removeSignInCredentials(const QString &applicationName,
 
     if (!stillInUse) {
         // remove the identity from the database
-        SignOn::Identity *removeIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId, this);
-        if (removeIdentity != NULL) {
+        SignOn::Identity *removeIdentity = identityId == 0 ? nullptr
+                                                           : SignOn::Identity::existingIdentity(identityId, this);
+        if (removeIdentity != nullptr) {
             removeIdentity->signOut();
             removeIdentity->remove();
         }
@@ -2348,7 +2352,7 @@ void Account::signIn(const QString &applicationName,
         return;
     }
 
-    if (parameters == NULL) {
+    if (parameters == nullptr) {
         //: Error emitted if function called with invalid parameters
         //% "Invalid sign-in parameters specified"
         emit signInError(qtTrId("sailfish_accounts-account-unpw_invalid_params"), Account::SignInMissingDataError);
@@ -2373,8 +2377,9 @@ void Account::signIn(const QString &applicationName,
     QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(applicationName, credName);
     int identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
 
-    SignOn::Identity *signInIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId);
-    if (signInIdentity == NULL) {
+    SignOn::Identity *signInIdentity = identityId == 0 ? nullptr
+                                                       : SignOn::Identity::existingIdentity(identityId);
+    if (signInIdentity == nullptr) {
         //: Error emitted if signon credentials could not be loaded from the database
         //% "Credentials with id %1 could not be loaded"
         emit signInError(qtTrId("sailfish_accounts-account-load_credentials_error").arg(identityId),
@@ -2402,7 +2407,8 @@ void Account::signIn(const QString &applicationName,
 
     d->signInCredentials.identity = signInIdentity;
     d->signInCredentials.session = signInIdentity->createSession(parameters->method());
-    if (d->signInCredentials.session == NULL) {
+
+    if (d->signInCredentials.session == nullptr) {
         d->signInCredentials.cleanup();
         //: Error emitted if an error occurred while creating a signon session
         //% "Unable to create signon session with the specified parameters"
@@ -2448,8 +2454,9 @@ void Account::signOut(const QString &applicationName,
     QString configurationValueKey = BUILD_CREDENTIALS_CONFIGURATION_KEY(applicationName, credName);
     int identityId = d->configurationValues.value(configurationValueKey, QVariant::fromValue<int>(0)).toInt();
 
-    SignOn::Identity *signInIdentity = identityId == 0 ? NULL : SignOn::Identity::existingIdentity(identityId, this);
-    if (signInIdentity == NULL) {
+    SignOn::Identity *signInIdentity = identityId == 0 ? nullptr
+                                                       : SignOn::Identity::existingIdentity(identityId, this);
+    if (signInIdentity == nullptr) {
         qWarning() << Q_FUNC_INFO << "credentials with id" << identityId << "could not be signed out";
         return;
     }
@@ -2496,19 +2503,22 @@ void Account::cancelSignInOperation()
 
 bool Account::enabled() const
 {
-    if (d->status == Account::Invalid)
+    if (d->status == Account::Invalid) {
         return false;
+    }
     return d->enabled;
 }
 
 void Account::setEnabled(bool e)
 {
-    if (d->status == Account::Invalid || d->status == Account::SyncInProgress)
+    if (d->status == Account::Invalid || d->status == Account::SyncInProgress) {
         return;
+    }
     setConfigurationValue(QString(), "enabled", e);
 
-    if (e == d->enabled)
+    if (e == d->enabled) {
         return;
+    }
 
     d->enabled = e;
 
@@ -2634,7 +2644,6 @@ QStringList Account::supportedServiceNames() const
     return d->supportedServiceNames;
 }
 
-
 /*!
     \qmlproperty Account::Status Account::status
     This property contains the current database-sync status of the account
@@ -2679,7 +2688,6 @@ Account::Status Account::status() const
     return d->status;
 }
 
-
 /*!
     \qmlproperty Account::Error Account::error
     This property contains the most recent error which occurred during
@@ -2693,7 +2701,6 @@ Account::ErrorType Account::error() const
 {
     return d->error;
 }
-
 
 /*!
     \qmlproperty string Account::errorMessage

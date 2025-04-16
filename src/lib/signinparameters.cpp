@@ -279,7 +279,8 @@ QString SignInParameters::password() const
     \list
     \li DefaultPolicy - UI may be shown to the user if no cached credentials exist
     \li RequestPasswordPolicy - UI will be shown to the user even if cached credentials exist
-    \li NoUserInteractionPolicy - UI will not be shown to the user even if no cached credentials exist.  The sign in operation will fail unless cached credentials exist.
+    \li NoUserInteractionPolicy - UI will not be shown to the user even if no cached credentials exist.
+        The sign in operation will fail unless cached credentials exist.
     \li ValidationPolicy - UI will only be shown to the user if validation (eg, CAPTCHA) is requested by the service
     \endlist
     
@@ -298,7 +299,8 @@ QString SignInParameters::password() const
     The value of this parameter may be:
     \list
     \li UseCachedCredentialsPolicy - sign in will return cached credentials if they exist and have not expired
-    \li RefreshCredentialsPolicy - sign in will cause a token refresh to occur even if cached credentials exist and have not expired
+    \li RefreshCredentialsPolicy - sign in will cause a token refresh to occur even if cached credentials exist
+        and have not expired
     \endlist
 
     Note that the \c UseCachedCredentialsPolicy can still result in a token

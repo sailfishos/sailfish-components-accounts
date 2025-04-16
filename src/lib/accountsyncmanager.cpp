@@ -272,7 +272,7 @@ AccountSyncProfileManagerPrivate::popProfileCreationDetails(Accounts::Account *a
 {
     if (account) {
         int accountId = account->id();
-        for (int i=0; i<profilesUnderCreation.count(); i++) {
+        for (int i = 0; i < profilesUnderCreation.count(); i++) {
             if (profilesUnderCreation[i].accountId == accountId) {
                 return profilesUnderCreation.takeAt(i);
             }
