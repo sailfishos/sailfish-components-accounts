@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2013 Jolla Ltd.
+# SPDX-FileCopyrightText: 2025 Jolla Mobile Ltd
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Define the location of the templates to use. Style sheets and scripts are
 # specified relative to the template directory and will be copied into
 # subdirectories of the output directory.
