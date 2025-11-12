@@ -385,7 +385,7 @@ QString AccountModifier::formatAllValues() const
     QString output;
 
     const QStringList keys = m_currAccount->allKeys();
-    for (const QString key : keys) {
+    for (const QString &key : keys) {
         output += QString("%1\n").arg(formatValue(key));
     }
 
