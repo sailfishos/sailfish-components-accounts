@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2013 - 2023 Jolla Ltd.
+# SPDX-FileCopyrightText: 2024 - 2025 Jolla Mobile Ltd
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 Name:       sailfish-components-accounts-qt5
 Summary:    Sailfish Accounts Components
 Version:    0.2.50
@@ -90,7 +95,7 @@ install -m 644 -p %{SOURCE1} %{buildroot}%{_datadir}/mapplauncherd/privileges.d/
 %postun -p /sbin/ldconfig
 
 %files
-%license LICENSE.BSD
+%license LICENSES/BSD-3-Clause.txt
 %{_libdir}/libsailfishaccounts.so.*
 %{_libdir}/qt5/qml/Sailfish/Accounts
 %{_datadir}/translations/*.qm

@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2020 Jolla Ltd.
+# SPDX-FileCopyrightText: 2025 Jolla Mobile Ltd
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 TEMPLATE = aux
 
 TS_FILE = $$OUT_PWD/sailfish_components_accounts_qt5.ts
