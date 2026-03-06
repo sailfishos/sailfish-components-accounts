@@ -126,30 +126,6 @@ const QVariant convertValue(const QVariant &value)
     return QVariant();
 }
 
-} // Empty namespace
-
-bool AccountPrivate::serviceReadyForEdits(const QString &serviceName) const
-{
-    if (status == Account::Invalid || status == Account::SyncInProgress) {
-        return false;
-    }
-
-    if (!serviceName.isEmpty() && !q->supportedServiceNames().contains(serviceName)) {
-        return false;
-    }
-
-    return true;
-}
-
-void AccountPrivate::setModified(bool &pendingInit)
-{
-    if (status == Account::Initializing) {
-        pendingInit = true;
-    } else {
-        setStatus(Account::Modified);
-    }
-}
-
 Account::ErrorType signOnErrorToErrorType(int signOnError)
 {
     Account::ErrorType errType = Account::SignInUnknownError;
@@ -176,6 +152,29 @@ Account::ErrorType signOnErrorToErrorType(int signOnError)
     return errType;
 }
 
+} // Empty namespace
+
+bool AccountPrivate::serviceReadyForEdits(const QString &serviceName) const
+{
+    if (status == Account::Invalid || status == Account::SyncInProgress) {
+        return false;
+    }
+
+    if (!serviceName.isEmpty() && !q->supportedServiceNames().contains(serviceName)) {
+        return false;
+    }
+
+    return true;
+}
+
+void AccountPrivate::setModified(bool &pendingInit)
+{
+    if (status == Account::Initializing) {
+        pendingInit = true;
+    } else {
+        setStatus(Account::Modified);
+    }
+}
 
 void SignInCredentials::cleanup(bool removeIdentity)
 {
