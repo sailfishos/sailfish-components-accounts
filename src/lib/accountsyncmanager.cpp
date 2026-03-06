@@ -261,7 +261,8 @@ void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId
     case Sync::SYNC_CONNECTION_ERROR:
     case Sync::SYNC_SERVER_FAILURE:
     case Sync::SYNC_BAD_REQUEST:
-        emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncError, message + ", details:" + statusDetails);
+        emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncError,
+                                         message + ", details: " + QString::number(statusDetails));
         break;
     }
 }
