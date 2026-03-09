@@ -8,7 +8,6 @@
 #include "globalaccountmanager_p.h"
 #include "globaltranslatorcache_p.h"
 
-//Qt
 #include <QDebug>
 #include <QHash>
 
@@ -25,7 +24,8 @@ public:
 
     ~ServiceModelPrivate() {}
 
-    void applyServiceTypeFilter() {
+    void applyServiceTypeFilter()
+    {
         QList<Accounts::Service> result;
         foreach (const Accounts::Service &service, serviceList) {
             if (service.serviceType() == serviceTypeFilter) {

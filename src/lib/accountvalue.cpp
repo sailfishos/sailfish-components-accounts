@@ -171,7 +171,7 @@ void AccountValuePrivate::initialise()
 
 void AccountValuePrivate::updateTargetFromRemote()
 {
-    if (m_enabled  && setupComplete() && m_targetProperty.isProperty()) {
+    if (m_enabled && setupComplete() && m_targetProperty.isProperty()) {
         Accounts::Account * const account = m_account->account();
         Accounts::Service const service = getService(m_service);
         account->selectService(service);

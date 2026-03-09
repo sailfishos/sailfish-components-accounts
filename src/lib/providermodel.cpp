@@ -11,7 +11,6 @@
 #include "globalaccountmanager_p.h"
 #include "globaltranslatorcache_p.h"
 
-//Qt
 #include <QDebug>
 #include <QHash>
 

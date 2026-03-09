@@ -7,6 +7,7 @@
 #include <QThreadStorage>
 
 QThreadStorage<Accounts::Manager *> g_accountManagers;
+
 Accounts::Manager *globalAccountManager()
 {
     if (!g_accountManagers.hasLocalData()) {

@@ -261,7 +261,8 @@ void AccountSyncProfileManagerPrivate::handleSyncStatus(const QString &profileId
     case Sync::SYNC_CONNECTION_ERROR:
     case Sync::SYNC_SERVER_FAILURE:
     case Sync::SYNC_BAD_REQUEST:
-        emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncError, message + ", details:" + statusDetails);
+        emit q->profileSyncStatusChanged(profileId, AccountSyncManager::SyncError,
+                                         message + ", details: " + QString::number(statusDetails));
         break;
     }
 }
@@ -271,7 +272,7 @@ AccountSyncProfileManagerPrivate::popProfileCreationDetails(Accounts::Account *a
 {
     if (account) {
         int accountId = account->id();
-        for (int i=0; i<profilesUnderCreation.count(); i++) {
+        for (int i = 0; i < profilesUnderCreation.count(); i++) {
             if (profilesUnderCreation[i].accountId == accountId) {
                 return profilesUnderCreation.takeAt(i);
             }

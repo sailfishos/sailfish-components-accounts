@@ -391,7 +391,7 @@ bool AccountBackupRestorer::restoreAccounts(const QString &backupFile,
         }
 
         // we need to create a new account, and set its settings to match the backed up ones.
-        Accounts::Account *newAccount = NULL;
+        Accounts::Account *newAccount = nullptr;
         QString providerName;
         QString displayName;
         bool enabled = false;
