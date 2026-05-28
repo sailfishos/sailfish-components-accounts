@@ -706,7 +706,8 @@ void AccountModifier::removeProfile()
     Buteo::ProfileManager. This ensures the profile can be updated even when sailfish-accounts-tool
     is run without privileged permissions.
  */
-bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Accounts::Service &srv, Buteo::SyncProfile *profile, const QString &templateProfile)
+bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Accounts::Service &srv,
+                                           Buteo::SyncProfile *profile, const QString &templateProfile)
 {
     if (!m_buteoClient) {
         m_buteoClient = new Buteo::SyncClientInterface;
@@ -807,7 +808,9 @@ bool AccountModifier::backupAccount(Accounts::Account *account)
 
 bool AccountModifier::restoreAccounts()
 {
-    return m_accountBackupRestorer.restoreAccounts(backupFile, &m_restoredSyncProfileProperties, &m_restoredSyncScheduleXml);
+    return m_accountBackupRestorer.restoreAccounts(backupFile,
+                                                   &m_restoredSyncProfileProperties,
+                                                   &m_restoredSyncScheduleXml);
 }
 
 void AccountModifier::triggerProfiles(Accounts::Account *account)
@@ -817,4 +820,3 @@ void AccountModifier::triggerProfiles(Accounts::Account *account)
         m_accountSyncManager.syncProfile(profileId);
     }
 }
-

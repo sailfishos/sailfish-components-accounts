@@ -96,4 +96,3 @@ bool Provider::isSingleAccount() const
 {
     return m_provider.isSingleAccount();
 }
-

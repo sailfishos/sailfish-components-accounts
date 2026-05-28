@@ -655,7 +655,7 @@ void AccountModel::accountCreated(Accounts::AccountId id)
         Q_D(AccountModel);
         Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
 
-        if (account != 0) {
+        if (account) {
             int prevCount = count();
 
             addedAccount(account);

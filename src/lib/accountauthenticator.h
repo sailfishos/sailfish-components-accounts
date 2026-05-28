@@ -21,6 +21,7 @@ class Q_DECL_EXPORT AccountAuthenticatorCredentials
     Q_PROPERTY(QString password MEMBER password)
     Q_PROPERTY(QString accessToken MEMBER accessToken)
     Q_PROPERTY(QVariantMap serviceSettings MEMBER serviceSettings)
+
 public:
     QString username;
     QString password;

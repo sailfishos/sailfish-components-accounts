@@ -68,4 +68,3 @@ QStringList ServiceType::tags() const
 {
     return m_serviceType.tags().toList();
 }
-

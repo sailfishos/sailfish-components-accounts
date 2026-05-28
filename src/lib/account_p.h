@@ -28,7 +28,8 @@ static const auto AccountReadOnlyKey = QStringLiteral("readonly");
 static const auto AccountProvisionedKey = QStringLiteral("provisioned"); // created by MDM.
 static const auto AccountLimitedKey = QStringLiteral("limited");
 
-struct SignInCredentials {
+struct SignInCredentials
+{
     bool creatingSignInCredentials;
     bool updatingSignInCredentials;
     bool signingInWithCredentials;
@@ -82,8 +83,10 @@ public:
 
     void updateStoreRepositories(bool enable);
 
-    void updateServiceKeys(const Accounts::Service &service, ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline);
-    void updateServiceKey(const ConfigStateMap &states, const QVariantMap &values, QVariantMap &baseline, const QString &key);
+    void updateServiceKeys(const Accounts::Service &service, ConfigStateMap &states,
+                           const QVariantMap &values, QVariantMap &baseline);
+    void updateServiceKey(const ConfigStateMap &states, const QVariantMap &values,
+                          QVariantMap &baseline, const QString &key);
 
     Account *q;
     Accounts::Manager *manager;

@@ -38,7 +38,8 @@ const QString ProfileMarkerBackupQuery = QStringLiteral("BackupQuery");
 const QString ProfileMarkerBackupRestore = QStringLiteral("BackupRestore");
 
 
-QString SyncProfileIdKey(const QString &templateProfileName) {
+QString SyncProfileIdKey(const QString &templateProfileName)
+{
     return QStringLiteral("%1/%2").arg(templateProfileName).arg(Buteo::KEY_PROFILE_ID);
 }
 
@@ -84,12 +85,19 @@ public:
     {
     public:
         ProfileCreationDetails()
-            : accountId(0) {}
+            : accountId(0)
+        {}
+
         ProfileCreationDetails(const QString &profId, int accId, const QString &service)
-            : profileId(profId), accountId(accId), serviceName(service) {}
+            : profileId(profId), accountId(accId), serviceName(service)
+        {}
+
         ProfileCreationDetails(int accId, const QHash<QString, QStringList> &multiple)
-            : multipleCreatedProfiles(multiple), accountId(accId) {}
-        ~ProfileCreationDetails() {}
+            : multipleCreatedProfiles(multiple), accountId(accId)
+        {}
+
+        ~ProfileCreationDetails()
+        {}
 
         QHash<QString, QStringList> multipleCreatedProfiles;
         QString profileId;
@@ -130,9 +138,8 @@ AccountSyncProfileManagerPrivate::AccountSyncProfileManagerPrivate(AccountSyncMa
     , q(parent)
     , m_accountManager(new Accounts::Manager)
     , m_profileManager(new Buteo::ProfileManager)
-    , m_buteoClient(0)
+    , m_buteoClient(new Buteo::SyncClientInterface)
 {
-    m_buteoClient = new Buteo::SyncClientInterface;
     connect(m_buteoClient, SIGNAL(syncStatus(QString,int,QString,int)),
             this, SLOT(handleSyncStatus(QString,int,QString,int)));
 }
@@ -337,8 +344,8 @@ void AccountSyncManager::syncProfile(const QString &profileId)
         return;
     }
 
-    // Not an error if startSync() returns false, as the sync may just be queued. If the sync
-    // fails, the syncStatus() signal will be received with an error.
+    // Not an error if startSync() returns false, as the sync may just be queued.
+    // If the sync fails, the syncStatus() signal will be received with an error.
     d->startSync(profileId);
 }
 
@@ -411,8 +418,9 @@ AccountSyncOptions *AccountSyncManager::accountSyncOptions(const QString &profil
     Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileId);
     if (!profile) {
         qWarning() << "Invalid profile name:" << profileId;
-        return 0;
+        return nullptr;
     }
+
     return AccountSyncOptionsPrivate::fromButeoProfile(*profile, this);
 }
 
@@ -450,7 +458,7 @@ bool AccountSyncManager::templateProfilesAvailable(const QStringList &templatePr
 {
     Q_FOREACH (const QString &profileName, templateProfiles) {
         Buteo::SyncProfile *profile = d->m_profileManager->syncProfile(profileName);
-        bool exists = (profile != 0);
+        bool exists = (profile != nullptr);
         delete profile;
         if (!exists) {
             return false;
@@ -558,11 +566,11 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
 {
     if (!account || !srv.isValid()) {
         qWarning() << "Invalid account or service";
-        return 0;
+        return nullptr;
     }
     if (templateProfileName.isEmpty()) {
         qWarning() << "Invalid templateProfileName";
-        return 0;
+        return nullptr;
     }
 
     Accounts::Service prevService = account->selectedService();
@@ -572,7 +580,7 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
     if (!templateProfile) {
         account->selectService(prevService);
         qWarning() << "Unable to load template profile:" << templateProfileName;
-        return 0;
+        return nullptr;
     }
 
     Buteo::SyncProfile *profile = templateProfile->clone();
@@ -580,7 +588,7 @@ Buteo::SyncProfile *AccountSyncManager::newProfileFromTemplate(const QString &te
         delete templateProfile;
         account->selectService(prevService);
         qWarning() << "unable to clone template profile:" << templateProfileName;
-        return 0;
+        return nullptr;
     }
 
     QString accountIdStr = QString::number(account->id());
@@ -723,7 +731,8 @@ bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::
     return !d->syncProfileIds(account, srv, QString()).isEmpty();
 }
 
-bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv, const QString &templateProfile) const
+bool AccountSyncManager::hasProfile(Accounts::Account *account, const Accounts::Service &srv,
+                                    const QString &templateProfile) const
 {
     return !d->syncProfileIds(account, srv, templateProfile).isEmpty();
 }
