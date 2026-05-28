@@ -402,7 +402,7 @@ QList<int> AccountManager::enabledAccounts(const QString &providerName, const QS
         Accounts::Account *account = Accounts::Account::fromId(d->manager, id, this);
         if (account != nullptr
                 && account->providerName() == providerName
-                && account->enabled()
+                && account->isEnabled()
                 && !account->valueAsBool(AccountCredentialsNeedUpdateKey)) {
             if (serviceName.isEmpty()) {
                 returnList.append(static_cast<int>(id));
@@ -410,7 +410,7 @@ QList<int> AccountManager::enabledAccounts(const QString &providerName, const QS
                 Accounts::Service service = d->manager->service(serviceName);
                 if (service.isValid()) {
                     account->selectService(service);
-                    if (account->enabled()) {
+                    if (account->isEnabled()) {
                         returnList.append(static_cast<int>(id));
                     }
                     account->selectService(Accounts::Service());

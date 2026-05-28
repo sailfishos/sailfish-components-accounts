@@ -140,7 +140,7 @@ void tst_Account::enabled()
     // and ensure that it's globally enabled in the database.
     Accounts::Manager m;
     Accounts::Account *a = m.account(account->identifier());
-    QVERIFY(a->enabled());
+    QVERIFY(a->isEnabled());
 
     // disable it
     account->setEnabled(false);
@@ -151,7 +151,7 @@ void tst_Account::enabled()
     // following check needs to wait until the cached copy (a) updates.
 
     // ensure that it's globally disabled in the database.
-    QTRY_VERIFY(!a->enabled());
+    QTRY_VERIFY(!a->isEnabled());
 
     QCOMPARE(spyManager.count(), 1);
     QCOMPARE(qvariant_cast<Accounts::AccountId>(spyManager.takeFirst().at(0)), newA->id());

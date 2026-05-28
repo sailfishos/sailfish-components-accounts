@@ -253,7 +253,7 @@ bool AccountBackupRestorer::backupAccount(Accounts::Account *account, const QStr
         backupIni.beginGroup(QStringLiteral("globalSettings"));
         {
             backupIni.setValue(QStringLiteral("providerName"), QVariant::fromValue<QString>(providerName));
-            backupIni.setValue(QStringLiteral("enabled"), QVariant::fromValue<bool>(account->enabled()));
+            backupIni.setValue(QStringLiteral("enabled"), QVariant::fromValue<bool>(account->isEnabled()));
             backupIni.setValue(QStringLiteral("displayName"), QVariant::fromValue<QString>(account->displayName()));
         }
         backupIni.endGroup();

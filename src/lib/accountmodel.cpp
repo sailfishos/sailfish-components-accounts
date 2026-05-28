@@ -92,14 +92,14 @@ DisplayData::DisplayData(AccountModel *parent, Accounts::Account *acct)
     Accounts::ServiceList services = account->services();
     account->selectService(Accounts::Service());
     provisioned = account->value(AccountProvisionedKey).toBool();
-    accountEnabled = account->enabled();
+    accountEnabled = account->isEnabled();
 
     for (const Accounts::Service &service : services) {
         CachedService cached;
         account->selectService(service);
         cached.name = service.name();
         cached.type = service.serviceType();
-        cached.enabled = account->enabled();
+        cached.enabled = account->isEnabled();
         serviceCache.append(cached);
     }
     account->selectService(Accounts::Service());
@@ -256,7 +256,7 @@ public:
             return QVariant::fromValue(displayData->account->provider().isValid());
         }
         if (role == AccountEnabledRole) {
-            return QVariant::fromValue(displayData->account->enabled());
+            return QVariant::fromValue(displayData->account->isEnabled());
         }
         if (role == AccountErrorRole) {
             displayData->account->selectService(Accounts::Service());
@@ -565,7 +565,7 @@ bool AccountModel::accountHasServiceOfTypeEnabled(int accountId, const QString &
         Q_FOREACH (const Accounts::Service &srv, account->services(serviceTypeName)) {
             if (srv.isValid()) {
                 account->selectService(srv);
-                bool result = account->enabled();
+                bool result = account->isEnabled();
                 if (result) {
                     account->selectService(Accounts::Service());
                     return result;

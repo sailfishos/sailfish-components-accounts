@@ -372,11 +372,11 @@ int AccountSyncManager::createAllProfiles(int accountId)
     if (account) {
         Q_FOREACH (const Accounts::Service &srv, account->services()) {
             account->selectService(srv);
-            if (account->enabled()) {
+            if (account->isEnabled()) {
                 Q_FOREACH (const QString &templateProfile, defaultTemplateProfiles(account, srv)) {
                     QString savedProfileId = account->value(SyncProfileIdKey(templateProfile)).toString();
                     if (savedProfileId.isEmpty() || !d->syncProfileFileExists(savedProfileId)) {
-                        savedProfileId = createProfile(templateProfile, account, srv, account->enabled());
+                        savedProfileId = createProfile(templateProfile, account, srv, account->isEnabled());
                         createdProfiles[srv.name()].append(savedProfileId);
                         createdCount++;
                     }

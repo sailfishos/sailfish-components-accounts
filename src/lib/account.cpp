@@ -305,8 +305,8 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
 
     // grab the default service enabled status unless the user has set it or it's a new account
     if (!enabledPendingInit && validAccountId) {
-        if (enabled != account->enabled()) {
-            enabled = account->enabled();
+        if (enabled != account->isEnabled()) {
+            enabled = account->isEnabled();
             emit q->enabledChanged();
         }
     }
@@ -407,8 +407,8 @@ void AccountPrivate::asyncQueryInfo()
     // enabled
     if (enabledPendingInit) {
         pendingInitModifications = true;
-    } else if (enabled != account->enabled()) {
-        enabled = account->enabled();
+    } else if (enabled != account->isEnabled()) {
+        enabled = account->isEnabled();
         emit q->enabledChanged();
     }
 
@@ -1615,7 +1615,7 @@ bool Account::isEnabledWithService(const QString &serviceName) const
         Accounts::Service srv = d->manager->service(serviceName);
         if (srv.isValid()) {
             d->account->selectService(srv);
-            retn = d->account->enabled();
+            retn = d->account->isEnabled();
             d->account->selectService(Accounts::Service());
         }
     }
@@ -1660,7 +1660,7 @@ void Account::enableWithService(const QString &serviceName)
         if (srv.isValid()) {
             d->serviceEnabledChanges[serviceName] = true;
             d->account->selectService(srv);
-            if (!d->account->enabled()) {
+            if (!d->account->isEnabled()) {
                 d->account->setEnabled(true);
                 d->account->selectService(Accounts::Service());
                 d->setModified(d->enabledPendingInit);
@@ -1701,7 +1701,7 @@ void Account::disableWithService(const QString &serviceName)
         if (srv.isValid()) {
             d->serviceEnabledChanges[serviceName] = false;
             d->account->selectService(srv);
-            if (d->account->enabled()) {
+            if (d->account->isEnabled()) {
                 d->account->setEnabled(false);
                 d->account->selectService(Accounts::Service());
                 d->setModified(d->enabledPendingInit);

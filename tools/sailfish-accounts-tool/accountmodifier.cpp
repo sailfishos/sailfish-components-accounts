@@ -549,7 +549,7 @@ bool AccountModifier::applySyncUpdateChanges()
 
             // only enable the profile if the account service is enabled.
             Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
-                    templateProfile, m_currAccount, srv, m_currAccount->enabled(),
+                    templateProfile, m_currAccount, srv, m_currAccount->isEnabled(),
                     m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
                     m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
             if (!profile) {
@@ -590,7 +590,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
         foreach (const Accounts::Service &srv, allServices) {
             if (srv.serviceType() == serviceType) {
                 m_currAccount->selectService(srv);
-                if (m_currAccount->enabled()) {
+                if (m_currAccount->isEnabled()) {
                     matchingService = srv;
                     break;
                 }
@@ -604,7 +604,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
     }
     m_currAccount->selectService(Accounts::Service());
     if (m_currAccount->value(KeyProviderAvailable).toBool() == providerAvailable
-            && m_currAccount->enabled() == providerAvailable) {
+            && m_currAccount->isEnabled() == providerAvailable) {
         return false;
     }
     if (providerAvailable) {
@@ -612,7 +612,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
         m_currAccount->setEnabled(!shouldEnable.isValid() || shouldEnable.toBool());
         m_currAccount->remove(KeyEnableWhenProviderAvailable);
     } else {
-        m_currAccount->setValue(KeyEnableWhenProviderAvailable, m_currAccount->enabled());
+        m_currAccount->setValue(KeyEnableWhenProviderAvailable, m_currAccount->isEnabled());
         m_currAccount->setEnabled(false);
     }
     m_currAccount->setValue(KeyProviderAvailable, providerAvailable);
@@ -638,7 +638,7 @@ bool AccountModifier::createProfiles(bool triggerSync)
             if (!m_accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
                 // Don't fail if any of the profiles cannot be created.
                 Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
-                        templateProfile, m_currAccount, srv, m_currAccount->enabled(),
+                        templateProfile, m_currAccount, srv, m_currAccount->isEnabled(),
                         m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
                         m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
                 if (!profile) {
