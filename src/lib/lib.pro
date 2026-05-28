@@ -7,7 +7,7 @@ TARGET  = sailfishaccounts
 TARGET = $$qtLibraryTarget($$TARGET)
 TARGETPATH = $$[QT_INSTALL_LIBS]
 
-QT += qml dbus
+QT += qml dbus xml
 CONFIG += qt hide_symbols create_pc create_prl no_install_prl link_pkgconfig
 PKGCONFIG += libsailfishkeyprovider accounts-qt5 libsignon-qt5 buteosyncfw5 mlite5 sailfishaccesscontrol
 LIBS += -lssu
@@ -101,7 +101,7 @@ QMAKE_PKGCONFIG_DESCRIPTION = Application-segregated encrypted account credentia
 QMAKE_PKGCONFIG_LIBDIR = $$target.path
 QMAKE_PKGCONFIG_INCDIR = $$develheaders.path
 QMAKE_PKGCONFIG_DESTDIR = pkgconfig
-QMAKE_PKGCONFIG_REQUIRES = Qt5Qml Qt5Xml accounts-qt5
+QMAKE_PKGCONFIG_REQUIRES = Qt5Qml accounts-qt5
 QMAKE_PKGCONFIG_VERSION = $$VERSION
 
 INSTALLS += target develheaders pkgconfig
