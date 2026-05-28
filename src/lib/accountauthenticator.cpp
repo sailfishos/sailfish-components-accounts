@@ -121,7 +121,7 @@ void AccountAuthenticatorPrivate::signIn(int accountId, const QString &serviceNa
     }
 
     account->selectService(srv);
-    if (!account->enabled()) {
+    if (!account->isEnabled()) {
         account->deleteLater();
 
         //% "Cannot authenticate, '%1' service is not enabled."

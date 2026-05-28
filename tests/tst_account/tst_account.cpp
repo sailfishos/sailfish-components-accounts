@@ -140,7 +140,7 @@ void tst_Account::enabled()
     // and ensure that it's globally enabled in the database.
     Accounts::Manager m;
     Accounts::Account *a = m.account(account->identifier());
-    QVERIFY(a->enabled());
+    QVERIFY(a->isEnabled());
 
     // disable it
     account->setEnabled(false);
@@ -151,7 +151,7 @@ void tst_Account::enabled()
     // following check needs to wait until the cached copy (a) updates.
 
     // ensure that it's globally disabled in the database.
-    QTRY_VERIFY(!a->enabled());
+    QTRY_VERIFY(!a->isEnabled());
 
     QCOMPARE(spyManager.count(), 1);
     QCOMPARE(qvariant_cast<Accounts::AccountId>(spyManager.takeFirst().at(0)), newA->id());
@@ -533,8 +533,7 @@ void tst_Account::configurationValues()
     QTRY_COMPARE(account->status(), Account::Synced);
     // the synced signal may be emitted from the account before the change propagates to other account instances.
     QTest::qWait(300);
-    QVariant expectStringList(QVariant::StringList);
-    a->value(testKey, expectStringList); // expectStringList is an in-out argument.
+    QVariant expectStringList = a->value(testKey);
     QCOMPARE(expectStringList, testStrListValue);
 
     // cleanup.
@@ -664,10 +663,10 @@ void tst_Account::serviceConfigurationValues()
     account->setConfigurationValue(testServiceName, testKey, testStrListValue);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
-    QVariant expectStringList(QVariant::StringList);
+
     // the synced signal may be emitted from the account before the change propagates to other account instances.
     QTest::qWait(300);
-    a->value(testKey, expectStringList); // expectStringList is an in-out parameter.
+    QVariant expectStringList = a->value(testKey);
     QCOMPARE(expectStringList, testStrListValue);
 
     // cleanup.

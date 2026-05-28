@@ -549,7 +549,7 @@ bool AccountModifier::applySyncUpdateChanges()
 
             // only enable the profile if the account service is enabled.
             Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
-                    templateProfile, m_currAccount, srv, m_currAccount->enabled(),
+                    templateProfile, m_currAccount, srv, m_currAccount->isEnabled(),
                     m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
                     m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
             if (!profile) {
@@ -590,7 +590,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
         foreach (const Accounts::Service &srv, allServices) {
             if (srv.serviceType() == serviceType) {
                 m_currAccount->selectService(srv);
-                if (m_currAccount->enabled()) {
+                if (m_currAccount->isEnabled()) {
                     matchingService = srv;
                     break;
                 }
@@ -604,7 +604,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
     }
     m_currAccount->selectService(Accounts::Service());
     if (m_currAccount->value(KeyProviderAvailable).toBool() == providerAvailable
-            && m_currAccount->enabled() == providerAvailable) {
+            && m_currAccount->isEnabled() == providerAvailable) {
         return false;
     }
     if (providerAvailable) {
@@ -612,7 +612,7 @@ bool AccountModifier::applyProviderAvailabilityChanges()
         m_currAccount->setEnabled(!shouldEnable.isValid() || shouldEnable.toBool());
         m_currAccount->remove(KeyEnableWhenProviderAvailable);
     } else {
-        m_currAccount->setValue(KeyEnableWhenProviderAvailable, m_currAccount->enabled());
+        m_currAccount->setValue(KeyEnableWhenProviderAvailable, m_currAccount->isEnabled());
         m_currAccount->setEnabled(false);
     }
     m_currAccount->setValue(KeyProviderAvailable, providerAvailable);
@@ -638,7 +638,7 @@ bool AccountModifier::createProfiles(bool triggerSync)
             if (!m_accountSyncManager.hasProfile(m_currAccount, srv, templateProfile)) {
                 // Don't fail if any of the profiles cannot be created.
                 Buteo::SyncProfile *profile = m_accountSyncManager.newProfileFromTemplate(
-                        templateProfile, m_currAccount, srv, m_currAccount->enabled(),
+                        templateProfile, m_currAccount, srv, m_currAccount->isEnabled(),
                         m_restoredSyncProfileProperties[m_currAccount->id()][templateProfile],
                         m_restoredSyncScheduleXml[m_currAccount->id()][templateProfile]);
                 if (!profile) {
@@ -706,7 +706,8 @@ void AccountModifier::removeProfile()
     Buteo::ProfileManager. This ensures the profile can be updated even when sailfish-accounts-tool
     is run without privileged permissions.
  */
-bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Accounts::Service &srv, Buteo::SyncProfile *profile, const QString &templateProfile)
+bool AccountModifier::saveProfileViaMsyncd(Accounts::Account *account, const Accounts::Service &srv,
+                                           Buteo::SyncProfile *profile, const QString &templateProfile)
 {
     if (!m_buteoClient) {
         m_buteoClient = new Buteo::SyncClientInterface;
@@ -807,7 +808,9 @@ bool AccountModifier::backupAccount(Accounts::Account *account)
 
 bool AccountModifier::restoreAccounts()
 {
-    return m_accountBackupRestorer.restoreAccounts(backupFile, &m_restoredSyncProfileProperties, &m_restoredSyncScheduleXml);
+    return m_accountBackupRestorer.restoreAccounts(backupFile,
+                                                   &m_restoredSyncProfileProperties,
+                                                   &m_restoredSyncScheduleXml);
 }
 
 void AccountModifier::triggerProfiles(Accounts::Account *account)
@@ -817,4 +820,3 @@ void AccountModifier::triggerProfiles(Accounts::Account *account)
         m_accountSyncManager.syncProfile(profileId);
     }
 }
-

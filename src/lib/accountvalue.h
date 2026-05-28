@@ -115,5 +115,4 @@ public:
     AccountValue *q;
 };
 
-
 #endif // SAILFISH_ACCOUNTS__ACCOUNTVALUE_H

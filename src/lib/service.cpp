@@ -90,4 +90,3 @@ QStringList Service::tags() const
 {
     return m_service.tags().toList();
 }
-

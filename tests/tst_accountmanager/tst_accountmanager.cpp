@@ -151,11 +151,11 @@ void tst_AccountManager::accounts()
         // ensure the sync worked correctly
         Accounts::Manager aqMan;
         Accounts::Account *aqAcc = aqMan.account(acc->identifier());
-        QVERIFY(aqAcc->enabled()); // globally enabled
+        QVERIFY(aqAcc->isEnabled()); // globally enabled
         Accounts::Service aqSrv = aqMan.service("test-service2");
         QVERIFY(aqSrv.isValid());  // service exists
         aqAcc->selectService(aqSrv);
-        QVERIFY(aqAcc->enabled()); // enabled with service
+        QVERIFY(aqAcc->isEnabled()); // enabled with service
 
         // now ensure that account retrieval works.
         Account *tempAcc = m->account(newAccountId); // string id
