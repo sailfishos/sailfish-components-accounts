@@ -101,7 +101,7 @@ QMAKE_PKGCONFIG_DESCRIPTION = Application-segregated encrypted account credentia
 QMAKE_PKGCONFIG_LIBDIR = $$target.path
 QMAKE_PKGCONFIG_INCDIR = $$develheaders.path
 QMAKE_PKGCONFIG_DESTDIR = pkgconfig
-QMAKE_PKGCONFIG_REQUIRES = Qt5Qml Qt5Xml libsailfishkeyprovider accounts-qt5
+QMAKE_PKGCONFIG_REQUIRES = Qt5Qml Qt5Xml accounts-qt5
 QMAKE_PKGCONFIG_VERSION = $$VERSION
 
 INSTALLS += target develheaders pkgconfig
