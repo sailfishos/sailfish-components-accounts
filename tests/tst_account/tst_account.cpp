@@ -533,8 +533,7 @@ void tst_Account::configurationValues()
     QTRY_COMPARE(account->status(), Account::Synced);
     // the synced signal may be emitted from the account before the change propagates to other account instances.
     QTest::qWait(300);
-    QVariant expectStringList(QVariant::StringList);
-    a->value(testKey, expectStringList); // expectStringList is an in-out argument.
+    QVariant expectStringList = a->value(testKey);
     QCOMPARE(expectStringList, testStrListValue);
 
     // cleanup.
@@ -664,10 +663,10 @@ void tst_Account::serviceConfigurationValues()
     account->setConfigurationValue(testServiceName, testKey, testStrListValue);
     account->sync();
     QTRY_COMPARE(account->status(), Account::Synced);
-    QVariant expectStringList(QVariant::StringList);
+
     // the synced signal may be emitted from the account before the change propagates to other account instances.
     QTest::qWait(300);
-    a->value(testKey, expectStringList); // expectStringList is an in-out parameter.
+    QVariant expectStringList = a->value(testKey);
     QCOMPARE(expectStringList, testStrListValue);
 
     // cleanup.
