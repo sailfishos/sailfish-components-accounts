@@ -475,7 +475,9 @@ AccountSyncOptions *AccountSyncOptionsPrivate::fromButeoProfile(const Buteo::Syn
     }
     d->m_allowedConnectionTypes = connectionTypes;
 
-    QObject::connect(d->m_schedule, SIGNAL(modifiedChanged()), options, SIGNAL(modifiedChanged()));
+    QObject::connect(d->m_schedule, &AccountSyncSchedule::modifiedChanged,
+                     options, &AccountSyncOptions::modifiedChanged);
+
     d->m_modified = false;
 
     return options;
@@ -669,7 +671,8 @@ void AccountSyncOptions::setSchedule(AccountSyncSchedule *schedule)
 {
     if (d->m_schedule != schedule) {
         d->m_schedule = schedule;
-        connect(d->m_schedule, SIGNAL(modifiedChanged()), this, SIGNAL(modifiedChanged()));
+        connect(d->m_schedule, &AccountSyncSchedule::modifiedChanged,
+                this, &AccountSyncOptions::modifiedChanged);
         emit scheduleChanged();
         d->setModified(true);
     }

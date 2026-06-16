@@ -140,8 +140,8 @@ AccountSyncProfileManagerPrivate::AccountSyncProfileManagerPrivate(AccountSyncMa
     , m_profileManager(new Buteo::ProfileManager)
     , m_buteoClient(new Buteo::SyncClientInterface)
 {
-    connect(m_buteoClient, SIGNAL(syncStatus(QString,int,QString,int)),
-            this, SLOT(handleSyncStatus(QString,int,QString,int)));
+    connect(m_buteoClient, &Buteo::SyncClientInterface::syncStatus,
+            this, &AccountSyncProfileManagerPrivate::handleSyncStatus);
 }
 
 AccountSyncProfileManagerPrivate::~AccountSyncProfileManagerPrivate()
@@ -156,8 +156,10 @@ void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account
 {
     ProfileCreationDetails details(profileId, account->id(), serviceName);
     profilesUnderCreation.append(details);
-    connect(account, SIGNAL(synced()), this, SLOT(handleAccountSynced()));
-    connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountSyncError()));
+    connect(account, &Accounts::Account::synced,
+            this, &AccountSyncProfileManagerPrivate::handleAccountSynced);
+    connect(account, &Accounts::Account::error,
+            this, &AccountSyncProfileManagerPrivate::handleAccountSyncError);
     account->sync();
 }
 
@@ -166,8 +168,10 @@ void AccountSyncProfileManagerPrivate::finalizeProfileCreation(Accounts::Account
 {
     ProfileCreationDetails details(account->id(), multipleCreatedProfiles);
     profilesUnderCreation.append(details);
-    connect(account, SIGNAL(synced()), this, SLOT(handleAccountSynced()));
-    connect(account, SIGNAL(error(Accounts::Error)), this, SLOT(handleAccountSyncError()));
+    connect(account, &Accounts::Account::synced,
+            this, &AccountSyncProfileManagerPrivate::handleAccountSynced);
+    connect(account, &Accounts::Account::error,
+            this, &AccountSyncProfileManagerPrivate::handleAccountSyncError);
     account->sync();
 }
 

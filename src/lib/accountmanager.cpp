@@ -36,14 +36,15 @@ AccountManagerPrivate::AccountManagerPrivate(AccountManager *parent)
     serviceTypeNames = serviceTypeNamesSet.values();
 
     manager->setTimeout(5000); // default 5 second timeout on database operations
-    connect(manager, SIGNAL(accountCreated(Accounts::AccountId)),
-            this, SLOT(updateEverything()));
-    connect(manager, SIGNAL(accountUpdated(Accounts::AccountId)),
-            this, SLOT(updateEverything()));
-    connect(manager, SIGNAL(accountRemoved(Accounts::AccountId)),
-            this, SLOT(updateEverything()));
-    connect(manager, SIGNAL(enabledEvent(Accounts::AccountId)),
-            this, SLOT(updateEverything()));
+
+    connect(manager, &Accounts::Manager::accountCreated,
+            this, &AccountManagerPrivate::updateEverything);
+    connect(manager, &Accounts::Manager::accountUpdated,
+            this, &AccountManagerPrivate::updateEverything);
+    connect(manager, &Accounts::Manager::accountRemoved,
+            this, &AccountManagerPrivate::updateEverything);
+    connect(manager, &Accounts::Manager::enabledEvent,
+            this, &AccountManagerPrivate::updateEverything);
     updateEverything();
 }
 
@@ -273,8 +274,10 @@ bool AccountManager::createAccount(const QString &providerName)
         }
 
         d->creatingAccounts.insert(newAccount, providerName);
-        connect(newAccount, SIGNAL(synced()), d, SLOT(createAccountSynced()));
-        connect(newAccount, SIGNAL(error(Accounts::Error)), d, SLOT(createAccountError(Accounts::Error)));
+        connect(newAccount, &Accounts::Account::synced,
+                d, &AccountManagerPrivate::createAccountSynced);
+        connect(newAccount, &Accounts::Account::error,
+                d, &AccountManagerPrivate::createAccountError);
         newAccount->setEnabled(false);
         newAccount->sync();
         return true;

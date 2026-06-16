@@ -273,16 +273,21 @@ void AccountPrivate::setAccount(Accounts::Account *acc, bool queryInfo)
     account = acc;
 
     // connect up our signals.
-    connect(account, SIGNAL(enabledChanged(QString,bool)),
-            this, SLOT(enabledHandler(QString,bool)), Qt::UniqueConnection);
-    connect(account, SIGNAL(displayNameChanged(QString)),
-            this, SLOT(displayNameChangedHandler()), Qt::UniqueConnection);
-    connect(account, SIGNAL(synced()),
-            this, SLOT(handleSynced()), Qt::UniqueConnection);
-    connect(account, SIGNAL(removed()),
-            this, SLOT(handleRemoved()), Qt::UniqueConnection);
-    connect(account, SIGNAL(destroyed()),
-            this, SLOT(invalidate()), Qt::UniqueConnection);
+    connect(account, &Accounts::Account::enabledChanged,
+            this, &AccountPrivate::enabledHandler,
+            Qt::UniqueConnection);
+    connect(account, &Accounts::Account::displayNameChanged,
+            this, &AccountPrivate::displayNameChangedHandler,
+            Qt::UniqueConnection);
+    connect(account, &Accounts::Account::synced,
+            this, &AccountPrivate::handleSynced,
+            Qt::UniqueConnection);
+    connect(account, &Accounts::Account::removed,
+            this, &AccountPrivate::handleRemoved,
+            Qt::UniqueConnection);
+    connect(account, &Accounts::Account::destroyed,
+            this, &AccountPrivate::invalidate,
+            Qt::UniqueConnection);
 
     // grab the provider name: this is necessary for provenance
     if (providerName != account->providerName()) {
@@ -744,12 +749,15 @@ void AccountPrivate::handleCredentialsStored(quint32 id)
         return;
     }
 
-    connect(signInCredentials.session, SIGNAL(response(SignOn::SessionData)),
-            this, SLOT(handleResponse(SignOn::SessionData)), Qt::UniqueConnection);
-    connect(signInCredentials.session, SIGNAL(error(SignOn::Error)),
-            this, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
-    connect(signInCredentials.session, SIGNAL(stateChanged(SignOn::AuthSession::AuthSessionState,QString)),
-            this, SLOT(handleStateChanged(SignOn::AuthSession::AuthSessionState,QString)), Qt::UniqueConnection);
+    connect(signInCredentials.session, &SignOn::AuthSession::response,
+            this, &AccountPrivate::handleResponse,
+            Qt::UniqueConnection);
+    connect(signInCredentials.session, &SignOn::AuthSession::error,
+            this, &AccountPrivate::handleSignOnError,
+            Qt::UniqueConnection);
+    connect(signInCredentials.session, &SignOn::AuthSession::stateChanged,
+            this, &AccountPrivate::handleStateChanged,
+            Qt::UniqueConnection);
 
     signInCredentials.session->process(SignOn::SessionData(signInCredentials.sessionData), signInCredentials.mechanism);
 }
@@ -768,8 +776,9 @@ void AccountPrivate::handleCredentialsInfo(const SignOn::IdentityInfo &info)
         updatedInfo.setSecret(signInCredentials.password, true);
     signInCredentials.identityInfo = updatedInfo;
 
-    connect(signInCredentials.identity, SIGNAL(credentialsStored(quint32)),
-            this, SLOT(handleCredentialsStored(quint32)), Qt::UniqueConnection);
+    connect(signInCredentials.identity, &SignOn::Identity::credentialsStored,
+            this, &AccountPrivate::handleCredentialsStored,
+            Qt::UniqueConnection);
 
     signInCredentials.identity->storeCredentials(signInCredentials.identityInfo);
 }
@@ -891,8 +900,9 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
                                          &configurationValues);
 
         // and write the changes to the accounts database
-        connect(account, SIGNAL(error(Accounts::Error)),
-                this, SLOT(handleAccountError()), Qt::UniqueConnection);
+        connect(account, &Accounts::Account::error,
+                this, &AccountPrivate::handleAccountError,
+                Qt::UniqueConnection);
 
         // have already connected account->synced() to handleSynced()
         account->sync();
@@ -928,7 +938,7 @@ void AccountPrivate::handleResponse(const SignOn::SessionData &data)
                 } else {
                     // we need to wait for the expiry to finish before forcing refresh.
                     signInCredentials.forcingCredentialsRefresh = false;
-                    QTimer::singleShot(3000, this, SLOT(handleExpiryTimeout()));
+                    QTimer::singleShot(3000, this, &AccountPrivate::handleExpiryTimeout);
                 }
             } else {
                 signInCredentials.cleanup();
@@ -1969,16 +1979,19 @@ void Account::createSignInCredentials(const QString &applicationName,
                 return;
             }
 
-            connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
-                    d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
-            connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)),
-                    d, SLOT(handleCredentialsStored(quint32)), Qt::UniqueConnection);
+            connect(d->signInCredentials.identity, &SignOn::Identity::error,
+                    d, &AccountPrivate::handleCredentialsFailed,
+                    Qt::UniqueConnection);
+            connect(d->signInCredentials.identity, &SignOn::Identity::credentialsStored,
+                    d, &AccountPrivate::handleCredentialsStored,
+                    Qt::UniqueConnection);
 
             d->setStatus(Account::SigningIn);
             d->signInCredentials.identity->storeCredentials(d->signInCredentials.identityInfo);
         } else {
-            connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
-                    d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
+            connect(d->signInCredentials.identity, &SignOn::Identity::error,
+                    d, &AccountPrivate::handleCredentialsFailed,
+                    Qt::UniqueConnection);
             d->setStatus(Account::SigningIn);
             d->handleCredentialsStored(d->signInCredentials.identity->id()); // reusing previously stored identity.
         }
@@ -2041,10 +2054,12 @@ void Account::createSignInCredentials(const QString &applicationName,
         d->signInCredentials.forcingCredentialsRefresh = false;
         d->signInCredentials.haveForcedCredentialsExpiry = false;
 
-        connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
-                d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
-        connect(d->signInCredentials.identity, SIGNAL(credentialsStored(quint32)),
-                d, SLOT(handleCredentialsStored(quint32)), Qt::UniqueConnection);
+        connect(d->signInCredentials.identity, &SignOn::Identity::error,
+                d, &AccountPrivate::handleCredentialsFailed,
+                Qt::UniqueConnection);
+        connect(d->signInCredentials.identity, &SignOn::Identity::credentialsStored,
+                d, &AccountPrivate::handleCredentialsStored,
+                Qt::UniqueConnection);
 
         d->setStatus(Account::SigningIn);
         d->signInCredentials.identity->storeCredentials(d->signInCredentials.identityInfo);
@@ -2173,8 +2188,9 @@ void Account::updateSignInCredentials(const QString &applicationName,
         d->signInCredentials.forcingCredentialsRefresh = false;
         d->signInCredentials.haveForcedCredentialsExpiry = false;
 
-        connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
-                d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
+        connect(d->signInCredentials.identity, &SignOn::Identity::error,
+                d, &AccountPrivate::handleCredentialsFailed,
+                Qt::UniqueConnection);
 
         d->setStatus(Account::SigningIn);
         d->handleCredentialsStored(identityId);
@@ -2227,10 +2243,12 @@ void Account::updateSignInCredentials(const QString &applicationName,
         d->signInCredentials.forcingCredentialsRefresh = false;
         d->signInCredentials.haveForcedCredentialsExpiry = false;
 
-        connect(d->signInCredentials.identity, SIGNAL(error(SignOn::Error)),
-                d, SLOT(handleCredentialsFailed(SignOn::Error)), Qt::UniqueConnection);
-        connect(d->signInCredentials.identity, SIGNAL(info(SignOn::IdentityInfo)),
-                d, SLOT(handleCredentialsInfo(SignOn::IdentityInfo)), Qt::UniqueConnection);
+        connect(d->signInCredentials.identity, &SignOn::Identity::error,
+                d, &AccountPrivate::handleCredentialsFailed,
+                Qt::UniqueConnection);
+        connect(d->signInCredentials.identity, &SignOn::Identity::info,
+                d, &AccountPrivate::handleCredentialsInfo,
+                Qt::UniqueConnection);
 
         d->setStatus(Account::SigningIn);
         d->signInCredentials.identity->queryInfo();
@@ -2438,12 +2456,15 @@ void Account::signIn(const QString &applicationName,
         return;
     }
 
-    connect(d->signInCredentials.session, SIGNAL(response(SignOn::SessionData)),
-            d, SLOT(handleResponse(SignOn::SessionData)), Qt::UniqueConnection);
-    connect(d->signInCredentials.session, SIGNAL(error(SignOn::Error)),
-            d, SLOT(handleSignOnError(SignOn::Error)), Qt::UniqueConnection);
-    connect(d->signInCredentials.session, SIGNAL(stateChanged(SignOn::AuthSession::AuthSessionState,QString)),
-            d, SLOT(handleStateChanged(SignOn::AuthSession::AuthSessionState,QString)), Qt::UniqueConnection);
+    connect(d->signInCredentials.session, &SignOn::AuthSession::response,
+            d, &AccountPrivate::handleResponse,
+            Qt::UniqueConnection);
+    connect(d->signInCredentials.session, &SignOn::AuthSession::error,
+            d, &AccountPrivate::handleSignOnError,
+            Qt::UniqueConnection);
+    connect(d->signInCredentials.session, &SignOn::AuthSession::stateChanged,
+            d, &AccountPrivate::handleStateChanged,
+            Qt::UniqueConnection);
 
     d->setStatus(Account::SigningIn);
     d->signInCredentials.session->process(SignOn::SessionData(sipParams), parameters->mechanism());

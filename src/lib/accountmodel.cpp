@@ -402,14 +402,14 @@ AccountModel::AccountModel(QObject* parent)
     d->headerData.insert(AccountProvisionedRole, "accountProvisioned");
     d->headerData.insert(AccountLimitedRole, "accountLimited");
 
-    QObject::connect(d->manager, SIGNAL(accountCreated(Accounts::AccountId)),
-                     this, SLOT(accountCreated(Accounts::AccountId)));
-    QObject::connect(d->manager, SIGNAL(accountRemoved(Accounts::AccountId)),
-                     this, SLOT(accountRemoved(Accounts::AccountId)));
-    QObject::connect(d->manager, SIGNAL(accountUpdated(Accounts::AccountId)),
-                     this, SLOT(accountUpdated(Accounts::AccountId)));
-    QObject::connect(d->manager, SIGNAL(enabledEvent(Accounts::AccountId)),
-                     this, SLOT(accountUpdated(Accounts::AccountId)));
+    QObject::connect(d->manager, &Accounts::Manager::accountCreated,
+                     this, &AccountModel::accountCreated);
+    QObject::connect(d->manager, &Accounts::Manager::accountRemoved,
+                     this, &AccountModel::accountRemoved);
+    QObject::connect(d->manager, &Accounts::Manager::accountUpdated,
+                     this, &AccountModel::accountUpdated);
+    QObject::connect(d->manager, &Accounts::Manager::enabledEvent,
+                     this, &AccountModel::accountUpdated);
 }
 
 AccountModel::~AccountModel()
@@ -711,8 +711,8 @@ void AccountModel::monitorSyncStatus(Accounts::Account *account)
 
     if (!d->accountSyncManager) {
         d->accountSyncManager = new AccountSyncManager(this);
-        connect(d->accountSyncManager, SIGNAL(profileSyncStatusChanged(QString,int,QString)),
-                SLOT(profileSyncStatusChanged(QString,int,QString)));
+        connect(d->accountSyncManager, &AccountSyncManager::profileSyncStatusChanged,
+                this, &AccountModel::profileSyncStatusChanged);
     }
 }
 
@@ -849,10 +849,10 @@ int AccountModel::getFilteredAccountsIndex(Accounts::AccountId id) const
 void AccountModel::addedAccount(Accounts::Account *account)
 {
     if (account) {
-        QObject::connect(account, SIGNAL(displayNameChanged(QString)),
-                this, SLOT(accountDisplayNameChanged()));
-        QObject::connect(account, SIGNAL(enabledChanged(QString,bool)),
-                this, SLOT(accountEnabledChanged()));
+        QObject::connect(account, &Accounts::Account::displayNameChanged,
+                this, &AccountModel::accountDisplayNameChanged);
+        QObject::connect(account, &Accounts::Account::enabledChanged,
+                this, &AccountModel::accountEnabledChanged);
     }
 }
 
