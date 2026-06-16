@@ -49,7 +49,7 @@ protected:
 private:
     ServiceModelPrivate* d_ptr;
     Q_DISABLE_COPY(ServiceModel)
-    Q_DECLARE_PRIVATE(ServiceModel);
+    Q_DECLARE_PRIVATE(ServiceModel)
 };
 
 #endif

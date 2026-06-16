@@ -4,7 +4,6 @@
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
-//project
 #include "accountmodel.h"
 #include "account.h"
 #include "account_p.h"
@@ -13,11 +12,10 @@
 #include "globalaccountmanager_p.h"
 #include "globaltranslatorcache_p.h"
 
-//Qt
 #include <QtDebug>
 #include <QTimer>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Manager>
 #include <Accounts/Account>
 #include <Accounts/Provider>
@@ -153,7 +151,8 @@ QString DisplayData::displayName()
 
     const QString savedDisplayName = account->displayName();
     account->selectService(Accounts::Service());
-    if (savedDisplayName.isEmpty() || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
+    if (savedDisplayName.isEmpty()
+        || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
         if (providerDisplayName.isEmpty()){
             if (account->provider().isValid()) {
                 providerDisplayName = SailfishAccounts::translatedDisplayName(account->provider());
@@ -207,7 +206,7 @@ class AccountModel::AccountModelPrivate
 {
 public:
     AccountModelPrivate()
-        : accountSyncManager(0)
+        : accountSyncManager(nullptr)
         , filterType(AccountModel::NoFilter)
         , rowToUpdate(-1)
         , componentComplete(false)
@@ -245,7 +244,8 @@ public:
         if (role == ProviderDisplayNameRole) {
             if (displayData->providerDisplayName.isEmpty()) {
                 if (displayData->account->provider().isValid()) {
-                    displayData->providerDisplayName = SailfishAccounts::translatedDisplayName(displayData->account->provider());
+                    displayData->providerDisplayName
+                        = SailfishAccounts::translatedDisplayName(displayData->account->provider());
                 } else {
                     displayData->providerDisplayName = obsoleteAccountProviderDisplayName();
                 }
@@ -514,9 +514,11 @@ void AccountModel::setAccountEnabled(int accountId, bool enabled)
             Q_FOREACH (const Accounts::Service &srv, d->accountsList[i]->account->services()) {
                 d->accountsList[i]->account->selectService(srv);
                 if (d->accountsList[i]->account->value(AccountUpdatedSignalTriggerDummyValueKey).toBool()) {
-                    d->accountsList[i]->account->setValue(AccountUpdatedSignalTriggerDummyValueKey, QVariant::fromValue<bool>(false));
+                    d->accountsList[i]->account->setValue(AccountUpdatedSignalTriggerDummyValueKey,
+                                                          QVariant::fromValue<bool>(false));
                 } else {
-                    d->accountsList[i]->account->setValue(AccountUpdatedSignalTriggerDummyValueKey, QVariant::fromValue<bool>(true));
+                    d->accountsList[i]->account->setValue(AccountUpdatedSignalTriggerDummyValueKey,
+                                                          QVariant::fromValue<bool>(true));
                 }
             }
             d->accountsList[i]->account->selectService(Accounts::Service());
@@ -530,7 +532,7 @@ QVariantMap AccountModel::getByAccount(int accountId)
 {
     Q_D(AccountModel);
     QVariantMap ret;
-    for (int i=0; i<d->accountsList.count(); i++) {
+    for (int i = 0; i < d->accountsList.count(); i++) {
         if (d->accountsList[i]->account->id() == (uint)accountId) {
             Q_FOREACH (int role, d->headerData.keys()) {
                 ret.insert(d->headerData[role], d->getModelData(d->accountsList[i], role));

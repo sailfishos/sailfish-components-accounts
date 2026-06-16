@@ -83,7 +83,7 @@ protected:
 private:
     ProviderModelPrivate* d_ptr;
     Q_DISABLE_COPY(ProviderModel)
-    Q_DECLARE_PRIVATE(ProviderModel);
+    Q_DECLARE_PRIVATE(ProviderModel)
 };
 
 #endif

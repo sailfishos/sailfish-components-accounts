@@ -12,10 +12,8 @@
 #include <QGuiApplication>
 #include <QLocale>
 
-// impl detail
 #include "globalaccountmanager_p.h"
 
-// public types
 #include "account.h"
 #include "accountmanager.h"
 #include "accountmodel.h"

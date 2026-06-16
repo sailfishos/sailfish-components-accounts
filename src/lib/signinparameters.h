@@ -15,6 +15,7 @@
 #include <QVariant>
 
 class Account;
+
 class Q_DECL_EXPORT SignInParameters : public QObject
 {
     Q_OBJECT

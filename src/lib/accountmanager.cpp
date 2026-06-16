@@ -17,13 +17,17 @@
 
 #include <QtDebug>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Manager>
 
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 
 AccountManagerPrivate::AccountManagerPrivate(AccountManager *parent)
-    : QObject(parent), q(parent), manager(globalAccountManager()), componentComplete(false), busy(false)
+    : QObject(parent)
+    , q(parent)
+    , manager(globalAccountManager())
+    , componentComplete(false)
+    , busy(false)
 {
     Accounts::ServiceList allServices = manager->serviceList();
     QSet<QString> serviceTypeNamesSet;
