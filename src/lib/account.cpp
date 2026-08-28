@@ -227,6 +227,7 @@ AccountPrivate::AccountPrivate(Account *parent, Accounts::Account *acc, bool que
     , enabled(false)
     , enabledPendingInit(false)
     , displayNamePendingInit(false)
+    , displayNameModified(false)
     , configurationValuesPendingInit(false)
     , constructedWithAccountPtr(false)
     , provisioned(false)
@@ -626,7 +627,8 @@ bool AccountPrivate::prepareSync()
     account->selectService(Accounts::Service());
 
     // set the display name
-    account->setDisplayName(displayName);
+    if (displayNameModified)
+        account->setDisplayName(displayName);
 
     // and write to database.
     setStatus(Account::SyncInProgress);
@@ -687,6 +689,8 @@ void AccountPrivate::handleSynced()
         if (configurationValues.contains(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY)) {
             setUserName(configurationValues.value(DEFAULT_CREDENTIALS_USERNAME_CONFIGURATION_KEY).toString());
         }
+
+        displayNameModified = false;
 
         // and update our status.
         if (signInCredentials.creatingSignInCredentials) {
@@ -1574,21 +1578,28 @@ void Account::setConfigurationValue(const QString &serviceName, const QString &k
     // maps when someone else changes an account setting.
 
     // Only update the state if we moved away from the baseline.
+    bool change = false;
     const bool sameValues = (baselineValue.type() == validValue.type()) && (baselineValue == validValue);
+
     if (serviceName.isEmpty()) {
         d->configurationValues[key] = validValue;
         if (!sameValues
                 || (d->configurationStates[key] != AccountPrivate::ConfigState::Default)) {
+            change = true;
             d->configurationStates[key] = AccountPrivate::ConfigState::Change;
         }
     } else {
         d->serviceConfigurationValues[serviceName][key] = validValue;
         if (!sameValues
                 || (d->serviceConfigurationStates[serviceName][key] != AccountPrivate::ConfigState::Default)) {
+            change = true;
             d->serviceConfigurationStates[serviceName][key] = AccountPrivate::ConfigState::Change;
         }
     }
-    d->setModified(d->configurationValuesPendingInit);
+
+    if (change) {
+        d->setModified(d->configurationValuesPendingInit);
+    }
 }
 
 /*!
@@ -2642,11 +2653,15 @@ QString Account::displayName() const
 
 void Account::setDisplayName(const QString &dn)
 {
-    if (d->status == Account::Invalid || d->status == Account::SyncInProgress)
+    if (d->status == Account::Invalid
+        || d->status == Account::SyncInProgress
+        || (d->status != Account::Initializing && d->displayName == dn))
         return;
 
     d->displayName = dn;
     d->setModified(d->displayNamePendingInit);
+    d->displayNameModified = true; // with separate setter this is slightly special case
+
     emit displayNameChanged();
 }
 

@@ -114,6 +114,7 @@ public:
     QMap<QString, bool> serviceEnabledChanges;
     bool enabledPendingInit;
     bool displayNamePendingInit;
+    bool displayNameModified;
     bool configurationValuesPendingInit;
     bool constructedWithAccountPtr;
 
