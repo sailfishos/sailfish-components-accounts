@@ -1686,13 +1686,14 @@ void Account::enableWithService(const QString &serviceName)
         if (srv.isValid()) {
             d->serviceEnabledChanges[serviceName] = true;
             d->account->selectService(srv);
+
             if (!d->account->isEnabled()) {
                 d->account->setEnabled(true);
-                d->account->selectService(Accounts::Service());
                 d->setModified(d->enabledPendingInit);
-            } else {
-                d->account->selectService(Accounts::Service());
             }
+
+            d->account->selectService(Accounts::Service());
+
             setConfigurationValue(serviceName, "enabled", true);
         }
     }
@@ -1727,13 +1728,13 @@ void Account::disableWithService(const QString &serviceName)
         if (srv.isValid()) {
             d->serviceEnabledChanges[serviceName] = false;
             d->account->selectService(srv);
+
             if (d->account->isEnabled()) {
                 d->account->setEnabled(false);
-                d->account->selectService(Accounts::Service());
                 d->setModified(d->enabledPendingInit);
-            } else {
-                d->account->selectService(Accounts::Service());
             }
+
+            d->account->selectService(Accounts::Service());
             setConfigurationValue(serviceName, "enabled", false);
         }
     }
