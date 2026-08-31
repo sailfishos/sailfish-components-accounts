@@ -8,10 +8,9 @@
 #ifndef SAILFISH_ACCOUNTS__ACCOUNTMODEL_H
 #define SAILFISH_ACCOUNTS__ACCOUNTMODEL_H
 
-//accounts-qt
+// accounts-qt
 #include <Accounts/Manager>
 
-//Qt
 #include <QQmlParserStatus>
 #include <QAbstractTableModel>
 #include <QMap>

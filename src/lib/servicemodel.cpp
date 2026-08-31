@@ -11,7 +11,7 @@
 #include <QDebug>
 #include <QHash>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Manager>
 
 class ServiceModel::ServiceModelPrivate

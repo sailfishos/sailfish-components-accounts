@@ -12,7 +12,7 @@
 #include <QtCore/QStringList>
 #include <QtCore/QString>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Manager>
 #include <Accounts/Account>
 

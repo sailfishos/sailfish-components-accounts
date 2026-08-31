@@ -13,7 +13,7 @@
 #include <QStringList>
 #include <QString>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Provider>
 
 class Q_DECL_EXPORT Provider : public QObject

@@ -17,7 +17,7 @@
 #include <QtGlobal>
 #include <QQmlParserStatus>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Account>
 #include <Accounts/Error>
 
@@ -89,8 +89,8 @@ public:
     ~Account();
 
     // QQmlParserStatus
-    void classBegin();
-    void componentComplete();
+    void classBegin() override;
+    void componentComplete() override;
 
     // database sync
     Q_INVOKABLE void sync();
@@ -175,8 +175,8 @@ Q_SIGNALS:
 protected:
     Account(QObject *parent, AccountPrivate *d);
 
-// the following should be protected, but are public to allow AccountFactory
-// (from jolla-settings-accounts) to use them during account creation.
+    // the following should be protected, but are public to allow AccountFactory
+    // (from jolla-settings-accounts) to use them during account creation.
 public:
     Account(bool queryInfoOnCreation, Accounts::Account *account, QObject *parent,
             const QVariantMap &serviceConfigValues = QVariantMap());

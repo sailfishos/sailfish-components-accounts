@@ -15,11 +15,11 @@
 #include <QStringList>
 #include <QString>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Account>
 #include <Accounts/Manager>
 
-//libsignon-qt
+// libsignon-qt
 #include <SignOn/Identity>
 #include <SignOn/IdentityInfo>
 #include <SignOn/AuthSession>
@@ -114,6 +114,7 @@ public:
     QMap<QString, bool> serviceEnabledChanges;
     bool enabledPendingInit;
     bool displayNamePendingInit;
+    bool displayNameModified;
     bool configurationValuesPendingInit;
     bool constructedWithAccountPtr;
 

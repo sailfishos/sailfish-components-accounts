@@ -6,7 +6,7 @@
 
 #include "providerhelper.h"
 
-//AccessControl
+// AccessControl
 #include <sailfishaccesscontrol.h>
 #include <unistd.h>
 

@@ -9,7 +9,7 @@
 #include "globaltranslatorcache_p.h"
 #include <QTranslator>
 
-//libaccounts-qt
+// libaccounts-qt
 #include <Accounts/Manager>
 
 /*!

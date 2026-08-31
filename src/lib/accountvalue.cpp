@@ -22,7 +22,6 @@ AccountValuePrivate::AccountValuePrivate(AccountValue *parent)
     , m_delayInitialisation(false)
     , q(parent)
 {
-    // Do nothing else
 }
 
 AccountValuePrivate::~AccountValuePrivate()
@@ -41,12 +40,10 @@ AccountValue::AccountValue(QObject *parent)
     : QObject(parent)
     , d(new AccountValuePrivate(this))
 {
-    // Do nothing else
 }
 
 AccountValue::~AccountValue()
 {
-    // Do nothing
 }
 
 Account *AccountValue::account() const

@@ -4,7 +4,6 @@
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
-//project
 #include "providermodel.h"
 #include "provider.h"
 #include "providerhelper.h"
@@ -223,7 +222,8 @@ ProviderModel::ProviderModel(QObject* parent)
         }
         d->providerList.append(provider);
     }
-    std::sort(d->providerList.begin(), d->providerList.end(), [](const Accounts::Provider &a, const Accounts::Provider &b) {
+    std::sort(d->providerList.begin(), d->providerList.end(),
+              [](const Accounts::Provider &a, const Accounts::Provider &b) {
         return SailfishAccounts::translatedDisplayName(a).localeAwareCompare(SailfishAccounts::translatedDisplayName(b)) < 0;
     });
     d->filteredProviderList = d->providerList;
