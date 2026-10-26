@@ -35,8 +35,8 @@ public:
     ~AccountAuthenticatorPrivate();
 
     void signIn(int accountId, const QString &serviceName);
-    void sendAuthenticatedRequest(const QUrl &url, const AccountAuthenticatorCredentials &credentials,
-                                  bool ignoreSslErrors);
+    void sendAuthenticatedRequest(const QUrl &url, const QString &serviceName,
+                                  const AccountAuthenticatorCredentials &credentials, bool ignoreSslErrors);
     void sendOcsUserRequest(int accountId,
                             const QString &serviceName,
                             const AccountAuthenticatorCredentials &credentials,

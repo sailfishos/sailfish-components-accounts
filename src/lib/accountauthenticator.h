@@ -41,6 +41,7 @@ public:
     Q_INVOKABLE void signIn(int accountId, const QString &serviceName);
 
     Q_INVOKABLE void sendAuthenticatedRequest(const QUrl &url,
+                                              const QString &serviceName,
                                               const AccountAuthenticatorCredentials &credentials,
                                               bool ignoreSslErrors);
     Q_INVOKABLE void sendOcsUserRequest(int accountId,
