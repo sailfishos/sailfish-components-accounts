@@ -24,6 +24,7 @@
 static const QString AccountUpdatedSignalTriggerDummyValueKey = QStringLiteral("dummy_value");
 static const QString AccountCredentialsNeedUpdateKey = QStringLiteral("CredentialsNeedUpdate");
 static const QString AccountDefaultCredentialsUserName = QStringLiteral("default_credentials_username");
+static const QString AccountDefaultCredentialsUserDisplayName = QStringLiteral("default_credentials_username_display");
 
 namespace {
     QString obsoleteAccountProviderDisplayName()
@@ -152,6 +153,7 @@ QString DisplayData::displayName()
     const QString savedDisplayName = account->displayName();
     account->selectService(Accounts::Service());
     if (savedDisplayName.isEmpty()
+        || savedDisplayName == account->value(AccountDefaultCredentialsUserDisplayName).toString()
         || savedDisplayName == account->value(AccountDefaultCredentialsUserName).toString()) {
         if (providerDisplayName.isEmpty()){
             if (account->provider().isValid()) {
@@ -274,6 +276,10 @@ public:
             if (userName.isEmpty() && !displayData->account->provider().isValid()) {
                 return obsoleteAccountProviderDisplayName();
             } else {
+                const QString userDisplayName = displayData->account->value(AccountDefaultCredentialsUserDisplayName).toString();
+                if (!userDisplayName.isNull()) { // Allow to hide user name
+                    return userDisplayName;
+                }
                 return userName;
             }
         }
