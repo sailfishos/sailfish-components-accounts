@@ -55,10 +55,11 @@ void AccountAuthenticator::signIn(int accountId, const QString &serviceName)
 }
 
 void AccountAuthenticator::sendAuthenticatedRequest(const QUrl &url,
+                                                    const QString &serviceName,
                                                     const AccountAuthenticatorCredentials &credentials,
                                                     bool ignoreSslErrors)
 {
-    d->sendAuthenticatedRequest(url, credentials, ignoreSslErrors);
+    d->sendAuthenticatedRequest(url, serviceName, credentials, ignoreSslErrors);
 }
 
 void AccountAuthenticator::sendOcsUserRequest(int accountId, const QString &serviceName,
@@ -292,6 +293,7 @@ void AccountAuthenticatorPrivate::signOnError(const SignOn::Error &error)
 }
 
 void AccountAuthenticatorPrivate::sendAuthenticatedRequest(const QUrl &url,
+                                                           const QString &serviceName,
                                                            const AccountAuthenticatorCredentials &credentials,
                                                            bool ignoreSslErrors)
 {
@@ -325,6 +327,7 @@ void AccountAuthenticatorPrivate::sendAuthenticatedRequest(const QUrl &url,
     reply->setProperty("credentialsUsername", credentials.username);
     reply->setProperty("credentialsPassword", credentials.password);
     reply->setProperty("credentialsAccessToken", credentials.accessToken);
+    reply->setProperty("serviceName", serviceName);
     connect(reply, &QNetworkReply::finished,
             this, &AccountAuthenticatorPrivate::authenticatedRequestFinished);
     connect(reply, &QNetworkReply::sslErrors,
@@ -336,7 +339,8 @@ void AccountAuthenticatorPrivate::authenticatedRequestFinished()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     const int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const bool ignoreSslErrors = reply->property("ignoreSslErrors").toBool();
-    const bool isWellKnown = reply->url().toString().contains(QStringLiteral(".well-known"));
+    const bool isWellKnown = reply->url().toString().endsWith(QStringLiteral(".well-known"));
+    const QString serviceName = reply->property("serviceName").toString();
 
     if (reply->error() == QNetworkReply::NoError) {
         emit q->authenticatedRequestFinished(true, QString());
@@ -347,9 +351,17 @@ void AccountAuthenticatorPrivate::authenticatedRequestFinished()
         credentials.username = reply->property("credentialsUsername").toString();
         credentials.password = reply->property("credentialsPassword").toString();
         credentials.accessToken = reply->property("credentialsAccessToken").toString();
+        QString path = QStringLiteral("/.well-known");
+        if (!serviceName.isEmpty()) {
+            Accounts::Service service = globalAccountManager()->service(serviceName);
+            if (service.isValid()) {
+                path.append(QChar('/') + service.serviceType());
+            }
+        }
         QUrl url = reply->url();
-        url.setPath(QStringLiteral("/.well-known"));
-        sendAuthenticatedRequest(url, credentials, ignoreSslErrors);
+        url.setPath(path);
+        // May retry later with an empty service
+        sendAuthenticatedRequest(url, QString(), credentials, ignoreSslErrors);
     } else {
         // the credentials are probably wrong.
         QUrl url = reply->url();
